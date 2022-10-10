@@ -1,0 +1,16 @@
+[15:11:35] [main/INFO] [LaunchWrapper]: Loading tweak class name net.minecraftforge.fml.common.launcher.FMLTweaker
+[15:11:39] [main/ERROR] [FML]: Coremod EyeOfDragonsPlugin: Unable to class load the plugin de.curlybracket.eyeofdragons.EyeOfDragonsPlugin
+java.lang.ClassNotFoundException: de.curlybracket.eyeofdragons.EyeOfDragonsPlugin
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:381) ~[?:1.8.0_51]
+	at net.minecraft.launchwrapper.LaunchClassLoader.findClass(LaunchClassLoader.java:117) ~[launchwrapper-1.12.jar:?]
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:424) ~[?:1.8.0_51]
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:357) ~[?:1.8.0_51]
+[15:11:45] [main/ERROR] [mixin]: Mixin config mixins.spectral_edge.json does not specify "minVersion" property
+[15:11:45] [main/ERROR] [mixin]: Mixin config mixins.spectral_edge.json does not specify "minVersion" property
+[15:11:45] [Client thread/ERROR] [HadEnoughItems]: Failed to register mod categories: class lykrast.jetif.JETIFPlugin
+[15:11:45] [Client thread/WARN] [smoothfont]: renderChar method might be replaced. Fix the space width to 4 (MC default).
+[16:07:31] [Client thread/ERROR] [FML]: Unidentified mapping from registry minecraft:recipes
+[15:22:44] [Server thread/DEBUG] [FML]: Bar Step: ServerAboutToStart - Quark: RotN Edition took 0.000s
+[22:16:38] [Server thread/TRACE] [FML]: Sending event FMLModIdMappingEvent to mod oldjava
+[22:16:38] [Server thread/TRACE] [FML]: Sent event FMLModIdMappingEvent to mod oldjava
+[22:16:38] [Server thread/DEBUG] [FML]: Bar Step: ModIdMapping - Old Java Warning took 0.000s

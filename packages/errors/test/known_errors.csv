@@ -1,0 +1,167 @@
+RegExp,Description
+Parsing error loading built-in advancement,
+ \[tconstruct-modifier\]: Cannot load modifier-model ,
+ \[(tconstruct-API|conarm)\]: Could not load multimodel ,
+ \[tconstruct-API\]: Could not load material model ,
+ \[FML\]: MultiModel minecraft:builtin/missing is empty ,
+\[FML\]: Exception loading (model|blockstate) for( the)? variant ,Model loading errors
+\[FML\]: Could not load override model ,
+\[FML\]: The mod .* is expecting signature.*however there is no signature matching that description,FML mod signature errors
+\[FML\]: FML appears to be missing any signature data. This is not a good thing,
+\[net.minecraft.client.renderer.texture.TextureMap\]: Using missing texture. unable to load ,Ignore missing textures
+\[Client thread/INFO\].*vazkii.patchouli.* Error while loading entry ,Not actual error (loading modded info books)
+\[java.lang.Throwable:printStackTrace:635\]: Caused by: java.lang.RuntimeException: Error while loading entry,More Patchouli books exceptions
+\[FML\]: Parsing error loading recipe ,Parsing recipe errors from FML. Probably items just removed but recipe reference is present
+\[com.buuz135.jeivillagers.Jeivillagers:registerCareer:71\]: Error checking recipes for class,jeivillagers is old (2017) mod. causing some errors
+\[bdlib\]: Error while processing RsRecipe,Advanced generators somehow cant create Vibrant items
+\[mixin\]: Error cleaning class output directory: .mixin.out\\class:,Unknown mixin error
+\[mixin\]: Added class metadata for java/lang/Error to metadata cache,
+\[FML\]: Error registering event handler: FMLMod:immersivepetroleum.*ItemProjector.handleMultiblockComplete,Immersive Engineering Projector event error. Probably skip
+\[Waila\]: Error wrapping plugin.*computronics.integration.waila.IntegrationWaila,Waila - Computronix Error
+\[Client thread/WARN\] \[Config\]: \[OptiFine\] Error finding Chunk.hasEntities,Optifine minor error
+\[Mechanics\]: Failed to copy .* property from block ,Mechanics error (reported to github but ignored) https://github.com/wolforcept/mechanics/issues/13
+\[Guide-API\]: Cannot get renderer for ,Guide-API error (mod for JSON books documentation for mods)
+\[net.blay09.mods.kleeslabs.KleeSlabs\]: Slab .* could not be found.,Some epsent slabs
+\[enderio\]: Cannot add smelting recipe .* because another mod already has registered a recipe ,EnderIO overwritten recipes
+\[enderio\]: Copying default recipe file from .* to .* failed. Reason:,EnderIO copy default recipe fail
+\[net.minecraft.advancements.AdvancementList\]: Couldn't load advancement ,Most likely happens when recipe changed and recipe name was changed too
+\[gendustry\]: \(This is not an error. no need to report it to anybody\),NOT ERRORS:
+THIS IS NOT AN OFFICIAL BUILD OF IMMERSIVE ENGINEERING!,
+\[mcjtylib_ng\]: Could not read 'userbuilder.json'. this is not an error!,
+mekanism:etc.error,
+\[tconevo\]: Artifacts were looked up before being loaded!,TconEvo error. Reported to issues https://github.com/phantamanta44/tinkers-evolution/issues/31
+\[tconevo\]: Encountered exception while loading artifacts!,
+\[jei\]: An interpreter is already registered for this item,Some JEI errors
+\[jei\]: Failed to register mod plugin,
+\[jei\]: A Recipe Handler has already been registered for ,
+\[jei\]: Could not find any matching ingredients to remove,
+\[jei\]: Recipe has no output. Extra Utilities 2 extrautils2:shortcut_hopper,
+\[journeymap\]: Couldn't locate icons for .*: ,Journey map ignored errors
+\[tconstruct-IMC\]: Invalid alloy fluid in alloy IMC,TiC invalid alloy (dont know what cause exception)
+\[compactmachines3\]: Could not deserialize recipe from file:,Compact machine cant find example recipes
+\[excompressum\]: Duplicate entry for .* in WoodenCrucible. overwriting...,Wooden Crucible error (they disabled anyway)
+\[randompatches\]: Failed to transform class: net.minecraft.tileentity.TileEntityPiston,Some other mod changes pistons. so it cant be changed. cfg says: Fixes MC-54026. which causes blocks attached to slime blocks in some circumstances to create ghost blocks if a piston pushes the slime block.
+\[immersiveengineering\]: Recipe has invalid inputs and will be ignored,
+Coremod EyeOfDragonsPlugin: Unable to class load the plugin de.curlybracket.eyeofdragons.EyeOfDragonsPlugin,Reported https://github.com/MKuckert/eye-of-dragons/issues/4
+Unable to read a class file correctly,Something with dcintegration mod
+There was a problem reading the entry module-info.class in the jar .*dcintegration.*- probably a corrupt zip,
+Zip file dcintegration.*.jar failed to read properly. it will be ignored,
+\[unidict\]: Immersive Engineering Integration: java\.lang\.IndexOutOfBoundsException: Index: 0. Size: 0,Reported. fixed https://github.com/WanionCane/UniDict/issues/195
+\[soundphysicsinjector\]: Target node not found! org\.orecruncher\.dsurround\.client\.sound\.ConfigSoundInstance,Reported: https://github.com/djpadbit/Sound-Physics/issues/69
+\[Client thread/ERROR\] \[reborncore\]: Invalid fingerprint detected for RebornCore!,Reported: https://github.com/TechReborn/RebornCore/issues/180
+There was a problem reading the entry .*spark-forge.jar - probably a corrupt zip,Spark normal behaviour
+Zip file spark-forge.jar failed to read properly. it will be ignored,
+\[Voice Chat Mod\],Devonly mod error
+\[FML\]: Found FMLCorePluginContainsFMLMod marker in ,
+\[FML\]: Mod .* is missing the required element 'version' and a version.properties file could not be found. Falling back to metadata version,
+\[FML\]: The coremod .* is not signed!,
+\[FML\]: The coremod .* does not have a MCVersion annotation. it may cause issues with this version of Minecraft,
+\[FML\]: Potentially Dangerous alternative prefix ,
+\[FML\]: \*[ *]{2},
+\[FML\]: \* Registry Item: The object .* has been registered twice for the same name,
+\[FML\]: No types have been added to Biome ,
+\[FML\]: Overriding existing radiation moderator data for ,
+\[\]: ==,
+\[LaunchWrapper\]: Tweak class name .* has already been visited -- skipping,
+\[draconicevolution\]: Found empty mod doc folder ,
+\[MineMenu\]: Menu item in slot .* is ,
+\[net.minecraft.client.renderer.block.model.ModelBlock\]: Unable to resolve texture due to upward reference:,
+\[ic2.(Item|Block)\]: The .* is not initialized.,
+\[orelib\]: Unable to locate field ,
+\[FML\]: A mod has attempted to assign Block Block,
+\[brandonscore\]: No features were detected for mod: brandonscore.,
+\[mixin\]: Reference map .+ for .+ could not be read\.,
+\[cd4017be_lib\]: Problem occoured adding ImmersiveEngineering handler,Known warning. do nothing https://github.com/CD4017BE/CD4017BE_lib/issues/15
+Could not get version info: java.io.FileNotFoundException,
+\[CoFH World\]: Using `metadata` .* for blocks is deprecated,
+\[dsurround\]: Cannot locate item .* for ItemRegistry,
+\[Integrated Dynamics\]: Invalid appendix ,
+\[EnderCore ASM\]: Ersatz patch applied. things may break!,
+\[enderio\]: TConstruct. you fail again. muhaha! The world is mine. mine!,
+\[enderio\]: Applied Energistics conduits loaded. Let your networks connect!,
+\[enderio\]: OpenComputers conduits loaded. Let your networks connect!,
+\[enderio\]: Forestry integration loaded. Let things grow.,
+\[enderio\]: Not adding supplied recipe as a recipe already exists for the input:,
+\[enderio\]: Item used in Smeltery recipe .* doesn't smelt into a fluid,
+\[jei\]: Mod added a tree entry after memory optimization!,
+\[plethora\]: Cannot inject neural renderer for ,
+\[TickCentral\]: Unable to get superclass as resource: ,Known. reported
+ResourcePack: ignored non-lowercase namespace: META-INF in ,
+\[net.minecraft.entity.passive.EntityVillager\]: PriceRange.* smaller than,
+\[ic2.Uu\]: UU predefined config: Can't find ItemStack for ,
+Mekanism Gas conduits loaded\. Let your networks connect!,
+Unable to read property: material with value: iron for blockstate,
+Mod advancedrocketrycore has been disabled through configuration,
+Sending runtime to plugin: .+ took .* ms,
+\[placebo\]: Exception loading patreon data!,
+WARN\] \[ReAuth\]: ,
+\[mixin\]: Static binding violation: PRIVATE @Overwrite method func_76615_h in mixins.phosphor.json:common.MixinChunk cannot reduce visibiliy of PUBLIC target method. visibility will be upgraded.,
+\[LLibrary Core\]: Failed to fetch hierarchy node for .*. This may cause patch issues,Reported https://github.com/iLexiconn/LLibrary/issues/156
+\[net.minecraft.client.settings.GameSettings\]: Skipping bad option: lastServer:,
+\[LLibrary Core\]: Unable to call Core API! It has not been initialized yet!,
+\[net.minecraft.client.settings.GameSettings\]: Skipping bad option: lastServer:,
+\[solcarrot\]: Invalid Fingerprint!,
+\[FTB Library\]: Replacing com.feed_the_beast.ftblib.lib.config.DefaultRankConfigHandler with com.feed_the_beast.ftbutilities.ranks.FTBUtilitiesPermissionHandler,
+\[tconstruct-API\]: Itemstack 1xitem.null@17 cannot represent material xu_evil_metal since it is not associated with the material!,
+\[tconstruct-API\]: Itemstack 1xitem.null@12 cannot represent material xu_enchanted_metal since it is not associated with the material!,
+\[tconstruct-API\]: Itemstack 1xitem.null@11 cannot represent material xu_demonic_metal since it is not associated with the material!,
+\[FML\]: Replacing net.minecraftforge.server.permission.DefaultPermissionHandler with com.feed_the_beast.ftbutilities.ranks.FTBUtilitiesPermissionHandler,
+\[FML\]: \* OPTIFINE DETECTED! DISABLING TIPTHESCALES!!!,
+\[forestry\]: Missing block: sandstone,
+\[enderio\]: Farming Station: Forestry integration for farming loaded but could not find Forestry sapling.,
+\[enderio\]: Farming Station: Forestry integration for fertilizing loaded but could not find Forestry fertilizer.,
+\[net.minecraft.client.audio.SoundManager\]: Missing sound for event: thaumcraft:runicshieldcharge,
+\[FML\]: Unable to find recipe for minecraft:rabbit_stew,
+\[FML\]: Unable to find recipe for minecraft:baked_potato,
+\[opencomputers\]: Invalid glyph char code detected in font.hex. Expected 0<= charCode <10000. got: 1D300,
+\[opencomputers\]: 87 total invalid glyph char codes detected in font.hex,
+\[inventorytweaks\]: Failed to check item tree version: null,
+\[thermalexpansion\]: Thermal Expansion received an invalid IMC from chisel! Key was addcompactorpressrecipe,
+\[thermalexpansion\]: Thermal Expansion received an invalid IMC from chisel! Key was addcompactorpressrecipe,
+\[ic2.Recipe\]: Late recipe loading failed.,
+\[enderio\]: Could not find Build Craft Wrench definition. Wrench integration with other mods may fail,
+\[toolprogression\]: Invalid block overwrite entry: ,
+\[toolprogression\]: Failed to set tool class of item 'redstonearsenal:tool.pickaxe_flux',
+\[toolprogression\]: Failed to set tool class of item 'redstonearsenal:tool.hammer_flux',
+\[toolprogression\]: Failed to set tool class of item 'redstonearsenal:tool.hammer_flux',
+\[forestry\]: Failed to find item for \(iceandfire:jungle_myrmex_coccon\) in the Forge registry.,
+\[enderio\]: Item used in cast recipe .* doesn't smelt into a fluid,
+\[keywizard\]: Controls gui override enabled. this may cause problems with other mods,
+\[keywizard\]: Conflicting mod detected. controls gui override may not work,
+\[dsurround\]: Cannot find sound that should be registered \[minecraft:\],
+\[net.minecraft.client.settings.GameSettings\]: Skipping bad option: lastServer:,
+\[FML\]: {3}Registry: 242 minecraft:entity.ghast.warn net.minecraft.util.SoundEvent@17ebbf1e,
+\[FML\]: {3}Registry: 859 twilightforest:mob.hydra.warn net.minecraft.util.SoundEvent@28037b9d,
+\[FML\]: {3}Registry: 242 minecraft:entity.ghast.warn net.minecraft.util.SoundEvent@17ebbf1e,
+\[FML\]: {3}Registry: 859 twilightforest:mob.hydra.warn net.minecraft.util.SoundEvent@28037b9d,
+\[advancedrocketry\]: Unable to create file C:\\Users\\LD\\Twitch\\Minecraft\\Instances\\Enigmatica2Expert - Extended\\saves\\New World-\\advRocketry\\planetDefs.xml,
+\[com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService\]: Couldn't look up profile properties for .* Invalid uuid..legacy=false\],
+\[FML\]: \* Invalid registration attempt for an Ore Dictionary item with name doorWood has occurred\.,Reported to MIA
+\[FML\]: \* Mods using BASE must have their mod class extend IBaseMod!,
+\[net\.minecraft\.server\.MinecraftServer\]: Can't keep up! Did the system time change,
+\[FML\]: {3}Registry: .*SoundEvent,
+Failed to initialize artifact .*: Unknown material,Reported to TconEvo
+Mixin config mixins.harvestcrafttweaker.json does not specify ""minVersion"" property,
+Mod floralchemy is loaded. but flower petropetunia is not present??,https://github.com/quat1024/BotaniaTweaks/issues/63
+\[Shoulder Surfing\]: Only found 13 code injections. but expected 9,
+\[Shoulder Surfing\]: ShoulderSurfing should be disabled!,Dont care if work
+\[excompressum\]: Could not load remote skins for auto sieve:,
+\[jei\]: Recipe registry plugin is slow. took .* ms. class pl.asie.preston.compat.jei.CompressorRecipeRegistryPlugin,
+\[AstralSorcery Patreon Effect Loader/WARN\] \[Astral Sorcery\]: Skipped .* patreon effects during loading due to malformed data!,
+\[enderio\]: Refined Storage conduits NOT loaded. Refined Storage is not installed,
+OBJModel\.Parser: found a face \('f'\) with more than 4 vertices. only the first 4 of these vertices will be rendered!,
+\[jetif\]: Couldn't load config field for Flux Networks. report this issue on JETIF's GitHub,actually not affecting game. https://github.com/Lykrast/JETIF/issues/20
+Mod requious is missing the required element 'version',Reported: https://github.com/DaedalusGame/RequiousFrakto/issues/19
+Patcher expecting empty class data file for net\.minecraft\.block\.state\.BlockStateContainer\$Builder. but received non-empty,
+\[soundphysicsinjector\]: What the hell. DS's version is not properly formatted \?,reported: https://github.com/OreCruncher/DynamicSurroundings/issues/775
+\[dsurround\]: Invalid fingerprint detected!,reported: https://github.com/OreCruncher/DynamicSurroundings/issues/775
+\[mixin\]: MixinEnvironment::addConfiguration is deprecated,caused by IntegratedProxy. ignore
+\[Client thread/WARN\] \[mixin\]: Error loading class: ,Mixins for absent mods
+\[Client thread/WARN\] \[org\.dimdev\.utils\.ModIdentifier\]: Failed to identify sun\.reflect\.GeneratedMethodAccessor13,VanillaFix warn
+\[Finalizer/WARN\] \[LoliASM\]: Clearing LoliStringPool 1,Known https://github.com/LoliKingdom/LoliASM/issues/51
+\[main/WARN\] \[ModDirector/ForgeLateLoader\[Launchwrapper\]\]: Failed to find deobf tweaker,Reported: https://github.com/Janrupf/mod-director/issues/22
+\[Client thread/WARN\] \[FML\]: \[Ping!\] Highlight color is invalid\. Please fix your config\.,Reported https://github.com/elifoster/Ping/issues/30
+\[main/WARN\] \[Bansoukou\]: .* was found in the mods folder\. Copying to modify the copied cache\.,
+\[main/WARN\] \[Bansoukou\]: Marking .* to fool Forge's mod discovering mechanism.,
+\[main/WARN\] \[Bansoukou\]: Patching ,
+\[ThaumicSpeedup/AspectThread/WARN\] \[thaumicwonders\]: Wildcard meta detected for .+ in void beacon registration; this can result in invalid result blocks,
