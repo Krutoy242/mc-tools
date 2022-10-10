@@ -1,0 +1,14 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "packages\\\\.+\\\\package\\.json$",
+        "cmd": "node merge_jsons.js ${file} && prettier-package-json --write ${file}"
+      },
+      {
+        "match": "((?!packages).)\\\\.+\\\\package\\.json$",
+        "cmd": "prettier-package-json --write ${file}"
+      }
+    ]
+  },
+}

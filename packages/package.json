@@ -1,0 +1,33 @@
+{
+  "name": "mct-",
+  "version": "0.0.0",
+  "description": "Automation tool for Minecraft modpack development",
+  "license": "MIT",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+  },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools"
+  ],
+  "packageManager": "pnpm@7.13.2"
+}
