@@ -1,0 +1,8 @@
+.idea
+.vscode/
+lerna-debug.log
+node_modules
+npm-debug.log
+packages/*/coverage
+packages/*/dist
+packages/*/lib

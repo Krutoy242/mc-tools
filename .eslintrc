@@ -1,0 +1,26 @@
+{
+  "extends": "@antfu",
+  "rules": {
+    "antfu/if-newline": "off",
+    "key-spacing": [ "error", { "align": "colon" } ],
+    "@typescript-eslint/consistent-indexed-object-style": 0,
+    "@typescript-eslint/comma-dangle": [
+      "error",
+      {
+        "functions": "never",
+        "imports": "always-multiline",
+        "exports": "always-multiline",
+        "arrays": "always-multiline",
+        "objects": "always-multiline"
+      }
+    ],
+    "no-cond-assign": [
+      "error",
+      "except-parens"
+    ],
+    "nonblock-statement-body-position": [
+      "error",
+      "any"
+    ]
+  }
+}
