@@ -27,8 +27,8 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "dev": "unbuild --stub",
-    "start": "esno src/cli.ts --log=test/debug.log --blacklist=test/known_errors.csv",
+    "release": "bumpp && npm build && npm publish",
+    "start": "esno src/cli.ts",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",

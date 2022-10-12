@@ -1,11 +1,3 @@
 # `errors`
 
-> TODO: description
-
-## Usage
-
-```
-const errors = require('errors');
-
-// TODO: DEMONSTRATE API
-```
+Scan debug.log file to find unknown errors

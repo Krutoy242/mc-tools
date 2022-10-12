@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { dirname } from 'path'
+import { dirname, resolve } from 'path'
+import { fileURLToPath } from 'url'
 import yargs from 'yargs'
-import { findErrors } from '.'
+import { findErrors, parseBlacklist } from '.'
 
 /* =============================================
 =                Arguments                    =
@@ -29,28 +30,33 @@ const argv = yargs(process.argv.slice(2))
   .parseSync()
 
 if (!existsSync(argv.log))
-  throw new Error(`${argv.log} doesnt exist. Provide correct path for debug.log`)
+  throw new Error(`${resolve(argv.log)} doesnt exist. Provide correct path for debug.log`)
 
 if (argv.blacklist && !existsSync(argv.blacklist))
-  throw new Error(`${argv.blacklist} doesnt exist. Provide correct path for .csv with blacklist`)
-
-let ignore: RegExp[] | undefined
-if (argv.blacklist) {
-  const blacklistText = readFileSync(argv.blacklist, 'utf8')
-  if (!blacklistText || !blacklistText.trim()) throw new Error(`${argv.blacklist} is empty.`)
-  const lines = blacklistText.split('\n')
-  if (lines.length <= 1) throw new Error(`${argv.blacklist} should contain header and content.`)
-  if (lines.slice(1).some(s => s.split(',').length > 2)) throw new Error(`${argv.blacklist} should not contain "," characters.`)
-  ignore = lines.slice(1).map(s => new RegExp(s.split(',')[0]))
-}
-
-const dbgLogText = readFileSync(argv.log, 'utf8')
+  throw new Error(`${resolve(argv.blacklist)} doesnt exist. Provide correct path for .csv with blacklist`)
 
 /* =============================================
 =                                             =
 ============================================= */
-;(async () => {
-  const unresolvedErrors = await findErrors(dbgLogText, ignore ?? [])
+function loadBlacklist(filePath: string) {
+  return parseBlacklist(readFileSync(filePath, 'utf8'))
+}
+
+function relative(relPath: string) {
+  return fileURLToPath(new URL(relPath, import.meta.url))
+}
+
+(async () => {
+  const ignore: RegExp[] = []
+
+  if (argv.blacklist) ignore.push(...loadBlacklist(argv.blacklist))
+
+  const defBLPath = relative('safe_errors.cfg')
+  if (existsSync(defBLPath)) ignore.push(...loadBlacklist(defBLPath))
+
+  const dbgLogText = readFileSync(argv.log, 'utf8')
+
+  const unresolvedErrors = await findErrors(dbgLogText, ignore)
 
   if (unresolvedErrors.length)
     process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)

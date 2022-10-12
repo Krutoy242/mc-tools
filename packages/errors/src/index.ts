@@ -6,7 +6,9 @@ export async function findErrors(debugLogText: string, ignore: RegExp[]): Promis
 
   const result: string[] = []
 
-  const allErrors = [...debugLogText.matchAll(/^.*\W(error|WARN)\W.*$/gim)]
+  const allErrors = [...debugLogText
+    .matchAll(/^\[[^\]]+\] \[[^\]]+(WARN|ERROR)\].*$/gim),
+  ]
 
   for (const match of allErrors) {
     if (ignore.some(r => r.test(match[0]))) continue
@@ -17,3 +19,9 @@ export async function findErrors(debugLogText: string, ignore: RegExp[]): Promis
   return result
 }
 
+export function parseBlacklist(blacklistText: string): RegExp[] {
+  return blacklistText
+    .split('\n')
+    .filter(l => l.trim() && !l.startsWith('#'))
+    .map(l => new RegExp(l))
+}
