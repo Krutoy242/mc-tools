@@ -1,5 +1,6 @@
 {
   "extends": "@antfu",
+  "root": true,
   "rules": {
     "antfu/if-newline": "off",
     "key-spacing": [ "error", { "align": "colon" } ],

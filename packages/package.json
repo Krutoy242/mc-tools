@@ -23,6 +23,11 @@
   "files": [
     "dist"
   ],
+  "scripts": {
+    "release": "bumpp && npm build && npm publish",
+    "start": "esno src/cli.ts",
+    "test": "vitest"
+  },
   "types": "./dist/index.d.ts",
   "keywords": [
     "automation",
