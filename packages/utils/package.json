@@ -1,7 +1,7 @@
 {
-  "name": "mct-",
+  "name": "mct-utils",
   "version": "0.0.0",
-  "description": "Automation tool for Minecraft modpack development",
+  "description": "Various utilities for Minecraft-Tools monorepo",
   "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "homepage": "https://github.com/Krutoy242/mc-tools",
@@ -24,10 +24,19 @@
     "dist"
   ],
   "scripts": {
+    "build": "unbuild",
+    "coverage": "vitest run --coverage",
     "release": "bumpp && npm build && npm publish",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",
+  "dependencies": {
+    "consola": "^2.15.3",
+    "yargs": "^17.6.0"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.13"
+  },
   "keywords": [
     "automation",
     "minecraft",

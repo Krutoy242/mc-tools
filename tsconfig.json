@@ -21,10 +21,10 @@
     "isolatedModules": true,
     "strictNullChecks": true,
     "skipDefaultLibCheck": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": {
+      "mct-utils/*": ["./packages/utils/src/*"],
+    }
   },
-  "exclude": ["**/node_modules", "**/*/dist"],
-  "references": [
-    {"path": "packages/errors"},
-  ]
+  "exclude": ["**/node_modules", "**/*/dist"]
 }
