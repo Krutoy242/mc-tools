@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Everything",
+    "description": "All Mods included",
+    "list": []
+  },
+  {
+    "name": "Soft",
+    "description": "Remove client-only mods",
+    "list": [
+      "betteranimals-",
+      "Sound-Physics-"
+    ]
+  },
+  {
+    "name": "Remove Everything",
+    "description": "Every single mod disabled",
+    "list": [
+      "[___MixinCompat-",
+      "OptiFine_"
+    ]
+  }
+]

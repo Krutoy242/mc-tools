@@ -2,7 +2,7 @@
 
 import { rename } from 'fs/promises'
 import { resolve } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import yargs from 'yargs'
 import chalk from 'chalk'
 import _ from 'lodash'
@@ -18,28 +18,43 @@ const { terminal } = terminal_kit
 ============================================= */
 const argv = yargs(process.argv.slice(2))
   .alias('h', 'help')
-  .option('cwd', {
-    alias   : 'c',
-    type    : 'string',
-    describe: 'Minecraft folder path',
-    default : './',
+  .detectLocale(false)
+  .scriptName('mct-reducer')
+  .strict()
+  .version()
+  .option('mods', {
+    alias    : 'm',
+    type     : 'string',
+    describe : 'Minecraft mods/ folder path',
+    default  : 'mods',
+    normalize: true,
   })
   .option('levels', {
     alias       : 'l',
     type        : 'string',
     describe    : 'Path to JSON with reduction levels',
     demandOption: true,
+    normalize   : true,
+  })
+  .coerce('levels', (f: string) => {
+    if (!existsSync(f)) throw new Error(`${resolve(f)} doesn't exist. Provide right path.`)
+    const jsonObj: ReduceLevels = JSON.parse(readFileSync(f, 'utf8'))
+    return jsonObj
+  })
+  .option('index', {
+    alias   : 'i',
+    type    : 'number',
+    describe: 'Select reduce level without prompt',
   })
   .parseSync()
 
-const modsFOlder = resolve(argv.cwd, 'mods')
-if (!existsSync(modsFOlder))
-  throw new Error(`${resolve(argv.cwd)} doesn't have mods/ folder. Provide right path.`)
+if (!existsSync(argv.mods))
+  throw new Error(`${resolve(argv.mods)} doesn't exist. Provide right path.`)
 
-const fetchInModsDir = getFetchInModsDir(argv.cwd)
+const fetchInModsDir = getFetchInModsDir(argv.mods)
 
 if (!fetchInModsDir('*.jar?(.disabled)').length)
-  throw new Error(`${modsFOlder} doesn't have mods in it (files ends with .jar and/or .disabled)`)
+  throw new Error(`${argv.mods} doesn't have mods in it (files ends with .jar and/or .disabled)`)
 
 /* =============================================
 =                                             =
@@ -56,8 +71,7 @@ async function init() {
 
   terminal.clear()
 
-  const jsonObj: ReduceLevels = (await import(argv.levels)).default
-  const levels = loadReduceLevels(jsonObj, argv.cwd)
+  const levels = loadReduceLevels(argv.levels as any, argv.mods)
 
   const unregMods = _.difference(allEnabledMods, levels.registeredMods).map(getFileName)
   if (unregMods.length) {
@@ -81,34 +95,41 @@ async function init() {
     )
   }
 
-  terminal`\nSelect `.brightYellow`Reduce Level`.styleReset()` for `.green(
-    totalModsLength
-  )` mods`.styleReset()`\n`
+  /**
+   * Index of Levels choice
+   */
+  let reduceIndex = argv.index
 
-  const getLevelText = (i: number) =>
-    chalk.rgb(
-      244,
-      (255 - (255 / levels.levels.length) * i) | 0,
-      59
-    )(levels.levels[i].name)
+  if (reduceIndex === undefined) {
+    terminal`\nSelect `.brightYellow`Reduce Level`.styleReset()` for `.green(
+      totalModsLength
+    )` mods`.styleReset()`\n`
 
-  let cumulativeReduction = 0
-  const reduceIndex = (
-    await terminal.singleColumnMenu(
-      levels.levels.map(
-        (l, i) =>
-          `${i + 1}: `
-          + `${getLevelText(i)} `
-          + `(${chalk.red.dim(
-            `-${
-              cumulativeReduction += l.files.length + l.disabledFiles.length}`
-          )}) `
-          + `${chalk.rgb(100, 100, 100)(l.description)}`
-      )
-    ).promise
-  ).selectedIndex
+    const getLevelText = (i: number) =>
+      chalk.rgb(
+        244,
+        (255 - (255 / levels.levels.length) * i) | 0,
+        59
+      )(levels.levels[i].name)
 
-  terminal('\n')
+    let cumulativeReduction = 0
+    reduceIndex = (
+      await terminal.singleColumnMenu(
+        levels.levels.map(
+          (l, i) =>
+            `${i + 1}: `
+            + `${getLevelText(i)} `
+            + `(${chalk.red.dim(
+              `-${
+                cumulativeReduction += l.files.length + l.disabledFiles.length}`
+            )}) `
+            + `${chalk.rgb(100, 100, 100)(l.description)}`
+        )
+      ).promise
+    ).selectedIndex
+
+    terminal('\n')
+  }
 
   const enableBlacklist = _.uniq(
     levels.levels
@@ -118,14 +139,14 @@ async function init() {
   )
 
   await toggleMods(
-    argv.cwd,
+    argv.mods,
     'Enabling Mods',
     _.difference(alreadyDisabled, enableBlacklist),
     false
   )
 
   await toggleMods(
-    argv.cwd,
+    argv.mods,
     'Disabling Mods',
     _.uniq(
       levels.levels
@@ -139,7 +160,7 @@ async function init() {
   exit()
 }
 
-export async function toggleMods(cwd: string, actionName: string, mods: string[], toDisable: boolean) {
+export async function toggleMods(modsPath: string, actionName: string, mods: string[], toDisable: boolean) {
   if (!mods.length) return
 
   const progressBar = terminal.progressBar({
@@ -160,7 +181,7 @@ export async function toggleMods(cwd: string, actionName: string, mods: string[]
       ? `${oldPath}.disabled`
       : oldPath.replace(/\.disabled$/, '')
 
-    await rename(resolve(cwd, oldPath), resolve(cwd, newPath))
+    await rename(resolve(modsPath, oldPath), resolve(modsPath, newPath))
 
     progressBar.update(progress += updateBit)
   }))

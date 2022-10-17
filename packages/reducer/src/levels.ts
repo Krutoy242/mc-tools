@@ -8,8 +8,8 @@ export type ReduceLevels = {
   list: string[]
 }[]
 
-export function loadReduceLevels(reduceLevels: ReduceLevels, cwd?: string) {
-  const fetchInModsDir = getFetchInModsDir(cwd ?? '')
+export function loadReduceLevels(reduceLevels: ReduceLevels, mods?: string) {
+  const fetchInModsDir = getFetchInModsDir(mods ?? '')
 
   const result: {
     registeredMods: string[]
