@@ -1,0 +1,47 @@
+{
+  "name": "mct-tcon",
+  "version": "0.0.0",
+  "description": "Tweaks Tinker Constructs' materials with csv tables",
+  "license": "MIT",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+  },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "bin": "./dist/cli.mjs",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "coverage": "vitest run --coverage",
+    "release": "bumpp && npm build && npm publish",
+    "start": "esno src/cli.ts",
+    "test": "vitest"
+  },
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "yargs": "^17.6.0"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.13"
+  },
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools"
+  ],
+  "packageManager": "pnpm@7.13.2"
+}
