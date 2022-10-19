@@ -9,8 +9,7 @@ function exec(params: string): string {
 }
 
 test('Run app no arguments', async () => {
-  const appResult = exec('').toString()
-    .trim()
+  const appResult = exec('')
 
   expect(appResult).toMatchInlineSnapshot(`
     "Found 6 errors
@@ -24,8 +23,7 @@ test('Run app no arguments', async () => {
 })
 
 test('Run app with additional filter', async () => {
-  const appResult = exec('--blacklist=test/custom_filter.cfg').toString()
-    .trim()
+  const appResult = exec('--blacklist=test/custom_filter.cfg')
 
   expect(appResult).toMatchInlineSnapshot(`
     "Found 1 errors
@@ -34,8 +32,7 @@ test('Run app with additional filter', async () => {
 })
 
 test('Run app with file output', async () => {
-  const appResult = exec('--output=test/output.log').toString()
-    .trim()
+  const appResult = exec('--output=test/output.log')
 
   expect(appResult).toMatchInlineSnapshot('"Found 6 errors"')
 })
