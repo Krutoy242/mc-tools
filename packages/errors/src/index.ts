@@ -21,7 +21,7 @@ export async function findErrors(debugLogText: string, ignore: RegExp[]): Promis
 
 export function parseBlacklist(blacklistText: string): RegExp[] {
   return blacklistText
-    .split('\n')
+    .split(/\r?\n/)
     .filter(l => l.trim() && !l.startsWith('#'))
     .map(l => new RegExp(l))
 }
