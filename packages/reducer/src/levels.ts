@@ -5,7 +5,7 @@ import chalk from 'chalk'
 
 import { getFetchInModsDir, getFileName, toggleMods } from '.'
 
-const { terminal } = terminal_kit
+const { terminal: T } = terminal_kit
 
 export type ReduceLevels = {
   name: string
@@ -67,14 +67,11 @@ function loadReduceLevels(reduceLevels: ReduceLevels, mods?: string) {
 
 export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIndex?: number) {
   const fetchInModsDir = getFetchInModsDir(modsPath)
-  if (!fetchInModsDir('*.jar?(.disabled)').length)
-    throw new Error(`${modsPath} doesn't have mods in it (files ends with .jar and/or .disabled)`)
-
   const alreadyDisabled = fetchInModsDir('*.jar.disabled')
   const allEnabledMods = fetchInModsDir('*.jar')
   const totalModsLength = allEnabledMods.length + alreadyDisabled.length
 
-  terminal.clear()
+  T.clear()
 
   const levels = loadReduceLevels(reduceLevels, modsPath)
 
@@ -106,7 +103,7 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
   let reduceIndex = cmdIndex
 
   if (reduceIndex === undefined) {
-    terminal`\nSelect `.brightYellow`Reduce Level`.styleReset()` for `.green(
+    T`\nSelect `.brightYellow`Reduce Level`.styleReset()` for `.green(
       totalModsLength
     )` mods`.styleReset()`\n`
 
@@ -118,7 +115,7 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
 
     let cumulativeReduction = totalModsLength
     reduceIndex = (
-      await terminal.singleColumnMenu(
+      await T.singleColumnMenu(
         levels.levels.map(
           (l, i) => `${i + 1}: `
             + `${getLevelText(i)} `
@@ -130,7 +127,7 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
       ).promise
     ).selectedIndex
 
-    terminal('\n')
+    T('\n')
   }
 
   const enableList = _.uniq(
@@ -154,6 +151,6 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
 
   await toggleMods(modsPath, 'Modifying mods', modsTuples)
 
-  terminal('\n\n')
+  T('\n\n')
   process.exit(0)
 }

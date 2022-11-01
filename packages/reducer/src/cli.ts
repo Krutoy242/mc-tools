@@ -6,6 +6,7 @@ import yargs from 'yargs'
 
 import type { ReduceLevels } from './levels'
 import { levels } from './levels'
+import { binary } from './binary'
 
 /* =============================================
 =                Arguments                    =
@@ -53,5 +54,12 @@ yargs(process.argv.slice(2))
       levels(argv.mods, argv.path!, argv.index)
     },
   })
+  .command({
+    command : 'binary',
+    describe: 'Reduce mods in half to find error',
+    builder : ya => ya,
+    handler : (argv) => {
+      binary(argv.mods)
+    },
+  })
   .parseSync()
-
