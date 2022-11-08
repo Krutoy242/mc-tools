@@ -71,9 +71,11 @@ importers:
     specifiers:
       '@types/yargs': ^17.0.13
       fast-levenshtein: ^3.0.0
+      typescript-memoize: ^1.1.1
       yargs: ^17.6.0
     dependencies:
       fast-levenshtein: 3.0.0
+      typescript-memoize: 1.1.1
       yargs: 17.6.0
     devDependencies:
       '@types/yargs': 17.0.13
@@ -7024,6 +7026,10 @@ packages:
   /typedarray/0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
     dev: true
+
+  /typescript-memoize/1.1.1:
+    resolution: {integrity: sha512-GQ90TcKpIH4XxYTI2F98yEQYZgjNMOGPpOgdjIBhaLaWji5HPWlRnZ4AeA1hfBxtY7bCGDJsqDDHk/KaHOl5bA==}
+    dev: false
 
   /typescript/4.8.4:
     resolution: {integrity: sha512-QCh+85mCy+h0IGff8r5XWzOVSbBO+KfeYrMQh7NJ58QujwcE22u+NUSmUxqF+un70P9GXKxa2HCNiTTMJknyjQ==}

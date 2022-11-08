@@ -5,8 +5,10 @@ import chalk from 'chalk'
 import levenshtein from 'fast-levenshtein'
 import { Memoize } from 'typescript-memoize'
 import terminal_kit from 'terminal-kit'
-import type { ModdedAddon } from './binary'
 import { style } from './binary'
+import type { InstalledAddon } from './minecraftinstance'
+
+export type ModdedAddon = InstalledAddon & { mod?: Mod }
 
 export function purify(fileName: string) {
   return fileName.replace(/(\-patched)?(\.jar|(\.jar)?(\.disabled)+)$/gm, '')
@@ -71,7 +73,7 @@ export class Mod {
       if (levArr[1].lev - levArr[0].lev < 5) {
         T(
           chalk.bgYellow(' No addon '),
-          chalk.gray(this.fileName),
+          chalk.gray(this.fileName), ' ',
           chalk.rgb(250, 250, 250)(this.pureName), '\n'
         )
         return

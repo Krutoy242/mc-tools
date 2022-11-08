@@ -1,9 +1,9 @@
-import _ from 'lodash'
-import escapeGlob from 'glob-escape'
-import terminal_kit from 'terminal-kit'
 import chalk from 'chalk'
+import _ from 'lodash'
+import terminal_kit from 'terminal-kit'
 
-import { getFetchInModsDir, getFileName, toggleMods } from '.'
+import type { Mod } from './Mod'
+import { ModStore } from './ModStore'
 
 const { terminal: T } = terminal_kit
 
@@ -13,87 +13,42 @@ export type ReduceLevels = {
   list: string[]
 }[]
 
-function loadReduceLevels(reduceLevels: ReduceLevels, mods?: string) {
-  const fetchInModsDir = getFetchInModsDir(mods ?? '')
-
-  const result: {
-    registeredMods: string[]
-    nonexistingEntries: string[]
-    severalVariations: { entry: string; files: string[] }[]
-    levels: {
-      name: string
-      description: string
-      files: string[]
-      disabledFiles: string[]
-    }[]
-  } = {
-    levels            : [],
-    registeredMods    : [],
-    nonexistingEntries: [],
-    severalVariations : [],
-  }
-
-  for (const reduceLevel of reduceLevels) {
-    const lines = _.uniq(
-      reduceLevel.list
-        .filter(s => s.trim())
-        .map((entry) => {
-          const files = fetchInModsDir(`${escapeGlob(entry)}*.jar?(.disabled)`)
-          if (files.length > 1) result.severalVariations.push({ entry, files })
-          return { entry, path: files[0] }
-        })
-    )
-
-    const [exist, nonexist] = _.partition(lines, o => !!o.path)
-
-    result.nonexistingEntries.push(...nonexist.map(o => o.entry))
-
-    const [disabledFiles, files] = _.partition(exist.map(o => o.path), o => o.endsWith('.disabled'))
-
-    result.registeredMods.push(...files)
-    result.registeredMods.push(...disabledFiles)
-    result.levels.push({
-      name       : reduceLevel.name,
-      description: reduceLevel.description,
-      files,
-      disabledFiles,
-    })
-  }
-
-  result.registeredMods = _.uniq(result.registeredMods)
-
-  return result
-}
-
 export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIndex?: number) {
-  const fetchInModsDir = getFetchInModsDir(modsPath)
-  const alreadyDisabled = fetchInModsDir('*.jar.disabled')
-  const allEnabledMods = fetchInModsDir('*.jar')
-  const totalModsLength = allEnabledMods.length + alreadyDisabled.length
+  const store = new ModStore(modsPath, 'minecraftinstance.json')
 
-  T.clear()
+  // T.clear()
 
-  const levels = loadReduceLevels(reduceLevels, modsPath)
+  const allLevelsGlobs = reduceLevels.map(r => r.list).flat()
+  const globToRgx = (r: string) => new RegExp(`^${_.escapeRegExp(r)}.*$`)
+  const levelsRgxs = allLevelsGlobs.map(globToRgx)
 
-  const unregMods = _.difference(allEnabledMods, levels.registeredMods).map(getFileName)
+  const unregMods = store.mods.filter(m => !levelsRgxs.some(r => r.test(m.fileName)))
   if (unregMods.length) {
     console.warn(
-      'This mods unregistered in lists. Add them first :>> ',
+      'This mods persist in mods/ folder but missed in levels list :>> ',
       unregMods
     )
   }
 
-  if (levels.nonexistingEntries.length) {
-    console.warn(
-      'This lines have no files :>> ',
-      levels.nonexistingEntries
-    )
-  }
+  const levelsTuples = allLevelsGlobs
+    .map((m, i) => [m, store.mods.filter(m =>
+      levelsRgxs[i].test(m.fileName)
+    )] as [string, Mod[]])
 
-  if (levels.severalVariations.length) {
-    console.warn(
-      'This lines have several variations :>> ',
-      levels.severalVariations
+  const nonexistingEntries = levelsTuples
+    .filter(([,a]) => !a.length)
+    .map(([m]) => m)
+
+  if (nonexistingEntries.length) console.warn('This lines have no files :>> ', nonexistingEntries)
+
+  const severalVariations = levelsTuples
+    .filter(([,a]) => a.length > 1)
+    .map(([s, o]) => `${chalk.yellow(s)} [${o.map(m => m.fileName).join(', ')}]`)
+
+  if (severalVariations.length) {
+    T(
+      'This lines have several variations :>> \n',
+      severalVariations.join('\n'), '\n'
     )
   }
 
@@ -104,53 +59,54 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
 
   if (reduceIndex === undefined) {
     T`\nSelect `.brightYellow`Reduce Level`.styleReset()` for `.green(
-      totalModsLength
+      store.mods.length
     )` mods`.styleReset()`\n`
 
     const getLevelText = (i: number) => chalk.rgb(
       244,
-      (255 - (255 / levels.levels.length) * i) | 0,
+      (255 - (255 / reduceLevels.length) * i) | 0,
       59
-    )(levels.levels[i].name)
+    )(reduceLevels[i].name)
 
-    let cumulativeReduction = totalModsLength
-    reduceIndex = (
-      await T.singleColumnMenu(
-        levels.levels.map(
-          (l, i) => `${i + 1}: `
-            + `${getLevelText(i)} `
-            + `(${chalk.yellow.dim.italic(
-              `${cumulativeReduction -= l.files.length + l.disabledFiles.length}`
-            )}/${chalk.gray.italic(totalModsLength)}) `
-            + `${chalk.rgb(100, 100, 100)(l.description)}`
-        )
-      ).promise
-    ).selectedIndex
+    let cumulativeReduction = allLevelsGlobs.length
+    function getLevelLine(l: ReduceLevels[number], i: number) {
+      return `${i + 1}: `
+      + `${getLevelText(i)} `
+      + `(${chalk.yellow.dim.italic(
+        `${cumulativeReduction -= l.list.length}`
+      )}/${chalk.gray.italic(store.mods.length)}) `
+      + `${chalk.rgb(100, 100, 100)(l.description)}`
+    }
+
+    const promptResult = await T.singleColumnMenu(
+      reduceLevels.map(getLevelLine),
+      { cancelable: true }
+    ).promise
+
+    reduceIndex = promptResult.selectedIndex
 
     T('\n')
+    if (promptResult.canceled) process.exit(0)
   }
 
-  const enableList = _.uniq(
-    levels.levels
-      .slice(0, reduceIndex + 1)
-      .map(r => r.disabledFiles)
-      .flat()
-  )
-  const disableList = _.uniq(
-    levels.levels
-      .slice(0, reduceIndex + 1)
-      .map(r => r.files)
-      .flat()
-  )
+  const disableList = reduceLevels
+    .slice(0, reduceIndex + 1)
+    .map(r => r.list)
+    .flat()
 
-  type Tuple = [file: string, toDisable: boolean]
-  const modsTuples: Tuple[] = [
-    ..._.difference(alreadyDisabled, enableList).map(f => [f, false] as Tuple),
-    ...disableList.map(f => [f, true] as Tuple),
-  ]
+  // Enable first
+  levelsTuples
+    .forEach(([,mods], i) => {
+      if (i < disableList.length) return
+      mods.forEach(m => m.enable())
+    })
 
-  await toggleMods(modsPath, 'Modifying mods', modsTuples)
+  // Then disable (including dependencies)
+  levelsTuples
+    .forEach(([,mods], i) => {
+      if (i >= disableList.length) return
+      mods.forEach(m => m.disable())
+    })
 
-  T('\n\n')
   process.exit(0)
 }
