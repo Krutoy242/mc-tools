@@ -83,7 +83,7 @@ export class Task {
   public flushErrors(): string {
     const err = this.getError()
     if (!err) return ''
-    const field = ('━').repeat((process.stdout.columns ?? 80 - this.name.length - 2) / 2)
+    const field = ('━').repeat((process.stdout.columns ?? 80) / 2 - this.name.length - 2)
     const head = chalk.gray(`${field} ${this.nameStyle(this.name)} ${field}`)
     return `${head}
 ${err}
