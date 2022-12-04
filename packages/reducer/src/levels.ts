@@ -26,7 +26,7 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
   if (unregMods.length) {
     console.warn(
       'This mods persist in mods/ folder but missed in levels list :>> ',
-      unregMods
+      unregMods.map(m => m.fileName)
     )
   }
 
