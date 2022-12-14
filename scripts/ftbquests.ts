@@ -1,15 +1,15 @@
 import { readFileSync, renameSync, writeFileSync } from 'fs'
-import { parse as csvParseSync } from 'csv-parse/sync'
+import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
-import sanitize from 'sanitize-filename'
 import type { Byte, Short } from 'ftbq-nbt'
 import { Int, parse } from 'ftbq-nbt'
-import fast_glob from 'fast-glob'
+import sanitize from 'sanitize-filename'
 import { Lang } from '../packages/utils/src/lang'
-import type { ChapterConfig, Item, QuestUid } from '../packages/utils/src/mods/ftbquests'
-import { getChapter, getChapters, getItem, getLangKey, getRewardFile, isLangKey, saveChapter, saveQuest, saveReward, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
-import { parseFtbqSNbt, stringifyFTBQSNbt } from '../packages/utils/src/snbt'
+import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
+import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
+
 import { naturalSort } from '../packages/utils/src'
+import { parseFtbqSNbt, stringifyFTBQSNbt } from '../packages/utils/src/snbt'
 
 /**
  * Converts FTBQuests reward tables to chests with saved content
@@ -51,7 +51,7 @@ export function renameChapters() {
     catch (e: any) {
       return console.error(`cant get chapter ${hash}: ${e.message}`)
     }
-    const localized = lang.getClear(getLangKey(chap.title))
+    const localized = lang.getClear(langKeyWithoutParenth(chap.title))
     const newName = uid(sanitize(`${String(i + 1).padStart(2, '0')} ${localized}`))
 
     const oldPath = `${chapPath}/${hash}`
@@ -70,37 +70,6 @@ export function renameChapters() {
   writeFileSync(indexPath, stringifyFTBQSNbt(index))
 }
 
-export const getCSV = (filename: string) =>
-  csvParseSync(readFileSync(filename, 'utf8'), { columns: true }) as Record<string, string>[]
-
-function getItemNames() {
-  const csv = getCSV('config/tellme/items-csv.csv')
-  return csv.reduce(
-    (result, o) => {
-      (result[o['Registry name']] ??= {})[o['Meta/dmg']] = o['Display name']
-      return result
-    },
-    {} as Record<string, Record<string, string>>
-  )
-}
-const names = getItemNames()
-const getItemName = (i?: Item) =>
-  i === undefined
-    ? undefined
-    : (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0]).replace(/§./g, '')
-
-function getQuestTaskItem(q: QuestUid) {
-  const firstTask = q?.tasks?.[0]?.items?.[0]
-  if (!firstTask) return undefined
-  const taskItem = getItem((firstTask as any)?.item ?? firstTask)
-  if (taskItem) return taskItem
-  console.log('Cant define:', firstTask)
-}
-
-function getTaskName(q: QuestUid) {
-  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title
-}
-
 export function removeNameOfQuests() {
   const chaps = getChapters()
   const lang = new Lang('ftbquests')
@@ -112,7 +81,7 @@ export function removeNameOfQuests() {
       if (!taskItem) return
       let dirty = false
       if (q.title) {
-        const questLangKey = getLangKey(q.title)
+        const questLangKey = langKeyWithoutParenth(q.title)
         const nameOfTask = getItemName(taskItem)?.toLocaleLowerCase()
         const nameOfQuest = lang.get(questLangKey)?.toLocaleLowerCase()
         if (!nameOfTask) console.error(`Cant find name: ${taskItem.id}:${taskItem.Damage?.value}`)
@@ -145,10 +114,10 @@ export function renameQuestsLangs() {
 
   const usedLangs = new Set<string>()
 
-  const rename = (obj: any, key: string | number, fresh: string) => {
-    const old: string | undefined = obj?.[key]
-    if (!old || !isLangKey(old)) return false
-    lang.rename(getLangKey(old), fresh)
+  const rename = (obj: string[] | { title?: string } | undefined, key: 0 | 'title', fresh: string) => {
+    const old = obj?.[key]
+    if (!old || !isLangKeyInParenth(old)) return false
+    lang.rename(langKeyWithoutParenth(old), fresh)
     usedLangs.add(fresh)
     obj[key] = `{${fresh}}`
     return true
@@ -157,7 +126,7 @@ export function renameQuestsLangs() {
   // Rename Entries
   const uidChap = uidGenerator(20, '')
   const trim = (s: string) => s.toLocaleLowerCase().replace(/[^\d\w]+/g, '_')
-  const toKey = (s: string) => trim(lang.getClear(getLangKey(s)))
+  const toKey = (s: string) => trim(lang.getClear(langKeyWithoutParenth(s)))
 
   chaps.forEach((ch) => {
     const chapName = uidChap(toKey(ch.title))
@@ -199,7 +168,7 @@ interface MCItem {
   Damage: Short
 }
 
-function injectLatestLine() {
+export function injectLatestLine() {
   const lastLine = readFileSync('crafttweaker_raw.log', 'utf8')
     .trim()
     .split('\n')
@@ -247,4 +216,5 @@ function injectLatestLine() {
   saveReward(fileUids[index], box)
 }
 
-injectLatestLine()
+// injectLatestLine()
+
