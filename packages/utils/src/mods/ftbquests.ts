@@ -3,6 +3,16 @@ import { resolve } from 'path'
 import fast_glob from 'fast-glob'
 import type { Byte, TagMap } from 'ftbq-nbt'
 import { Int, parse, stringify } from 'ftbq-nbt'
+import { getItemNames } from './tellme'
+
+/*
+████████╗██╗   ██╗██████╗ ███████╗███████╗
+╚══██╔══╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔════╝
+   ██║    ╚████╔╝ ██████╔╝█████╗  ███████╗
+   ██║     ╚██╔╝  ██╔═══╝ ██╔══╝  ╚════██║
+   ██║      ██║   ██║     ███████╗███████║
+   ╚═╝      ╚═╝   ╚═╝     ╚══════╝╚══════╝
+*/
 
 export interface Item {
   id: string
@@ -66,7 +76,7 @@ export interface Quest {
   x: number
   y: number
   text?: string[]
-  dependencies: string[]
+  dependencies?: string[]
   tasks: QuestTask[]
   rewards: QuestReward[]
 }
@@ -175,20 +185,21 @@ export function uidGenerator(maxLen = 80, ch = '…') {
   }
 }
 
-export function getChapters() {
+export function getChapters(): Chapter[] {
   const chapCwd = 'config/ftbquests/normal/chapters'
-  const chapters = fast_glob.sync('*', { onlyFiles: false, cwd: chapCwd })
-    .filter(f => f !== 'index.snbt')
-    .map(dir => getChapter(dir.replace('.snbt', ''))) as Chapter[]
+  const chaptersUids = getFile<any>('chapters/index').index as string[]
+  const chapters = chaptersUids.map(uid => getChapter(uid)) as Chapter[]
 
-  return chapters.map((ch) => {
+  // Add quests to chapters
+  chapters.forEach(ch =>
     ch.quests
       = fast_glob.sync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
         .map(f => f.split(/[\/\\]/)[1].replace(/\.snbt$/, ''))
         .filter(f => f !== 'chapter')
         .map(uid => getQuest(ch.uid, uid))
-    return ch
-  })
+  )
+
+  return chapters
 }
 
 /*
@@ -200,10 +211,41 @@ export function getChapters() {
 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝
 */
 
-export function isLangKey(title?: string): boolean {
+export function isLangKeyInParenth(title?: string): boolean {
   return title !== undefined && title[0] === '{' && title[title.length - 1] === '}'
 }
 
-export function getLangKey(title: string): string {
-  return isLangKey(title) ? title.substring(1, title.length - 1) : title
+export function langKeyWithoutParenth(title: string): string {
+  return isLangKeyInParenth(title) ? title.substring(1, title.length - 1) : title
+}
+
+let names: ReturnType<typeof getItemNames>
+
+/**
+ * Get localized name for an Item
+ * Clean up all formatting codes `§`
+ */
+export function getItemName(i?: Item) {
+  if (i === undefined) return undefined
+  names ??= getItemNames()
+  return (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0]).replace(/§./g, '')
+}
+
+/**
+ * Get first item in tasks if any
+ */
+export function getQuestTaskItem(q: QuestUid) {
+  const firstTask = q?.tasks?.[0]?.items?.[0]
+  if (!firstTask) return undefined
+  const taskItem = getItem((firstTask as any)?.item ?? firstTask)
+  if (taskItem) return taskItem
+  throw new Error(`Cant define quest task item: ${firstTask}`)
+}
+
+/**
+ * Generate task name based on its first task item
+ * OR on the title of quest itself
+ */
+export function getTaskName(q: QuestUid) {
+  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title
 }

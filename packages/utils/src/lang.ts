@@ -35,6 +35,17 @@ export class Lang {
     return result
   }
 
+  public set(key: string, text: string | string[]) {
+    this.getCodes()
+      .forEach(langCode =>
+        this.getLangFile(langCode)[key]
+          = Array.isArray(text) ? text.join('\\n') : text
+      )
+  }
+
+  /**
+   * Get value for lang key entry without formatting symbols `§`
+   */
   public getClear(langEntry: string, langCode = Lang.defaultLangCode) {
     return this.get(langEntry, langCode).replace(/§./g, '')
   }
@@ -56,22 +67,16 @@ export class Lang {
     }
   }
 
-  public save() {
+  public save(sortWeight?: (langKey: string) => number) {
     for (const langCode of this.getCodes()) {
       const lang = this.getLangFile(langCode)
       this.deleteSet.forEach(del => delete lang[del])
       const lines = Object.entries(lang)
-        // .sort(([ak], [bk]) => {
-        //   const [, a1, a2] = ak.split('.')
-        //   const [, b1, b2] = bk.split('.')
-        //   return naturalSort(a1, b1) // Chapter name
-        //     || naturalSort(a2, b2) // Quest name
-        //     || naturalSort(ak, bk) // Whole entry
-        // })
-        .map(([k, v]) => `${k}=${v}`)
+      if (sortWeight) lines.sort(([a], [b]) => sortWeight(a) - sortWeight(b))
+
       writeFileSync(
         `resources/${this.langOwner}/lang/${langCode}.lang`,
-        `#PARSE_ESCAPES\n${lines.join('\n')}\n`
+        `#PARSE_ESCAPES\n${lines.map(([k, v]) => `${k}=${v}`).join('\n')}\n`
       )
     }
   }
