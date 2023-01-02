@@ -10,6 +10,7 @@ const type_post1 = `((\\[${type_literal}?\\])*)` as const
 const type_post2 = `((\\[${type_post1}?\\])*)` as const
 const type_post = `((\\[${type_post2}?\\])*)` as const
 const type = `${type_literal}(${type_post}|${type_post2}|${type_post1})*` as const
+const type_assign = `as${sp}(?<type>${type})` as const
 const expression_1 = `(${number}|${identifier})` as const
 const getter = `(\\[${ss}${expression_1}${ss}\\]|\\.${literal})` as const
 const expression = `${expression_1}${getter}*` as const
@@ -23,6 +24,7 @@ export const $ = {
   identifier,
   number,
   type,
+  type_assign,
   getter,
   expression,
 }
@@ -149,14 +151,21 @@ const conversions: { [name: string]: { convert?: ReplTuple; revert?: ReplTuple }
 
   PARAM_TYPE: {
     convert: [
-      `(?<=function${$.sp}${$.literal}[^;{}]+)${$.sp}as${$.sp}(?<type>${$.type})`,
+      `(?<=function${$.sp}${$.literal}[^;{}]+)${$.sp}${$.type_assign}`,
+      ':/* cast param */ $<type>',
+    ],
+  },
+
+  PARAM_TYPE_ANON: {
+    convert: [
+      `(?<=function${$.ss}\\(${$.ss}${$.literal})${$.sp}${$.type_assign}`,
       ':/* cast param */ $<type>',
     ],
   },
 
   DEFINE_TYPE: {
     convert: [
-      `(?<=(const|var)${$.sp}${$.literal})${$.sp}as${$.sp}(?<type>${$.type})(?=${$.ss}[=;])`,
+      `(?<=(const|var)${$.sp}${$.literal})${$.sp}${$.type_assign}(?=${$.ss}[=;])`,
       ':/* cast def */ $<type>',
     ],
   },
