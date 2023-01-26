@@ -58,7 +58,7 @@ export class ModStore {
     this.mods.sort((a, b) =>
       a.getDepsLevel() - b.getDepsLevel()
       || a.dependents.size - b.dependents.size
-      || naturalSort(a.pureName, b.pureName))
+      || naturalSort(a.pureName ?? '', b.pureName ?? ''))
   }
 
   @bind

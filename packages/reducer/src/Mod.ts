@@ -10,8 +10,8 @@ import type { InstalledAddon } from './minecraftinstance'
 
 export type ModdedAddon = InstalledAddon & { mod?: Mod }
 
-export function purify(fileName: string) {
-  return fileName.replace(/(\-patched)?(\.jar|(\.jar)?(\.disabled)+)$/gm, '')
+export function purify(fileName?: string) {
+  return fileName?.replace(/(\-patched)?(\.jar|(\.jar)?(\.disabled)+)$/gm, '')
 }
 
 const { terminal: T } = terminal_kit
@@ -40,7 +40,7 @@ export class Mod {
   }
 
   private isDisabled: boolean
-  public pureName: string
+  public pureName?: string
   public addon?: ModdedAddon
   public dependents = new Set<Mod>()
 
@@ -57,13 +57,13 @@ export class Mod {
     this.isDisabled = !fileName.endsWith('.jar')
     this.pureName = purify(fileName)
 
-    this.addon = Mod.addons.find(a => purify(a.installedFile.FileNameOnDisk) === this.pureName
+    this.addon = Mod.addons.find(a => purify(a.installedFile.fileNameOnDisk) === this.pureName
     )
 
     if (!this.addon) {
       const levArr = _(Mod.addons)
         .map(a => ({
-          lev  : levenshtein.get(purify(a.installedFile.FileNameOnDisk), this.pureName),
+          lev  : levenshtein.get(purify(a.installedFile.fileNameOnDisk) ?? '', this.pureName ?? ''),
           addon: a,
         }
         ))
