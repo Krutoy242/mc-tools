@@ -41,6 +41,11 @@ const argv = yargs(process.argv.slice(2))
     if (!existsSync(f)) throw new Error(`${resolve(f)} doesnt exist. Provide correct path for with blacklist`)
     return loadBlacklist(f)
   })
+  .option('hash', {
+    alias   : 'h',
+    default : true,
+    describe: 'Replace hashed addresses of methods @12abcfff => @xxxxxxxx',
+  })
   .parseSync()
 
 /* =============================================
@@ -67,11 +72,15 @@ function relative(relPath: string) {
   if (unresolvedErrors.length)
     process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)
 
+  let text = unresolvedErrors.join('\n')
+
+  if (!argv.hash) text = text.replace(/@[0-9a-f]{4,8}/g, '@xxxxxxxx')
+
   if (argv.output) {
     mkdirSync(dirname(argv.output), { recursive: true })
-    writeFileSync(argv.output, unresolvedErrors.join('\n'))
+    writeFileSync(argv.output, text)
   }
   else {
-    process.stdout.write(`${unresolvedErrors.join('\n')}\n`)
+    process.stdout.write(`${text}\n`)
   }
 })()
