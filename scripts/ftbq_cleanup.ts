@@ -86,12 +86,13 @@ export function cleanupLangEntries() {
       )
 
       if (!questName) {
-        throw new Error(`Quest name identification error: ${JSON.stringify({
+        console.warn(`Quest name identification error: ${JSON.stringify({
           title: q.title,
           icon : q.icon,
           text : q.text,
           uid  : q.uid,
         }, null, 2)}`)
+        return
       }
 
       if (+langifyTitle(q, `q.${chapName}.${questName}.name`, questWeight)

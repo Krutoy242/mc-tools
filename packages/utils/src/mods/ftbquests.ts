@@ -228,7 +228,7 @@ let names: ReturnType<typeof getItemNames>
 export function getItemName(i?: Item) {
   if (i === undefined) return undefined
   names ??= getItemNames()
-  return (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0]).replace(/§./g, '')
+  return (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0])?.replace(/§./g, '')
 }
 
 /**
