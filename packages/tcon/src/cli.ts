@@ -90,10 +90,8 @@ function parseTweaks(tweaksPath: string) {
   if (!argv.tweaks) return
 
   console.log('[1/2] Loading configs')
-  let newConfig = readFileSync(
-    resolve(argv.mc, 'config/tweakersconstruct.cfg'),
-    'utf8'
-  )
+  const tweakerconstruct_cfg_path = resolve(argv.mc, 'config/tweakersconstruct.cfg')
+  let newConfig = readFileSync(tweakerconstruct_cfg_path, 'utf8')
 
   const invalid = {
     material: new Set<string>(),
@@ -133,6 +131,7 @@ function parseTweaks(tweaksPath: string) {
     }
     process.stdout.write('.')
   }
+  saveText(newConfig, tweakerconstruct_cfg_path)
   process.stdout.write('done\n')
 
   Object.entries(invalid).forEach(([key, set]) => {
