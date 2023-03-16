@@ -6,7 +6,7 @@ import yargs from 'yargs'
 import fast_glob from 'fast-glob'
 import { parse as csvParseSync } from 'csv-parse/sync'
 import type { TweakName, TweakObj } from '.'
-import { genStatsTable, getLookup, parseStats } from '.'
+import { genStatsTable, getLookup, parseStats, parseTraits } from '.'
 
 /* =============================================
 =                Arguments                    =
@@ -87,9 +87,7 @@ function parseTweaks(tweaksPath: string) {
 }
 
 (async () => {
-  if (!argv.tweaks) return
-
-  console.log('[1/2] Loading configs')
+  console.log('[1/3] Loading configs')
   const tweakerconstruct_cfg_path = resolve(argv.mc, 'config/tweakersconstruct.cfg')
   let newConfig = readFileSync(tweakerconstruct_cfg_path, 'utf8')
 
@@ -98,7 +96,7 @@ function parseTweaks(tweaksPath: string) {
     absent  : new Set<string>(),
   }
 
-  process.stdout.write('[2/2] Applying tweaks')
+  process.stdout.write('[2/3] Applying tweaks')
   for (const [tweakGroup, tweakObj] of parseTweaks(argv.tweaks)) {
     const { tweakedMat, existMats } = parseStats(argv.default, tweakGroup, tweakObj)
 
@@ -134,6 +132,18 @@ function parseTweaks(tweaksPath: string) {
   saveText(newConfig, tweakerconstruct_cfg_path)
   process.stdout.write('done\n')
 
+  process.stdout.write('[2/3] Fetching Traits')
+  if (argv.save) {
+    const allTraits = Object.values(
+      parseTraits(argv.default, newConfig)
+    ).map(parts => Object.values(parts).map(s => [...s]))
+      .flat(2)
+    const toSave = [...new Set(allTraits)].join('\n')
+    saveText(toSave, resolve(argv.save, 'Traits.csv'))
+  }
+  process.stdout.write('done\n')
+
+  // Show invalid tweaks
   Object.entries(invalid).forEach(([key, set]) => {
     if (set.size === 0) return
     process.stdout.write(String(

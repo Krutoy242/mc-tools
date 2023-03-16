@@ -7,6 +7,7 @@ export type TweakName =
   | 'Bowstring Stat Tweaks'
   | 'Fletching Stat Tweaks'
   | 'Stat Tweaks'
+  | 'Trait tweaks'
 
 /** Structure of custom tweaking files */
 export interface TweakObj {
@@ -172,6 +173,11 @@ export function genStatsTable(tweakHead: string[], list: TweakedMaterial[]) {
   })
 }
 
+/**
+ * Get table chunk from .cfg file as string
+ * @param tweakGroup name of config
+ * @returns chunk with text in this config
+ */
 export function getLookup(tweakGroup: TweakName) {
   return `(S:"?${tweakGroup}"? <[\\n\\r])([\\r\\s\\S]*?)\\n(     >)`
 }
@@ -213,6 +219,48 @@ export function parseStats(
 
   tweakedMat.sort((a, b) => a.power - b.power)
   return { tweakedMat, existMats: [...existMats] }
+}
+
+/**
+ * take traits from both configs to make table of traits
+ */
+export function parseTraits(
+  tweakers_cfg: string,
+  default_tweakers_cfg: string
+) {
+  const traits: { [name: string]: { [part: string]: Set<string> } } = {}
+  mergeChunk(default_tweakers_cfg)
+  mergeChunk(tweakers_cfg, true)
+
+  function mergeChunk(fileContent: string, rewrite = false) {
+    const rgx = new RegExp(getLookup('Trait tweaks'), 'i')
+    const chunk = fileContent.match(rgx)?.[0]
+    if (!chunk) throw new Error('Can\'t parse tweakerconstruct.cfg')
+
+    const added = new Set<string>()
+
+    chunk.trim().split('\n')
+      .map(l =>
+        l.trim().match(
+          /^(?<mat>[^:\n]+):(?<part>[^:\n]+):(?<traits>.+)$/
+        )?.groups as { mat: string
+          part: string
+          traits: string }
+      )
+      .filter(Boolean)
+      .forEach((o) => {
+        o.traits.split(',').forEach((trait) => {
+          // Tweakerconstruct fully rewrite all materials traits
+          if (rewrite && !added.has(o.mat)) {
+            added.add(o.mat)
+            traits[o.mat] = {}
+          }
+          ((traits[o.mat] ??= {})[o.part] ??= new Set()).add(trait)
+        })
+      })
+  }
+
+  return traits
 }
 
 /*
