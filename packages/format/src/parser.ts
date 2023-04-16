@@ -5,13 +5,14 @@ const capture = '_\\(\'[^\']+\'\\)' as const
 const literal = '(\\w[\\w\\d]*)' as const
 const identifier = `(${capture}|${literal})` as const
 const number = '\\-?\\d+(\\.\\d+)' as const
+const string = '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')' as const
 const type_literal = `${literal}(\\.${literal})*` as const
 const type_post1 = `((\\[${type_literal}?\\])*)` as const
 const type_post2 = `((\\[${type_post1}?\\])*)` as const
 const type_post = `((\\[${type_post2}?\\])*)` as const
 const type = `${type_literal}(${type_post}|${type_post2}|${type_post1})*` as const
 const type_assign = `as${sp}(?<type>${type})` as const
-const expression_1 = `(${number}|${identifier})` as const
+const expression_1 = `(${string}|${number}|${identifier})` as const
 const getter = `(\\[${ss}${expression_1}${ss}\\]|\\.${literal})` as const
 const expression = `${expression_1}${getter}*` as const
 
@@ -23,6 +24,7 @@ export const $ = {
   literal,
   identifier,
   number,
+  string,
   type,
   type_assign,
   getter,
@@ -140,7 +142,7 @@ const conversions: { [name: string]: { convert?: ReplTuple; revert?: ReplTuple }
   },
 
   HAS: {
-    convert: [new RegExp(`(${$.expression})${$.sp}has${$.sp}(${$.expression})`, 'gm'), '$1 in $2'],
+    convert: [new RegExp(`(?<left>${$.expression})${$.sp}has${$.sp}(?<right>${$.expression})`, 'gm'), '$<left> in $<right>'],
 
   },
 
