@@ -1,21 +1,38 @@
-import { exec as _exec, execSync } from 'child_process'
-import { URL, fileURLToPath } from 'url'
-import { promisify } from 'util'
+/**
+ * @file Generates changelogs based on git repo.
+ * @author Krutoy242
+ * @link https://github.com/Krutoy242
+ */
 
-import fs_extra from 'fs-extra'
+/*
+██╗███╗   ███╗██████╗  ██████╗ ██████╗ ████████╗███████╗
+██║████╗ ████║██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██╔════╝
+██║██╔████╔██║██████╔╝██║   ██║██████╔╝   ██║   ███████╗
+██║██║╚██╔╝██║██╔═══╝ ██║   ██║██╔══██╗   ██║   ╚════██║
+██║██║ ╚═╝ ██║██║     ╚██████╔╝██║  ██║   ██║   ███████║
+╚═╝╚═╝     ╚═╝╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
+*/
+
+import { exec as _exec, execSync } from 'node:child_process'
+import { URL, fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
+import { readFileSync, writeFileSync } from 'fs-extra'
 import _ from 'lodash'
 import open from 'open'
 import replace_in_file from 'replace-in-file'
 import yargs from 'yargs'
 
+import { fetchMods } from '../../utils/src/curseforge'
 import { formatRow, getModsIds } from './automation/modsDiff.js'
-import { fetchMods } from './lib/curseforge.js'
 import { generateManifest } from './lib/manifest.js'
-import { defaultHelper, escapeRegex, loadText, saveText } from './lib/utils.js'
 
 /** @typedef {import('./lib/minecraftinstance').InstalledAddon} InstalledAddon */
 
-const { unlink, writeFileSync } = fs_extra
+function escapeRegex(str: string) {
+  return str.replace(/[/\\^$*+?.()|[\]{}]/g, '\\$&')
+}
+
 const exec = promisify(_exec)
 
 const argv = yargs(process.argv.slice(2))
@@ -48,12 +65,13 @@ const changelogComplete = 'CHANGELOG.md'
 const minecraftinstance_old = 'minecraftinstance_old.json'
 const githubNotesPath = 'dev/release/~GitHub_notes.md'
 
-interface Subcategory {
-  symbol: string
-  aliases: string[]
-  isBlacklisted?: boolean
-  subcategory?: Subcategory[]
-}
+/**
+ * @typedef {Object} Subcategory
+ * @property {string} symbol
+ * @property {string[]} aliases
+ * @property {boolean} [isBlacklisted]
+ * @property {Subcategory[]} [subcategory]
+ * */
 
 /*
 ██╗███╗   ██╗██╗████████╗
@@ -84,6 +102,7 @@ export async function init(h = defaultHelper) {
   // Change version in files
   bumpVersionInFiles(nextVersion)
 
+  /** @type {string[]} */
   const changelogLines: string[] = []
 
   changelogLines.push(
@@ -93,7 +112,7 @@ export async function init(h = defaultHelper) {
   const commitMap = getCommitMap(old_version)
 
   const changelogStructure = parseChangelogStructure(
-    loadText(relative('automation/data/changelog_structure.md'))
+    readFileSync(relative('automation/data/changelog_structure.md'), 'utf8')
   )
 
   const blacklistedCategories = filterCommitMap(commitMap, changelogStructure)
@@ -113,7 +132,7 @@ export async function init(h = defaultHelper) {
 
   try {
     await runProcess(
-      `npx mc-icons@latest --silent --treshold=2 --input="${changelogLatest}"`,
+      `esno E:/dev/mc-icons/src/cli.ts "${changelogLatest}" --silent --no-short --modpack=e2ee --treshold=2`,
       () => h.step()
     )
   }
@@ -132,6 +151,11 @@ export async function init(h = defaultHelper) {
       + `Blacklisted: ${blacklistedCategories}`
   )
 }
+
+if (
+  import.meta.url === (await import('node:url')).pathToFileURL(process.argv[1]).href
+)
+  init()
 
 /**
  * @param {typeof defaultHelper} h
@@ -220,10 +244,8 @@ async function getCommitChangeLines(h: typeof defaultHelper, commitMap: { [keySy
   // Iterate fields not mentioned in "annotations"
   let unknownCommits = 0
   for (const [key, arr] of Object.entries(commitMap)) {
-    if (/\w+.*/.test(key)) {
-      unknownCommits++
-      // continue // Skip commits started with words
-    }
+    if (/\w+.*/.test(key)) unknownCommits++// continue // Skip commits started with words
+
     arr.forEach(() => {
       commitLogChanges.push(
         ...stringifySubcat({ symbol: key, aliases: ['❓❓'] })
@@ -258,7 +280,7 @@ async function getModChanges(version, nextVersion, h = defaultHelper) {
   const promises = ['added', 'removed', 'updated'].map(group =>
     fetchMods(
       modsDiff[group].map(
-        ({ addonID }: InstalledAddon) => addonID
+        (/** @type {InstalledAddon} */ { addonID }: InstalledAddon) => addonID
       )
     )
   )
@@ -293,19 +315,19 @@ async function getModChanges(version, nextVersion, h = defaultHelper) {
     ].join('\n')
   }
 
+  await generateManifest(nextVersion)
+
+  /*
   // Generate manifests for later use in changelog generator
   await generateManifest(version, minecraftinstance_old, '_old')
-  await generateManifest(nextVersion)
 
   h.begin('Retrieving mod detailed changelogs', 10)
   const nextModsChangelogsFile = `MODS_${nextVersion}.md`
   const nextModsChangelogsFull = `changelogs/${nextModsChangelogsFile}`
   const chgenCommand
-    = 'java -jar ./ChangelogGenerator-2.0.0-pre10.jar -m'
+    = '"D:/Program Files/Java/jdk-18/bin/java" -jar ModListCreator-4.0.3-fatjar.jar changelog'
     + ' --old="manifest_old.json"'
     + ' --new="manifest.json"'
-    + ' --entries=5'
-    + ' --lines=40'
     + ` --output=${nextModsChangelogsFull}`
 
   const chGenConsoleOut = (data) => {
@@ -335,14 +357,14 @@ async function getModChanges(version, nextVersion, h = defaultHelper) {
   }
 
   // Remove file if there is no changes at all
-  if (loadText(nextModsChangelogsFull).split('\n').length <= 4) {
+  if (readFileSync(nextModsChangelogsFull).split('\n').length <= 4) {
     unlink(nextModsChangelogsFull)
   }
   else {
     makeModsChangelogBetter(nextModsChangelogsFull)
     result += `\n## [> Mods updates detailed.](https://github.com/Krutoy242/Enigmatica2Expert-Extended/blob/master/changelogs/${nextModsChangelogsFile})\n\n`
   }
-
+ */
   return result
 }
 
@@ -350,7 +372,7 @@ async function getModChanges(version, nextVersion, h = defaultHelper) {
  * @param {string} nextModsChangelogsFull
  */
 function makeModsChangelogBetter(nextModsChangelogsFull: string) {
-  const newChangelogText = loadText(nextModsChangelogsFull)
+  const newChangelogText = readFileSync(nextModsChangelogsFull)
     .replace(
       /(?<prefix>^####.*$)(?<body>([\s\S\n](?!\n##)){1,})/gim,
       (/** @type {any[]} */ ...args: any[]) => {
@@ -361,7 +383,7 @@ function makeModsChangelogBetter(nextModsChangelogsFull: string) {
     )
     .replace(/^## (Added|Removed)[\s\n]+(\*\s[^\n]+\n)+/gim, '')
 
-  saveText(newChangelogText, nextModsChangelogsFull)
+  writeFileSync(newChangelogText, nextModsChangelogsFull)
 }
 
 /*
@@ -471,11 +493,11 @@ function getCommitMap(version: string) {
  */
 function parseCommitMessage(commitMessage: string) {
   const match = commitMessage.match(/^(?<symbol>[^a-zA-Z ]+) (?<subject>.+)/ms)
-  const symbol = match?.groups.symbol
-  if (!match || !symbol.trim()) return ['other', commitMessage]
+  const symbol = match?.groups?.symbol
+  if (!match || !symbol?.trim()) return ['other', commitMessage]
 
   // Remove leading spaces frow commit message
-  const trimmedSubject = match.groups.subject
+  const trimmedSubject = match.groups?.subject
     .split('\n')
     .map(l => l.replace(/^ {4}/, ''))
     .filter((l, i) => l || i !== 1)
@@ -529,7 +551,7 @@ function filterCommitMap(commitMap: { [s: string]: string[] }, changelogStructur
       if (!flatStructure[symbol].subcategory?.length) return
 
       const anySubcatName = flatStructure[symbol].subcategory
-        .map(subcat => subcat.aliases)
+        ?.map(subcat => subcat.aliases)
         .flat()
         .map(escapeRegex)
         .join('|')
@@ -615,15 +637,15 @@ function bumpVersionInFiles(nextVersion: string) {
     to   : `$1${nextVersion}$2`,
   })
 
-  saveText(nextVersion, 'dev/version.txt')
+  writeFileSync(nextVersion, 'dev/version.txt')
 }
 
 function appendChangelog() {
   // Determine current version
-  const chLogLatestText = loadText(changelogLatest)
+  const chLogLatestText = readFileSync(changelogLatest)
   const latestVersion = chLogLatestText.match(/^# (.+)\n/m)[1].trim()
 
-  const chLogCmplteText = loadText(changelogComplete)
+  const chLogCmplteText = readFileSync(changelogComplete)
   const headerMatch = chLogCmplteText.match(/([\s\S\n]+?)^# /m)
   const header = headerMatch[1]
 
@@ -644,13 +666,13 @@ function appendChangelog() {
     + chLogLatestText
     + blocks.map(([version, block]) => `# ${version}${block}`).join('\n')
 
-  saveText(newChLog, changelogComplete)
+  writeFileSync(newChLog, changelogComplete)
 
   // GitHub release notes
-  saveText(
+  writeFileSync(
     chLogLatestText.replace(
       /^# .+(\n[\s\n]*)/m,
-      `${loadText('dev/release/GitHub_release_header.md')}$1`
+      `${readFileSync('dev/release/GitHub_release_header.md')}$1`
     ),
     githubNotesPath
   )
