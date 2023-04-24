@@ -1,10 +1,12 @@
 {
   "extends": "@antfu",
   "root": true,
+  "plugins": ["unused-imports"],
   "rules": {
     "antfu/if-newline": "off",
+  //   "unused-imports/no-unused-imports": 2,
     "key-spacing": [ "error", { "align": "colon" } ],
-    "@typescript-eslint/consistent-indexed-object-style": 0,
+  //   "@typescript-eslint/consistent-indexed-object-style": 0,
     "@typescript-eslint/comma-dangle": [
       "error",
       {
@@ -15,13 +17,13 @@
         "objects": "always-multiline"
       }
     ],
-    "no-cond-assign": [
-      "error",
-      "except-parens"
-    ],
-    "nonblock-statement-body-position": [
-      "error",
-      "any"
-    ]
+  //   "no-cond-assign": [
+  //     "error",
+  //     "except-parens"
+  //   ],
+  //   "nonblock-statement-body-position": [
+  //     "error",
+  //     "any"
+  //   ]
   }
 }

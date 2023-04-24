@@ -26,5 +26,10 @@
       "mct-utils/*": ["./packages/utils/src/*"],
     }
   },
+  "references": [
+    {
+      "path": "./packages/utils"
+    }
+  ],
   "exclude": ["**/node_modules", "**/*/dist"]
 }
