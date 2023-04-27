@@ -10,11 +10,12 @@ import { findErrors, parseBlacklist } from '.'
 =                Arguments                    =
 ============================================= */
 const argv = yargs(process.argv.slice(2))
+  .scriptName('mct-errors')
   .alias('h', 'help')
   .detectLocale(false)
-  .scriptName('mct-errors')
   .strict()
   .version()
+  .wrap(null)
   .option('output', {
     alias    : 'o',
     normalize: true,

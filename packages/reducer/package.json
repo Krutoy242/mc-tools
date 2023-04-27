@@ -32,17 +32,20 @@
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
+    "chalk": "^5.2.0",
+    "fast-glob": "^3.2.12",
     "fast-levenshtein": "^3.0.0",
+    "lodash": "^4.17.21",
+    "terminal-kit": "^3.0.0",
     "typescript-memoize": "^1.1.1",
-    "yargs": "^17.6.0"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.13"
+    "@types/yargs": "^17.0.24"
   },
   "keywords": [
     "automation",
     "minecraft",
     "tools"
-  ],
-  "packageManager": "pnpm@7.13.2"
+  ]
 }

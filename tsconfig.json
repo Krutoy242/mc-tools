@@ -6,9 +6,9 @@
     "noLib": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es2020",
+    "target": "ESNext",
+    "module": "ESNext",
     "sourceMap": true,
-    "module": "esnext",
     "jsx": "preserve",
     "strict": true,
     "moduleResolution": "node",
@@ -26,10 +26,5 @@
       "mct-utils/*": ["./packages/utils/src/*"],
     }
   },
-  "references": [
-    {
-      "path": "./packages/utils"
-    }
-  ],
   "exclude": ["**/node_modules", "**/*/dist"]
 }

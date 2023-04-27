@@ -33,19 +33,18 @@
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "chalk": "^5.1.2",
+    "chalk": "^5.2.0",
     "cli-truncate": "^3.1.0",
     "execa": "^6.1.0",
     "string-width": "^5.1.2",
-    "yargs": "^17.6.0"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.13"
+    "@types/yargs": "^17.0.24"
   },
   "keywords": [
     "automation",
     "minecraft",
     "tools"
-  ],
-  "packageManager": "pnpm@7.13.2"
+  ]
 }

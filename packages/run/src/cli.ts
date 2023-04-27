@@ -34,4 +34,4 @@ const argv = yargs(process.argv.slice(2))
 =                                             =
 ============================================= */
 
-await showTerminal(argv)
+;(async () => showTerminal(argv))()

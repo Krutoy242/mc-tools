@@ -33,15 +33,14 @@
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "yargs": "^17.6.0"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.13"
+    "@types/yargs": "^17.0.24"
   },
   "keywords": [
     "automation",
     "minecraft",
     "tools"
-  ],
-  "packageManager": "pnpm@7.13.2"
+  ]
 }
