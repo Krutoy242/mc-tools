@@ -5,31 +5,17 @@
  * @link https://github.com/Krutoy242
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
 import CFV2 from 'curseforge-v2'
+import { readFileSync, readJsonSync, writeJsonSync } from 'fs-extra'
 
 const { CFV2Client } = CFV2
-
-/* ===========================
-  Utils
-=========================== */
-
-export const loadText = (filename: string) => readFileSync(filename, 'utf8')
-export const loadJson = (filename: string) => JSON.parse(loadText(filename))
-export function saveText(txt: string, filename: string) {
-  mkdirSync(dirname(filename), { recursive: true })
-  writeFileSync(filename, txt)
-}
-export function saveObjAsJson(obj: any, filename: string) {
-  saveText(JSON.stringify(obj, null, 2), filename)
-}
 // ===========================
 
 const cachePath = '~cf_cache.json'
 
 const cf = new CFV2Client({
-  apiKey: loadText('secrets/~cf_api_key.txt').trim(),
+  apiKey: readFileSync('secrets/~cf_api_key.txt', 'utf8').trim(),
 })
 
 type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
@@ -38,13 +24,12 @@ type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
  * Get mod information from CurseForge
  * If file was already fetched last `timeout` hours
  * it would be loaded from cache file
- * @param {number[]} modIds
- * @param {number} [timeout] hours of restoring from cache
- * @returns {Promise<CFV2.CF2Addon[]>}
+ * @param modIds
+ * @param timeout hours of restoring from cache
  */
 export async function fetchMods(modIds: number[], timeout = 96): Promise<CFV2.CF2Addon[]> {
   // Create file if not have one
-  if (!existsSync(cachePath)) saveObjAsJson({}, cachePath)
+  if (!existsSync(cachePath)) writeJsonSync(cachePath, {})
 
   const result: CFV2.CF2Addon[] = []
   const fromCFIds: number[] = []
@@ -69,7 +54,7 @@ export async function fetchMods(modIds: number[], timeout = 96): Promise<CFV2.CF
  * @returns {CFV2.CF2Addon | undefined}
  */
 function cachedMod(modID: number, timeout: number): CFV2.CF2Addon | undefined {
-  const cached: ModCached = loadJson(cachePath)[modID]
+  const cached: ModCached = readJsonSync(cachePath)[modID]
   if (!cached) return
 
   const hoursPass
@@ -94,11 +79,11 @@ async function loadFromCF(modIds: number[]): Promise<CFV2.CF2Addon[]> {
   if (!mods || !mods.length)
     throw new Error(`Cant fetch mods for IDs: ${modIds}`)
 
-  const json = loadJson(cachePath)
+  const json = readJsonSync(cachePath)
   mods.forEach((mod) => {
     json[mod.id] = { __lastUpdated: Date.now(), ...mod }
   })
-  saveObjAsJson(json, cachePath)
+  writeJsonSync(json, cachePath)
 
   return mods
 }
