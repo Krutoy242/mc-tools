@@ -1,0 +1,52 @@
+{
+  "name": "mct-curseforge",
+  "version": "0.0.0",
+  "description": "CLI tool and lib for working with CurseForge and its files (`minecraftinstance.json`, `manifest.json`)",
+  "license": "MIT",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+  },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "bin": "./dist/cli.mjs",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "coverage": "vitest run --coverage",
+    "release": "bumpp && npm build && npm publish",
+    "start": "esno src/cli.ts",
+    "test": "vitest"
+  },
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "fs-extra": "^11.1.1",
+    "handlebars": "^4.7.7",
+    "ignore": "^5.2.4",
+    "mc-benchmark": "^1.0.7",
+    "typescript-memoize": "^1.1.1",
+    "yargs": "^17.7.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.1",
+    "@types/yargs": "^17.0.24"
+  },
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools"
+  ]
+}

@@ -1,0 +1,50 @@
+# Mod List
+
+{{#if added}}
+## 🟢 Added mods
+
+Icon | Summary
+----:|:-------
+{{#each added}}
+<img src="
+  {{~{padEnd (replace cf2Addon.logo.thumbnailUrl "256/256" "30/30") 95 post='"'}~}}
+> | 
+  {{~{padStart cf2Addon.name 42 pre='[**'}~}}
+**]({{{padEnd cf2Addon.links.websiteUrl 75 post=')'}~}}
+<sup><sub>
+  {{~padEnd latestFile.fileName 49~}}
+</sub></sup><br>
+  {{~cf2Addon.summary}}
+{{/each}}
+{{/if}}
+{{#if removed}}
+## 🔴 Removed mods
+
+Icon | Summary
+----:|:-------
+{{#each removed}}
+<img src="
+  {{~{padEnd (replace cf2Addon.logo.thumbnailUrl "256/256" "30/30") 95 post='"'}~}}
+> | 
+  {{~{padStart cf2Addon.name 42 pre='[**'}~}}
+**]({{{padEnd cf2Addon.links.websiteUrl 75 post=')'}~}}
+<sup><sub>
+  {{~padEnd latestFile.fileName 49~}}
+</sub></sup><br>
+  {{~cf2Addon.summary}}
+{{/each}}
+{{/if}}
+{{#if updated}}
+## 🟡 Updated mods
+
+Icon | Summary | Old / New
+----:|:--------|:---------
+{{#each updated}}
+<img src="
+  {{~{padEnd (replace now.cf2Addon.logo.thumbnailUrl "256/256" "30/30") 95 post='"'}~}}
+> | 
+  {{~{padStart now.cf2Addon.name 42 pre='[**'}~}}
+**]({{padEnd now.cf2Addon.links.websiteUrl 74 post=')'~}}
+ | <nobr>{{replace was.latestFile.fileName '.jar' ''}}</nobr><br><nobr>{{replace now.latestFile.fileName '.jar' ''}}</nobr>
+{{/each}}
+{{/if}}
