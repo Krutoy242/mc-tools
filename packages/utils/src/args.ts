@@ -1,10 +1,17 @@
-import { existsSync } from 'fs'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import consola from 'consola'
+
 import type { Arguments, Argv, CamelCaseKey, /* InferredOptionType,  */Options } from 'yargs'
 import yargs from 'yargs'
 
 type DemandedOption = Options & {
   errorMessage: string | ((value?: string) => string | undefined)
+}
+
+export function assertPath(f: string, errorText?: string) {
+  if (existsSync(f)) return f
+  throw new Error(`${resolve(f)} ${errorText ?? 'doesnt exist. Provide correct path.'}`)
 }
 
 // type AddOption<T> = <K extends string, O extends DemandedOption>(key: K, options: O) => ExtendedYargs<T & { [key in K]: InferredOptionType<O> }>
@@ -29,7 +36,7 @@ type Parameters<T extends (...args: any[]) => any> = T extends (...args: infer P
 
 type GetArgvT<C extends Argv<any>> = C extends Argv<infer T> ? T : never
 
-type ExtendedArgv<T={}> = {
+type ExtendedArgv<T = {}> = {
   [K in keyof Argv<T>]: Argv<T>[K] extends (...args: any) => Argv<T>
     ? (...args: Parameters<Argv<T>[K]>) => ExtendedArgv<GetArgvT<ReturnType<Argv<T>[K]>>>
     : Argv<T>[K]
