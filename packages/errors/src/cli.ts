@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { dirname, resolve } from 'path'
-import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import fse from 'fs-extra'
 import yargs from 'yargs'
-import { findErrors, parseBlacklist } from '.'
+import { parse } from 'yaml'
+import type { Config } from '.'
+import { findErrors } from '.'
+
+const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
 
 /* =============================================
 =                Arguments                    =
@@ -33,49 +37,33 @@ const argv = yargs(process.argv.slice(2))
       return log
     },
   })
-  .option('blacklist', {
-    alias    : 'b',
-    describe : 'Path to .csv file with regExps',
+  .option('config', {
+    alias    : 'c',
+    describe : 'Path to .yml file with configs',
     normalize: true,
+    default  : relative('config.yml'),
   })
-  .coerce('blacklist', (f: string) => {
+  .coerce('config', (f: string) => {
     if (!existsSync(f)) throw new Error(`${resolve(f)} doesnt exist. Provide correct path for with blacklist`)
-    return loadBlacklist(f)
-  })
-  .option('hash', {
-    alias   : 'h',
-    default : true,
-    describe: 'Replace hashed addresses of methods @12abcfff => @xxxxxxxx',
+    return parse(readFileSync(f, 'utf8')) as Config
   })
   .parseSync()
 
 /* =============================================
 =                                             =
 ============================================= */
-function loadBlacklist(filePath: string) {
-  return parseBlacklist(readFileSync(filePath, 'utf8'))
-}
 
 function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
 }
 
 (async () => {
-  const ignore: RegExp[] = []
-
-  if (argv.blacklist) ignore.push(...argv.blacklist)
-
-  const defBLPath = relative('safe_errors.cfg')
-  if (existsSync(defBLPath)) ignore.push(...loadBlacklist(defBLPath))
-
-  const unresolvedErrors = await findErrors(argv.log, ignore)
+  const unresolvedErrors = await findErrors(argv.log, argv.config as Config)
 
   if (unresolvedErrors.length)
     process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)
 
-  let text = unresolvedErrors.join('\n')
-
-  if (!argv.hash) text = text.replace(/@[0-9a-f]{4,8}/g, '@xxxxxxxx')
+  const text = unresolvedErrors.join('\n')
 
   if (argv.output) {
     mkdirSync(dirname(argv.output), { recursive: true })
