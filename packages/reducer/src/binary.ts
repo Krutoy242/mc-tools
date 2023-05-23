@@ -16,7 +16,7 @@ export async function binary(modsPath: string) {
   const store = new ModStore(modsPath, 'minecraftinstance.json')
 
   while (true) {
-    T('There is ', chalk.green(store.mods.length), 'mods:\n', drawMods(store.mods), '\n')
+    T('There is ', chalk.green(store.mods.length), ' mods:\n', drawMods(store.mods), '\n')
     await disableSecondHalf(store.mods)
 
     T('Now, does ', chalk.red('error'), ' still persist?\n', drawMods(store.mods), '\n')
@@ -69,9 +69,11 @@ function drawMods(mods: Mod[]) {
     .map(chunk => chunk.map(m => m.statusText).join(''))
     .join('\n')
 
-  const keys = Object.keys(style) as any[]
-  return `Enabled and Disabled ${
-    chalk.gray(keys.join(' '))
-  } ${keys.map(k => getStatusText(k, true)).join('')} ${keys.map(k => getStatusText(k, false)).join('')}
+  const keys = (Object.keys(style) as (keyof (typeof style))[])
+
+  return `${
+    keys.map(k => `Enabled ${chalk.gray(k)} ${getStatusText(k, false)}`).join('\n')
+  }\n${
+    keys.map(k => `Disabled ${chalk.gray(k)} ${getStatusText(k, true)}`).join('\n')}
 ${chunks}`
 }

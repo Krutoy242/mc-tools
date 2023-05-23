@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 import fast_glob from 'fast-glob'
 
 export const getFileName = (s: string) => s.replace(/^.*[\\/]/, '')

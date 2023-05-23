@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 import { bind } from './bind'
 import type { MCInstance } from './minecraftinstance'
 import { Mod } from './Mod'
@@ -19,6 +19,9 @@ const mandatoryDeps = {
   'thaumicenergistics-'            : ['Thaumcraft'],
   'ModDirector'                    : ['thaumicenergistics-'],
   'Loot Capacitor Tooltips'        : ['Ender IO'],
+  'Compact Solars'                 : ['Industrial Craft'],
+  'Deep Blood Evolution'           : ['Deep Mob Evolution', 'Blood Magic'],
+  'Ender Storage continuation'     : ['CodeChicken Lib 1.8.+'],
 }
 
 interface ModConfig {
