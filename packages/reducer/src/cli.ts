@@ -7,6 +7,7 @@ import yargs from 'yargs'
 import type { ReduceLevels } from './levels'
 import { levels } from './levels'
 import { binary } from './binary'
+import { interactive } from './interactive'
 
 /* =============================================
 =                Arguments                    =
@@ -50,16 +51,24 @@ yargs(process.argv.slice(2))
         type    : 'number',
         describe: 'Select reduce level without prompt',
       }),
-    handler: (argv) => {
-      levels(argv.mods, argv.path!, argv.index)
+    handler: async (argv) => {
+      await levels(argv.mods, argv.path!, argv.index)
     },
   })
   .command({
     command : 'binary',
     describe: 'Reduce mods in half to find error',
     builder : ya => ya,
-    handler : (argv) => {
-      binary(argv.mods)
+    handler : async (argv) => {
+      await binary(argv.mods)
     },
   })
-  .parseSync()
+  .command({
+    command : 'interactive',
+    describe: 'Pick mods and manipulate them one by one',
+    builder : ya => ya,
+    handler : async (argv) => {
+      await interactive(argv.mods)
+    },
+  })
+  .parse()
