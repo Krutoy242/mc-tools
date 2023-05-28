@@ -11,6 +11,7 @@ import fse from 'fs-extra'
 import type { CF2Addon } from 'curseforge-v2'
 
 import Handlebars from 'handlebars'
+import type { InstalledAddon } from './minecraftinstance.js'
 import type { ModsList } from './index.js'
 import { fetchMods, modList } from './index.js'
 
@@ -18,6 +19,24 @@ const { readFileSync } = fse
 
 function relative(relPath) {
   return fileURLToPath(new URL(relPath, import.meta.url))
+}
+
+// Simple implementation of lodash.get
+// Handles arrays, objects, and any nested combination of the two.
+// Also handles undefined as a valid value - see test case for details.
+// Based on: https://gist.github.com/harish2704/d0ee530e6ee75bad6fd30c98e5ad9dab
+export function deepGet(obj: { [x: string]: any }, query: string | (string | number)[], defaultVal?: any) {
+  query = Array.isArray(query)
+    ? query
+    : query.replace(/(\[(\d)\])/g, '.$2').replace(/^\./, '').split('.')
+
+  if (!(query[0] in obj)) return defaultVal
+
+  obj = obj[query[0]]
+  if (obj && query.length > 1)
+    return deepGet(obj, query.slice(1), defaultVal)
+
+  return obj
 }
 
 export async function generateModsList(
@@ -28,6 +47,7 @@ export async function generateModsList(
     ignore?: string
     template?: string
     verbose?: boolean
+    sort?: string
   }
 ) {
   if (opts?.verbose) process.stdout.write('Get Mods diffs from JSONs ... ')
@@ -44,6 +64,16 @@ export async function generateModsList(
     cursedUnion.forEach(o => cursedMap[o.id] = o)
   }
 
+  // Sorting function
+  let sortKey = opts?.sort ?? 'addonID'
+  let sortDirection = true
+  if (sortKey.startsWith('/')) {
+    sortDirection = false
+    sortKey = sortKey.substring(1)
+  }
+  const sortFn = (a: InstalledAddon, b: InstalledAddon) => deepGet(a, sortKey) - deepGet(b, sortKey)
+  const sort = (a: InstalledAddon, b: InstalledAddon) => sortDirection ? sortFn(a, b) : sortFn(b, a)
+
   for (const key of (Object.keys(diff) as (keyof ModsList)[])) {
     diff[key]?.forEach((o: any) => {
       if (key === 'updated') {
@@ -53,8 +83,8 @@ export async function generateModsList(
       else { o.cf2Addon = cursedMap[o.addonID] }
     })
     if (key === 'updated')
-      diff[key]?.sort((a, b) => a.now.addonID - b.now.addonID)
-    else diff[key]?.sort((a, b) => a.addonID - b.addonID)
+      diff[key]?.sort((a, b) => sort(a.now, b.now))
+    else diff[key]?.sort(sort)
   }
 
   Handlebars.registerHelper('replace', (str, from, to) => String(str).replace(from, to))

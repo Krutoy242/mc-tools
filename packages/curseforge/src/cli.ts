@@ -68,6 +68,12 @@ yargs(process.argv.slice(2))
         alias   : 'o',
         type    : 'string',
         describe: 'Path to output file',
+      })
+      .option('sort', {
+        alias   : 's',
+        type    : 'string',
+        describe: 'Sort field of CurseForge addon. Accept deep path like `cf2Addon.downloadCount`. `/` symbol at start of value change sort order.',
+        default : 'addonID',
       }),
     handler: async (args) => {
       if (args.verbose) console.log('- Generating Modlist -')
