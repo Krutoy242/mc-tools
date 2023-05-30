@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execSync } from 'node:child_process'
 import { postfixTypes } from './parser'
 
 export const declarations
@@ -45,10 +45,5 @@ declare type bool = boolean;
 
 export function lintFile(file: string) {
   const command = `eslint --fix "${file.replace(/\\/g, '/')}"`
-  try {
-    return execSync(command).toString().trim()
-  }
-  catch (error: any) {
-    return 'ERROR: Managable error during linting.'
-  }
+  return execSync(command).toString().trim()
 }

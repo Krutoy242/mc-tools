@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
-import { join, parse, resolve } from 'path'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join, parse, resolve } from 'node:path'
 import yargs from 'yargs'
 import { lintFile } from './eslint'
 import { convert, revert } from '.'
@@ -67,7 +67,16 @@ async function main() {
 
   // Lint & fix
   console.log('executing ESLint --fix')
-  console.log(lintFile(newFilePath))
+  try {
+    console.log(lintFile(newFilePath))
+  }
+  catch (error) {
+    console.log('ERROR: Managable error during linting.:')
+
+    const errStr = (error as any).stdout.toString()
+    console.log(errStr)
+    if (errStr.match(/\d+ error/im)) return
+  }
 
   if (argv.ts) return
 
