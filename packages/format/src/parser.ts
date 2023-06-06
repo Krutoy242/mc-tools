@@ -58,7 +58,7 @@ const conversions: { [name: string]: { convert?: ReplTuple; revert?: ReplTuple }
 
   PRAGMAS: {
     convert: [/^(.*?)#(.*)$/gm, '$1//$2'],
-    revert : [/^\/\/\s*((?:priority|loader|modloaded) .*$)/gm, '#$1'],
+    revert : [/^\/\/\s*((?:priority|loader|modloaded|reloadable|norun) .*$)/gm, '#$1'],
   },
 
   IMPORTS: {

@@ -43,7 +43,7 @@ declare type bool = boolean;
 // CONVERSION_DEBRIS
 `
 
-export function lintFile(file: string) {
-  const command = `eslint --fix "${file.replace(/\\/g, '/')}"`
+export function lintFile(glob: string) {
+  const command = `eslint --fix --quiet "${glob.replace(/\\/g, '/')}"`
   return execSync(command).toString().trim()
 }
