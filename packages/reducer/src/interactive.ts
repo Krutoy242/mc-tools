@@ -19,12 +19,14 @@ export async function interactive(modsPath: string) {
     if (!prefixes[prefix]) prefix = undefined
     const pure = (prefixes[prefix] ? inputString.substring(1) : inputString).toLocaleLowerCase()
 
-    return store.mods
+    const result = store.mods
       .filter(m =>
         m.addon?.name.toLocaleLowerCase().includes(pure)
         || m.fileName.toLocaleLowerCase().includes(pure)
       )
       .map(m => (prefix ?? '') + m.addon?.name ?? m.fileName)
+
+    return (result && result.length) ? result : ''
   }
 
   while (true) {
@@ -53,7 +55,9 @@ export async function interactive(modsPath: string) {
 
     T`\n`
 
-    await prefixes[prefix]?.(selectedMod) ?? selectedMod.disable()
+    await prefixes[prefix]
+      ? prefixes[prefix](selectedMod)
+      : selectedMod.disable()
   }
 }
 
