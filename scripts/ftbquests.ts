@@ -1,4 +1,4 @@
-import { readFileSync, renameSync, writeFileSync } from 'fs'
+import { readFileSync, renameSync, writeFileSync } from 'node:fs'
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
 import type { Byte, Short } from 'ftbq-nbt'
@@ -217,4 +217,3 @@ export function injectLatestLine() {
 }
 
 // injectLatestLine()
-

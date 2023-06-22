@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import fast_glob from 'fast-glob'
 import type { Byte, TagMap } from 'ftbq-nbt'
 import { Int, parse, stringify } from 'ftbq-nbt'
@@ -86,11 +86,16 @@ export type QuestUid = Quest & { uid: string }
 export type Chapter = ChapterConfigUid & { quests: QuestUid[] }
 
 export function parseFtbqSNbt(sNbt: string) {
-  return parse(sNbt
-    .replace(/(\[[BILbil];([\s\n]*\d+(\.\d+)?[BILbil]\b,?)+[\s\n]*\])/gm, (m, r) => {
+  const replaced = sNbt
+    .replace(/(\[[BILbil];([\s\n]*\-?\d+(\.\d+)?[BILbil]\b,?)+[\s\n]*\])/gm, (m, r) => {
       return r.replace(/(\d+)[BILbil]\b/gm, '$1')
     }) // Remove list types
-  , { useBoolean: true })
+  try {
+    return parse(replaced, { useBoolean: true })
+  }
+  catch (error) {
+    console.log('error parsing this :>> ', replaced, error)
+  }
 }
 
 export function stringifyFTBQSNbt(tag: Object) {
