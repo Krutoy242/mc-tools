@@ -62,11 +62,19 @@ export interface QuestReward {
   command?: string
 }
 
-export interface QuestTask {
-  uid: string
-  type: string
+export interface ItemQuestTask {
+  type: 'item'
   items: (Item | { item: string })[]
   ignore_nbt?: Byte
+}
+
+export interface FluidQuestTask {
+  type: 'fluid'
+  fluid: string
+}
+
+export type QuestTask = (ItemQuestTask | FluidQuestTask) & {
+  uid: string
   title?: string
 }
 
@@ -164,8 +172,8 @@ export function getItem(item: Item | string): Item {
 
   return {
     id,
-    Damage: meta && meta != '0' ? new Int(Number(meta)) : undefined, // eslint-disable-line eqeqeq
-    Count : count && count != '1' ? new Int(Number(count)) : undefined, // eslint-disable-line eqeqeq
+    Damage: (meta && meta != '0') ? new Int(Number(meta)) : undefined, // eslint-disable-line eqeqeq
+    Count : (count && count != '1') ? new Int(Number(count)) : undefined, // eslint-disable-line eqeqeq
   }
 }
 
@@ -252,5 +260,5 @@ export function getQuestTaskItem(q: QuestUid) {
  * OR on the title of quest itself
  */
 export function getTaskName(q: QuestUid) {
-  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title
+  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title ?? q?.tasks?.[0]?.fluid
 }
