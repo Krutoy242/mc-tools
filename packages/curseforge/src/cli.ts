@@ -3,6 +3,7 @@
 import yargs from 'yargs'
 import fse from 'fs-extra'
 import { assertPath } from '../../utils/src/args'
+import type { ManifestGenerationOptions } from './manifest'
 import { generateManifest } from './manifest'
 import { generateModsList } from './modsDiff'
 
@@ -44,7 +45,7 @@ yargs(process.argv.slice(2))
     describe: 'Generate manifest.json file',
     handler : async (args) => {
       if (args.verbose) console.log('- Generating manifest -')
-      await generateManifest(args.mcinstance, args as any)
+      await generateManifest(args.mcinstance, args as unknown as ManifestGenerationOptions)
     },
   })
   .command({

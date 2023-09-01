@@ -55,15 +55,21 @@ function formatModList(modsList: ModpackManifestFile[]) {
     .replace(/},{/g, '},\n    {') // new lines
 }
 
+export interface ManifestGenerationOptions {
+  key: string
+  ignore?: string
+  verbose?: boolean
+
+  /** Version of the pack that would be written into manifest file */
+  packVersion?: string
+
+  /** manifest[...].json */
+  postfix?: string
+}
+
 export async function generateManifest(
   mcinstancePath = 'minecraftinstance.json',
-  options: {
-    key: string
-    ignore?: string
-    packVersion?: string
-    postfix?: string
-    verbose?: boolean
-  }
+  options: ManifestGenerationOptions
 ): Promise<{ [key: string]: any }> {
   if (options.verbose) process.stdout.write('Determining version: ')
   const manifestPath = `manifest${options.postfix ?? ''}.json`
