@@ -172,7 +172,7 @@ ignore:
   - 'WARN. \[inventorytweaks\]: Failed to check item tree version: null'
   - 'WARN. \[keywizard\]: Conflicting mod detected, controls gui override may not work'
   - 'WARN. \[keywizard\]: Controls gui override enabled, this may cause problems with other mods'
-  - 'WARN. \[mixin\]: Static binding violation: PRIVATE @Overwrite method func_76615_h in mixins\.phosphor\.json:common\.MixinChunk cannot reduce visibiliy of PUBLIC target method, visibility will be upgraded\.'
+  - 'WARN. \[mixin\]: Static binding violation: PRIVATE @Overwrite method func_76615_h in mixins\.phosphor\.json:common\.MixinChunk .+ cannot reduce visibiliy of PUBLIC target method, visibility will be upgraded\.'
   - 'Unable to read property: material with value: iron for blockstate: .+ic2:te'
   - 'WARN. \[smoothfont\]: Fonts folder "fontfiles" does not exist'
   - 'WARN. \[smoothfont\]: renderChar method might be replaced\. Fix the space width to 4 \(MC default\)\.'
