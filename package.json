@@ -25,7 +25,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "lerna run build",
+    "build": "pnpm run build:readme && pnpm run build:lerna",
+    "build:lerna": "lerna run build",
+    "build:readme": "esno scripts/build/readme.ts",
     "test": "lerna run test",
     "verify": "lerna run verify --stream"
   },
@@ -34,6 +36,9 @@
   "workspaces": [
     "packages/*"
   ],
+  "dependencies": {
+    "handlebars": "^4.7.7"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^0.38.5",
     "@types/eslint": "^8.37.0",

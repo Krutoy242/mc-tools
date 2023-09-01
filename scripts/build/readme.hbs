@@ -1,0 +1,38 @@
+<h1 align="center">{{package.name}}</h1>
+
+{{package.description}}
+
+<!-- extended_desc -->{{extended_desc}}<!-- /extended_desc -->
+
+## Usage
+
+1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+
+2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
+   ```sh
+   > cd C:/Instances/MyModpack
+   ```
+
+3. Run:
+    ```sh
+    > npx {{package.name}} --help
+    ```
+
+{{#if helpOutput}}
+### Options
+
+```shell
+{{helpOutput}}
+```
+{{/if}}
+
+## Author
+
+* https://github.com/Krutoy242
+
+## Other tools
+
+{{#each packages}}
+- [{{package.name}}]({{package.homepage}}/tree/master/packages/{{name}})
+  > {{package.description}}
+{{/each}}
