@@ -8,7 +8,6 @@
 import { fileURLToPath } from 'node:url'
 
 import fse from 'fs-extra'
-import type { CF2Addon } from 'curseforge-v2'
 
 import Handlebars from 'handlebars'
 import type { ModsList } from '../../curseforge/src'
@@ -56,7 +55,7 @@ export async function generateModsList(
   const diff = modList(mcInstancePath, mcInstancePathOld, opts?.ignore)
   if (opts?.verbose) process.stdout.write(' done\n')
 
-  const cursedMap: Record<number, CF2Addon> = {}
+  const cursedMap: Record<number, Awaited<ReturnType<typeof fetchMods>>[number]> = {}
   if (opts?.key) {
     if (opts?.verbose) process.stdout.write('Asking Curseforge API for mods ... ')
     const cursedUnion = await fetchMods(diff.union.map(addon => addon.addonID), opts.key)
