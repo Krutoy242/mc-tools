@@ -44,6 +44,8 @@
   },
   "keywords": [
     "automation",
+    "ci",
+    "cli",
     "minecraft",
     "tools"
   ]

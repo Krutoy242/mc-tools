@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import merge from 'ts-deepmerge'
 
 // @ts-check
@@ -7,7 +7,7 @@ import merge from 'ts-deepmerge'
 const loadJson = f => JSON.parse(readFileSync(f, 'utf8'))
 
 const sourcePackagesJson = resolve(process.argv[2], '../../', 'package.json')
-const resultObj = merge.default(
+const resultObj = merge(
   loadJson(sourcePackagesJson),
   loadJson(process.argv[2])
 )
