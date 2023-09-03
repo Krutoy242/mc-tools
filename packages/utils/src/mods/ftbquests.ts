@@ -248,7 +248,7 @@ export function getItemName(i?: Item) {
  * Get first item in tasks if any
  */
 export function getQuestTaskItem(q: QuestUid) {
-  const firstTask = q?.tasks?.[0]?.items?.[0]
+  const firstTask = (q?.tasks?.[0] as ItemQuestTask)?.items?.[0]
   if (!firstTask) return undefined
   const taskItem = getItem((firstTask as any)?.item ?? firstTask)
   if (taskItem) return taskItem
@@ -260,5 +260,5 @@ export function getQuestTaskItem(q: QuestUid) {
  * OR on the title of quest itself
  */
 export function getTaskName(q: QuestUid) {
-  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title ?? q?.tasks?.[0]?.fluid
+  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
 }

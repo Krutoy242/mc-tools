@@ -38,6 +38,7 @@ type GetArgvT<C extends Argv<any>> = C extends Argv<infer T> ? T : never
 
 type ExtendedArgv<T = {}> = {
   [K in keyof Argv<T>]: Argv<T>[K] extends (...args: any) => Argv<T>
+    // @ts-expect-error hard type
     ? (...args: Parameters<Argv<T>[K]>) => ExtendedArgv<GetArgvT<ReturnType<Argv<T>[K]>>>
     : Argv<T>[K]
 } & ExtendedCommands<T>

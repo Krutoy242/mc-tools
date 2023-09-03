@@ -6,10 +6,9 @@ import { Int, parse } from 'ftbq-nbt'
 import sanitize from 'sanitize-filename'
 import { Lang } from '../packages/utils/src/lang'
 import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
-import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
+import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, parseFtbqSNbt, saveChapter, saveQuest, saveReward, stringifyFTBQSNbt, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 import { naturalSort } from '../packages/utils/src'
-import { parseFtbqSNbt, stringifyFTBQSNbt } from '../packages/utils/src/snbt'
 
 /**
  * Converts FTBQuests reward tables to chests with saved content
