@@ -1,7 +1,7 @@
 {
-  "name": "mct-curseforge",
+  "name": "mct-modlist",
   "version": "0.0.0",
-  "description": "Lib for working with CurseForge using minecraftinstance.json",
+  "description": "Generate .md file with all mods listed",
   "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "homepage": "https://github.com/Krutoy242/mc-tools",
@@ -20,24 +20,16 @@
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "bin": "./dist/cli.mjs",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
-    "coverage": "vitest run --coverage",
     "release": "bumpp && npm build && npm publish",
-    "start": "esno src/cli.ts",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
     "fs-extra": "^11.1.1",
-    "handlebars": "^4.7.7",
-    "ignore": "^5.2.4",
-    "mc-benchmark": "^1.0.7",
-    "typescript-memoize": "^1.1.1",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
@@ -46,7 +38,8 @@
   },
   "keywords": [
     "automation",
-    "lib",
+    "ci",
+    "cli",
     "minecraft",
     "tools"
   ]

@@ -1,13 +1,13 @@
 <h1 align="center">mct-curseforge</h1>
 
-CLI tool and lib for working with CurseForge and its files (`minecraftinstance.json`, `manifest.json`)
+Lib for working with CurseForge using minecraftinstance.json
 
 <!-- extended_desc --><!-- /extended_desc -->
 
 ## Usage
 
 1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
-   
+
 2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
    ```sh
    > cd C:/Instances/MyModpack
@@ -18,23 +18,6 @@ CLI tool and lib for working with CurseForge and its files (`minecraftinstance.j
     > npx mct-curseforge --help
     ```
 
-### Options
-
-```shell
-mct-curseforge [command]
-
-Commands:
-  mct-curseforge manifest  Generate manifest.json file
-  mct-curseforge modlist   Generate .md file with all mods listed
-
-Options:
-      --version     Show version number  [boolean]
-  -v, --verbose     Log working process in stdout  [boolean]
-  -i, --ignore      Path to ignore file similar to .gitignore  [string]
-  -k, --key         Path to file with CurseForge API key  [string] [required]
-  -m, --mcinstance  Path to minecraftinstance.json  [string] [default: "minecraftinstance.json"]
-  -h, --help        Show help  [boolean]
-```
 
 ## Author
 
@@ -46,6 +29,10 @@ Options:
   > Scan debug.log file to find unknown errors
 - [mct-format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format)
   > Format .zs files by using ESLint for typescript
+- [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest)
+  > `manifest.json` generation tool
+- [mct-modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist)
+  > Generate .md file with all mods listed
 - [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer)
   > Partially disable minecraft mods
 - [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run)

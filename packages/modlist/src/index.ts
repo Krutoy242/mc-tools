@@ -11,13 +11,13 @@ import fse from 'fs-extra'
 import type { CF2Addon } from 'curseforge-v2'
 
 import Handlebars from 'handlebars'
-import type { InstalledAddon } from './minecraftinstance.js'
-import type { ModsList } from './index.js'
-import { fetchMods, modList } from './index.js'
+import type { ModsList } from '../../curseforge/src'
+import { fetchMods, modList } from '../../curseforge/src'
+import type { InstalledAddon } from '../../curseforge/src/minecraftinstance'
 
 const { readFileSync } = fse
 
-function relative(relPath) {
+function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
 }
 
@@ -25,7 +25,7 @@ function relative(relPath) {
 // Handles arrays, objects, and any nested combination of the two.
 // Also handles undefined as a valid value - see test case for details.
 // Based on: https://gist.github.com/harish2704/d0ee530e6ee75bad6fd30c98e5ad9dab
-export function deepGet(obj: { [x: string]: any }, query: string | (string | number)[], defaultVal?: any) {
+function deepGet(obj: { [x: string]: any }, query: string | (string | number)[], defaultVal?: any) {
   query = Array.isArray(query)
     ? query
     : query.replace(/(\[(\d)\])/g, '.$2').replace(/^\./, '').split('.')
@@ -39,16 +39,18 @@ export function deepGet(obj: { [x: string]: any }, query: string | (string | num
   return obj
 }
 
+export interface ModListOpts {
+  key: string
+  ignore?: string
+  template?: string
+  verbose?: boolean
+  sort?: string
+}
+
 export async function generateModsList(
   mcInstancePath: string,
   mcInstancePathOld?: string,
-  opts?: {
-    key: string
-    ignore?: string
-    template?: string
-    verbose?: boolean
-    sort?: string
-  }
+  opts?: ModListOpts
 ) {
   if (opts?.verbose) process.stdout.write('Get Mods diffs from JSONs ... ')
   const diff = modList(mcInstancePath, mcInstancePathOld, opts?.ignore)

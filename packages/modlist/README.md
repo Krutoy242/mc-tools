@@ -1,6 +1,6 @@
-<h1 align="center">mct-reducer</h1>
+<h1 align="center">mct-modlist</h1>
 
-Partially disable minecraft mods
+Generate .md file with all mods listed
 
 <!-- extended_desc --><!-- /extended_desc -->
 
@@ -15,23 +15,23 @@ Partially disable minecraft mods
 
 3. Run:
     ```sh
-    > npx mct-reducer --help
+    > npx mct-modlist --help
     ```
 
 ### Options
 
 ```shell
-mct-reducer [command]
-
-Commands:
-  mct-reducer levels <path>  Select reduce level with prompt
-  mct-reducer binary         Reduce mods in half to find error
-  mct-reducer interactive    Pick mods and manipulate them one by one
-
 Options:
-      --version  Show version number                                   [boolean]
-  -m, --mods     Minecraft mods/ folder path          [string] [default: "mods"]
-  -h, --help     Show help                                             [boolean]
+      --version     Show version number  [boolean]
+  -v, --verbose     Log working process in stdout  [boolean]
+  -i, --ignore      Path to ignore file similar to .gitignore
+  -k, --key         Path to file with CurseForge API key  [required]
+  -m, --mcinstance  Path to minecraftinstance.json  [default: "minecraftinstance.json"]
+  -l, --old         Path to old minecraftinstance.json to compare with  [string]
+  -t, --template    Path to Handlebar template
+  -o, --output      Path to output file  [default: "MODS.md"]
+  -s, --sort        Sort field of CurseForge addon. Accept deep path like `cf2Addon.downloadCount`. `/` symbol at start of value flip sort order.  [default: "addonID"]
+  -h, --help        Show help  [boolean]
 ```
 
 ## Author
@@ -48,8 +48,8 @@ Options:
   > Format .zs files by using ESLint for typescript
 - [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest)
   > `manifest.json` generation tool
-- [mct-modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist)
-  > Generate .md file with all mods listed
+- [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer)
+  > Partially disable minecraft mods
 - [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run)
   > Run several shell commands parralely
 - [mct-tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon)

@@ -4,10 +4,9 @@
  * @author Krutoy242
  * @link https://github.com/Krutoy242
  */
-// @ts-check
 
 import fse from 'fs-extra'
-import { fetchMods, loadMCInstanceFiltered } from './index.js'
+import { fetchMods, loadMCInstanceFiltered } from '../../curseforge/src'
 
 const { readFileSync, readJsonSync, writeFileSync } = fse
 
