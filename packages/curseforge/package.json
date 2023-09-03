@@ -20,14 +20,12 @@
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "bin": "./dist/cli.mjs",
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "release": "bumpp && npm build && npm publish",
     "start": "esno src/cli.ts",
     "test": "vitest"
   },

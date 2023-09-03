@@ -26,7 +26,6 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "release": "bumpp && npm build && npm publish",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",

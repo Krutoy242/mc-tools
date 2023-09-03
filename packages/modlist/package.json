@@ -20,11 +20,13 @@
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
+  "bin": "./dist/cli.mjs",
   "files": [
     "dist"
   ],
   "scripts": {
-    "release": "bumpp && npm build && npm publish",
+    "build": "unbuild",
+    "coverage": "vitest run --coverage",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",

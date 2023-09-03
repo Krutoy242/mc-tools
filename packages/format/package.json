@@ -27,7 +27,6 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "release": "bumpp && npm build && npm publish",
     "start": "esno src/cli.ts",
     "test": "vitest"
   },
