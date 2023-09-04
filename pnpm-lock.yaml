@@ -148,6 +148,9 @@ importers:
       handlebars:
         specifier: ^4.7.7
         version: 4.7.7
+      mct-curseforge:
+        specifier: workspace:^
+        version: link:../curseforge
       yargs:
         specifier: ^17.7.1
         version: 17.7.1

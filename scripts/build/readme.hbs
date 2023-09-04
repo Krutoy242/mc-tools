@@ -6,6 +6,13 @@
 
 ## Usage
 
+{{#if (includes package.keywords "cli")}}
+{{~#if (includes package.keywords "lib")}}
+You can use this package either as CLI tool or as library.
+
+To use as CLI tool:
+
+{{/if}}
 1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
 2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
@@ -17,6 +24,7 @@
     ```sh
     > npx {{package.name}} --help
     ```
+{{/if}}
 
 {{#if helpOutput}}
 ### Options
@@ -26,13 +34,34 @@
 ```
 {{/if}}
 
+{{~#if (includes package.keywords "lib")}}
+
+## API
+{{~#if (includes package.keywords "cli")}}
+
+To use as library:
+{{/if}}
+
+1. Install package
+  > ```shell
+  > npm i {{package.name}}
+  > ```
+
+2. Import functions from package.
+  > ```ts
+  > import {...} from "{{package.name}}"
+  > ```
+
+{{typedoc}}
+
+{{~/if}}
+
 ## Author
 
 * https://github.com/Krutoy242
 
 ## Other tools
 
-{{#each packages}}
-- [{{package.name}}]({{package.homepage}}/tree/master/packages/{{name}})
-  > {{package.description}}
-{{/each}}
+{{#each packages}}{{#if (includes package.keywords "cli")}}
+* [{{package.name}}]({{package.homepage}}/tree/master/packages/{{name}}) - {{package.description}}
+{{~/if}}{{/each}}

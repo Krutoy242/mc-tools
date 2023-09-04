@@ -17,6 +17,7 @@
         "objects": "always-multiline"
       }
     ],
+    "n/prefer-global/process": 0
   //   "no-cond-assign": [
   //     "error",
   //     "except-parens"

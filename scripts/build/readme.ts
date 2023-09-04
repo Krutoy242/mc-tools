@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parse } from 'node:path'
 import { promisify } from 'node:util'
-import { exec } from 'node:child_process'
+import { exec, execSync } from 'node:child_process'
 import fast_glob from 'fast-glob'
 import Handlebars from 'handlebars'
 import fse from 'fs-extra'
@@ -36,20 +36,34 @@ async function handleReadme(readmePath: string, i: number) {
     /<!-- extended_desc -->([\s\S\n]*?)<!-- \/extended_desc -->/m
   )?.[1] ?? ''
 
-  const cliPath = `packages/${packages[i].name}/src/cli.ts`
-
+  const pkg = packages[i].package
+  const pkgPath = `packages/${packages[i].name}`
+  const cliPath = `${pkgPath}/src/cli.ts`
   const exist = existsSync(cliPath)
-  log(`${exist ? 'Executing' : 'Writing'} ${chalk.green(packages[i].package.name)}${exist ? chalk.green(' --help') : ''}`)
-  const helpOutput = exist
+  const isCli = pkg.keywords.includes('cli') && exist
+
+  log(`${isCli ? 'Executing' : 'Writing'} ${chalk.green(pkg.name)}${isCli ? chalk.green(' --help') : ''}`)
+  const helpOutput = isCli
     ? (await execP(`esno ${cliPath} --help`)).stdout.trim()
     : undefined
 
   const data = {
-    package : packages[i].package,
+    package : pkg,
     packages: packages.filter((_, j) => j !== i),
     extended_desc,
     helpOutput,
   }
+
+  Handlebars.registerHelper('includes', (obj: Array<any>, element: any) => obj.includes(element))
+
+  const typedocCommand = `npx typedoc ${pkgPath}/src --out docs/${packages[i].name} --plugin typedoc-plugin-markdown --hideBreadcrumbs --hideInPageTOC --disableSources --githubPages false --excludeInternal`
+  Handlebars.registerHelper('typedoc', () => {
+    log(chalk.rgb(20, 90, 10)('docs') + chalk.gray(` for ${packages[i].package.name}`))
+    execSync(typedocCommand)
+    return readFileSync(`docs/${packages[i].name}/modules.md`, 'utf8')
+      .replace(/^# .+\n/gm, '')
+      .replace(/^(#+) /gm, '#$1 ')
+  })
 
   const builder = Handlebars.compile(readFileSync(relative('readme.hbs'), 'utf8'), { noEscape: true })
   const result = builder(data)
