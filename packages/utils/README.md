@@ -6,18 +6,36 @@ Various utilities for Minecraft-Tools monorepo
 
 ## Usage
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
 
-3. Run:
-    ```sh
-    > npx mct-utils --help
-    ```
+## API
+1. Install package
+  > ```shell
+  > npm i mct-utils
+  > ```
 
+2. Import functions from package.
+  > ```ts
+  > import {...} from "mct-utils"
+  > ```
+
+
+### Functions
+
+#### naturalSort
+
+▸ **naturalSort**(`a`, `b`): `number`
+
+##### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `a` | `string` |
+| `b` | `string` |
+
+##### Returns
+
+`number`
 
 ## Author
 
