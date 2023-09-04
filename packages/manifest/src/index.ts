@@ -6,7 +6,7 @@
  */
 
 import fse from 'fs-extra'
-import { fetchMods, loadMCInstanceFiltered } from '../../curseforge/src'
+import { fetchMods, loadMCInstanceFiltered } from 'mct-curseforge'
 
 const { readFileSync, readJsonSync, writeFileSync } = fse
 
@@ -62,7 +62,7 @@ export interface ManifestGenerationOptions {
   /** Version of the pack that would be written into manifest file */
   packVersion?: string
 
-  /** manifest[...].json */
+  /** manifest[postfix].json */
   postfix?: string
 }
 
@@ -81,7 +81,7 @@ export async function generateManifest(
   if (options.verbose) process.stdout.write(`${options.packVersion || 'unknown'}\n`)
 
   if (options.verbose) process.stdout.write('Loading minecraftinstance.json ... ')
-  const addonsListUnfiltered = loadMCInstanceFiltered(mcinstancePath, options.ignore).installedAddons
+  const addonsListUnfiltered = loadMCInstanceFiltered(readJsonSync(mcinstancePath), options.ignore).installedAddons
   if (options.verbose) process.stdout.write(`loaded, ${addonsListUnfiltered.length} addons\n`)
 
   if (options.verbose) process.stdout.write('Loading mods meta from CurseForge ... ')

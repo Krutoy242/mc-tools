@@ -2,6 +2,7 @@
 
 import yargs from 'yargs'
 import fse from 'fs-extra'
+import type { Minecraftinstance } from 'mct-curseforge/minecraftinstance'
 import { assertPath } from '../../utils/src/args'
 import { generateModsList } from '.'
 
