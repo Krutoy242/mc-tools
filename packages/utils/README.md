@@ -25,19 +25,11 @@ Various utilities for Minecraft-Tools monorepo
 
 ## Other tools
 
-- [mct-curseforge](https://github.com/Krutoy242/mc-tools/tree/master/packages/curseforge)
-  > Lib for working with CurseForge using minecraftinstance.json
-- [mct-errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors)
-  > Scan debug.log file to find unknown errors
-- [mct-format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format)
-  > Format .zs files by using ESLint for typescript
-- [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest)
-  > `manifest.json` generation tool
-- [mct-modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist)
-  > Generate .md file with all mods listed
-- [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer)
-  > Partially disable minecraft mods
-- [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run)
-  > Run several shell commands parralely
-- [mct-tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon)
-  > Tweaks Tinker Constructs' materials with csv tables
+
+* [mct-errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
+* [mct-format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format) - Format .zs files by using ESLint for typescript
+* [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
+* [mct-modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
+* [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
+* [mct-tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
