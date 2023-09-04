@@ -38,21 +38,47 @@ function deepGet(obj: { [x: string]: any }, query: string | (string | number)[],
   return obj
 }
 
+/**
+ * Options for mod list generator
+ */
 export interface ModListOpts {
+  /** CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys */
   key: string
+
+  /**
+   * .gitignore-like file content with mods to ignore.
+   * @see modList
+   */
   ignore?: string
+
+  /** Custom Handlebars template to generate result */
   template?: string
+
+  /** Output information about working process in stdout */
   verbose?: boolean
+
+  /**
+   * Sort field of CurseForge addon.
+   * Accept deep path like `cf2Addon.downloadCount`.
+   * `/` symbol at start of value flip sort order.
+   */
   sort?: string
 }
 
+/**
+ * Generate modlist for given `minecraftinstance.json` file
+ * @param mcInstanceFresh Json object from `minecraftinstance.json` of current version
+ * @param mcInstanceOld Json object from `minecraftinstance.json` of previous version.
+ * @param opts Options for mod list generator
+ * @returns Markdown file based on given Handlebars template
+ */
 export async function generateModsList(
-  mcInstancePath: string,
-  mcInstancePathOld?: string,
+  mcInstanceFresh: Minecraftinstance,
+  mcInstanceOld?: Minecraftinstance,
   opts?: ModListOpts
 ) {
   if (opts?.verbose) process.stdout.write('Get Mods diffs from JSONs ... ')
-  const diff = modList(mcInstancePath, mcInstancePathOld, opts?.ignore)
+  const diff = modList(mcInstanceFresh, mcInstanceOld, opts?.ignore)
   if (opts?.verbose) process.stdout.write(' done\n')
 
   const cursedMap: Record<number, Awaited<ReturnType<typeof fetchMods>>[number]> = {}
@@ -75,7 +101,7 @@ export async function generateModsList(
   const sortFn = (a: InstalledAddon, b: InstalledAddon) => deepGet(a, sortKey) - deepGet(b, sortKey)
   const sort = (a: InstalledAddon, b: InstalledAddon) => sortDirection ? sortFn(a, b) : sortFn(b, a)
 
-  for (const key of (Object.keys(diff) as (keyof ModsList)[])) {
+  for (const key of (Object.keys(diff) as (keyof ModsComparsion)[])) {
     diff[key]?.forEach((o: any) => {
       if (key === 'updated') {
         o.now.cf2Addon = cursedMap[o.now.addonID]
@@ -88,9 +114,9 @@ export async function generateModsList(
     else diff[key]?.sort(sort)
   }
 
-  Handlebars.registerHelper('replace', (str, from, to) => String(str).replace(from, to))
-  Handlebars.registerHelper('padEnd', (str, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padEnd(pad))
-  Handlebars.registerHelper('padStart', (str, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padStart(pad))
+  Handlebars.registerHelper('replace', (str: string, from, to) => String(str).replace(from, to))
+  Handlebars.registerHelper('padEnd', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padEnd(pad))
+  Handlebars.registerHelper('padStart', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padStart(pad))
 
   const builder = Handlebars.compile(opts?.template ?? readFileSync(relative('default.hbs'), 'utf8'))
 

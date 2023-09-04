@@ -6,6 +6,10 @@ Generate .md file with all mods listed
 
 ## Usage
 
+You can use this package either as CLI tool or as library.
+
+To use as CLI tool:
+
 1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
 2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
@@ -23,16 +27,66 @@ Generate .md file with all mods listed
 ```shell
 Options:
       --version     Show version number  [boolean]
+  -k, --key         Path to file with CurseForge API key.
+                    Get one at https://console.curseforge.com/?#/api-keys.
+                    If omitted, environment variable `CURSE_FORGE_API_KEY` would be used instead.  [string]
+  -i, --ignore      Path to ignore file similar to .gitignore.
+                    Used to exclude mods that used only in dev environment and should not be included in mod list.
+                    `ignore` file content example: "mods/tellme-*"  [string]
+  -m, --mcinstance  Path to instance json.
+                    This json file generates by CurseForge launcher.
+                    It located at the root of Minecraft instance folder.  [default: "minecraftinstance.json"]
+  -l, --old         Path to old instance json to compare with.
+                    This option is useful when you want to make changelog and compare two modpack versions.  [string]
+  -t, --template    Path to Handlebar template.
+                    See `default.hbs` for more info.
+  -s, --sort        Sort field of CurseForge addon.
+                    Accept deep path like `cf2Addon.downloadCount`.
+                    `/` symbol at start of value flip sort order.  [default: "addonID"]
+  -o, --output      Path to output file.  [default: "MODS.md"]
   -v, --verbose     Log working process in stdout  [boolean]
-  -i, --ignore      Path to ignore file similar to .gitignore
-  -k, --key         Path to file with CurseForge API key  [required]
-  -m, --mcinstance  Path to minecraftinstance.json  [default: "minecraftinstance.json"]
-  -l, --old         Path to old minecraftinstance.json to compare with  [string]
-  -t, --template    Path to Handlebar template
-  -o, --output      Path to output file  [default: "MODS.md"]
-  -s, --sort        Sort field of CurseForge addon. Accept deep path like `cf2Addon.downloadCount`. `/` symbol at start of value flip sort order.  [default: "addonID"]
   -h, --help        Show help  [boolean]
 ```
+
+## API
+To use as library:
+
+1. Install package
+  > ```shell
+  > npm i mct-modlist
+  > ```
+
+2. Import functions from package.
+  > ```ts
+  > import {...} from "mct-modlist"
+  > ```
+
+
+### Interfaces
+
+- [ModListOpts](interfaces/ModListOpts.md)
+
+### Functions
+
+#### generateModsList
+
+▸ **generateModsList**(`mcInstanceFresh`, `mcInstanceOld?`, `opts?`): `Promise`<`string`\>
+
+Generate modlist for given `minecraftinstance.json` file
+
+##### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `mcInstanceFresh` | `Minecraftinstance` | Json object from `minecraftinstance.json` of current version |
+| `mcInstanceOld?` | `Minecraftinstance` | Json object from `minecraftinstance.json` of previous version. |
+| `opts?` | [`ModListOpts`](interfaces/ModListOpts.md) | Options for mod list generator |
+
+##### Returns
+
+`Promise`<`string`\>
+
+Markdown file based on given Handlebars template
 
 ## Author
 
