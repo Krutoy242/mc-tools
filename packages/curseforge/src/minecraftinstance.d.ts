@@ -1,4 +1,4 @@
-export interface RootObject {
+export interface Minecraftinstance {
   baseModLoader: BaseModLoader;
   isUnlocked: boolean;
   javaArgsOverride?: any;

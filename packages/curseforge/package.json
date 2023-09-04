@@ -26,7 +26,6 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "start": "esno src/cli.ts",
     "test": "vitest"
   },
   "types": "./dist/index.d.ts",

@@ -10,21 +10,21 @@ import fse from 'fs-extra'
 import type { Ignore } from 'ignore'
 import ignore from 'ignore'
 
-import type { InstalledAddon, RootObject } from './minecraftinstance'
+import type { InstalledAddon, Minecraftinstance } from './minecraftinstance'
 
 const { readJsonSync, writeJsonSync } = fse
-
 const { CFV2Client } = CFV2
-// ===========================
-
 type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
 
 /**
- * Get mod information from CurseForge
- * If file was already fetched last `timeout` hours
- * it would be loaded from cache file
- * @param modIds
- * @param timeout hours of restoring from cache
+ * Get mod information from CurseForge, such as name, summary, download count, etc.
+ * @param modIds IDs of mods you want to fetch. `[32274, 59751, 59816]`
+ * @param cfApiKey CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
+ * @param timeout If file was already fetched last `timeout` hours, it would be loaded from cache file
+ * @param doLogging Log into stdout
+ * @returns Object with information about mods
+ * @example const cfMods = await fetchMods([32274, 59751, 59816], key)
+ * console.log(cfMods.map(m => m.name)) // ["JourneyMap", "Forestry", "Random Things"]
  */
 export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96, doLogging = false): Promise<CFV2.CF2Addon[]> {
   const result: CFV2.CF2Addon[] = []
@@ -53,11 +53,6 @@ export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96
   )
 }
 
-/**
- * @param {number} modID
- * @param {number} timeout
- * @returns {CFV2.CF2Addon | undefined}
- */
 function cachedMod(cached: ModCached, timeout: number): CFV2.CF2Addon | undefined {
   if (!cached) return
 
@@ -72,10 +67,6 @@ function cachedMod(cached: ModCached, timeout: number): CFV2.CF2Addon | undefine
 
 let cf: CFV2.CFV2Client
 
-/**
- * @param {number[]} modIds
- * @returns {Promise<CFV2.CF2Addon[]>}
- */
 async function loadFromCF(modIds: number[], cfApiKey: string): Promise<CFV2.CF2Addon[]> {
   if (!modIds.length) return []
 
@@ -98,9 +89,7 @@ function keyBy<T extends { [key: string]: any }>(arr: T[], key: keyof T) {
 
 type IgnoreArgument = Parameters<Ignore['add']>[0]
 
-function getIgnoredModIds(mciPath: string, ignoreArg?: IgnoreArgument) {
-  const mci: RootObject = readJsonSync(mciPath)
-
+function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument) {
   const ignoredByUnavaliable = mci.installedAddons.filter(
     // Unavailable like Optifine or Nutrition
     addon => !addon.installedFile?.isAvailable
@@ -119,40 +108,79 @@ function getIgnoredModIds(mciPath: string, ignoreArg?: IgnoreArgument) {
 }
 
 /**
- * Load minecraftinstance.json file from disk,
- * filter devonly mods and return typed
+ * Load minecraftinstance.json file from disk, filtering unavailable or ignored mods
+ * @param mci Json object of `minecraftinstance.json`
+ * @param ignore .gitignore-like file content with mods to ignore.
+ *
+ * For example, `ignore` contains 3 lines:
+ * ```ts
+ * const mci = loadMCInstanceFiltered(mciPath, `
+ *   scripts/debug
+ *   config/FBP/*
+ *   mods/tellme-*
+ * `)
+ * ```
+ * Since it have line `mods/tellme-*` in it, mod `tellme-1.12.2-0.7.0.jar` would be removed from result.
+ * @returns Same `minecraftinstance` object but without unavailable on CF mods like Optifine or Nutrition.
  */
-export function loadMCInstanceFiltered(filePath: string, ignoreArg?: IgnoreArgument) {
-  const mcinstance: RootObject = readJsonSync(filePath)
-  const ignoredModIds = getIgnoredModIds(filePath, ignoreArg)
+export function loadMCInstanceFiltered(mci: Minecraftinstance, ignore?: IgnoreArgument) {
+  const ignoredModIds = getIgnoredModIds(mci, ignore)
 
-  mcinstance.installedAddons = mcinstance.installedAddons.filter(
+  mci.installedAddons = mci.installedAddons.filter(
     a => !ignoredModIds?.has(a.addonID)
   )
 
-  return mcinstance
+  return mci
 }
 
-export interface ModsList {
+/**
+ * Mods list that always present in mc instance
+ * @internal
+ */
+export interface ModsUnion {
+  /** Union of all mods in both instances */
   union: InstalledAddon[]
+}
+
+/**
+ * Result of comparsion of two `minecraftinstance`s
+ * @internal
+ */
+export interface ModsComparsion extends ModsUnion {
+  /** Intersection, mods that present in both instances */
   both?: InstalledAddon[]
+
+  /** Mods that exist in new instance, but absent in old */
   added?: InstalledAddon[]
+
+  /** Mods that exist in old, but absent in new */
   removed?: InstalledAddon[]
+
+  /** Array of mods with same ID but different versions */
   updated?: { was: InstalledAddon; now: InstalledAddon }[]
 }
 
 /**
  * Compare two minecraftinstance.json files and output differences between them
+ * @param fresh Json object from `minecraftinstance.json` of current version
+ * @param old   Json object from `minecraftinstance.json` of previous version.
+ * @param ignore .gitignore-like file content with mods to ignore.
+ * Useful for dev-only mods that should not be included in result.
+ * @returns Result of comparsion.
+ * if `old` is omited, returns only `union` field.
  */
-export function modList(
-  mcInstanceNew: string,
-  mcInstancePathOld?: string,
-  ignoreArg?: IgnoreArgument
-): ModsList {
-  const B = loadMCInstanceFiltered(mcInstanceNew, ignoreArg).installedAddons
-  if (!mcInstancePathOld) return { union: B }
+// export function modList<T extends Minecraftinstance | undefined = undefined>(
+//   fresh: Minecraftinstance,
+//   old?: T,
+//   ignore?: IgnoreArgument
+// ): T extends undefined ? { union: InstalledAddon[] } : ModsComparsion {
+export function modList(fresh: Minecraftinstance, old?: undefined, ignore?: IgnoreArgument): ModsUnion
+export function modList(fresh: Minecraftinstance, old?: Minecraftinstance, ignore?: IgnoreArgument): ModsComparsion
+export function modList(fresh: Minecraftinstance, old?: Minecraftinstance | undefined, ignore?: IgnoreArgument): ModsComparsion | ModsUnion {
+  const B = loadMCInstanceFiltered(fresh, ignore).installedAddons
+  if (!old) return { union: B }
 
-  const A = loadMCInstanceFiltered(mcInstancePathOld, ignoreArg).installedAddons
+  const A = loadMCInstanceFiltered(old, ignore).installedAddons
 
   const map_A = keyBy(A, 'addonID')
   const map_B = keyBy(B, 'addonID')
@@ -169,3 +197,9 @@ export function modList(
   }
   return result
 }
+
+/*
+const a = modList({} as any)
+const b = modList({} as any, {} as Minecraftinstance)
+const c = modList({} as any, undefined)
+ */
