@@ -1,11 +1,9 @@
 # Mod List
 
-{{#if added}}
-## 🟢 Added mods
-
+{{#*inline "list"}}
 Icon | Summary
 ----:|:-------
-{{#each added}}
+{{#each this}}
 <img src="
   {{~{padEnd (replace cf2Addon.logo.thumbnailUrl "256/256" "30/30") 95 post='"'}~}}
 > | 
@@ -16,23 +14,29 @@ Icon | Summary
 </sub></sup><br>
   {{~cf2Addon.summary}}
 {{/each}}
+-----------
+
+{{/inline}}
+
+{{! If no comparsion information provided, fallback to single list of mods}}
+{{~#if added}}{{else}}
+  {{~#if removed}}{{else}}
+    {{~#if updated}}{{else}}
+      {{~> list union}}
+    {{/if}}
+  {{/if}}
+{{/if}}
+
+
+{{#if added}}
+## 🟢 Added mods
+
+{{> list added}}
 {{/if}}
 {{#if removed}}
 ## 🔴 Removed mods
 
-Icon | Summary
-----:|:-------
-{{#each removed}}
-<img src="
-  {{~{padEnd (replace cf2Addon.logo.thumbnailUrl "256/256" "30/30") 95 post='"'}~}}
-> | 
-  {{~{padStart cf2Addon.name 42 pre='[**'}~}}
-**]({{{padEnd cf2Addon.links.websiteUrl 75 post=')'}~}}
-<sup><sub>
-  {{~padEnd latestFile.fileName 49~}}
-</sub></sup><br>
-  {{~cf2Addon.summary}}
-{{/each}}
+{{> list removed}}
 {{/if}}
 {{#if updated}}
 ## 🟡 Updated mods
