@@ -1,5 +1,5 @@
 {
-  "name": "mct-run",
+  "name": "@mct/run",
   "version": "0.0.0",
   "description": "Run several shell commands parralely",
   "license": "MIT",

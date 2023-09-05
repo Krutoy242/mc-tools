@@ -10,9 +10,9 @@ import { fileURLToPath } from 'node:url'
 import fse from 'fs-extra'
 
 import Handlebars from 'handlebars'
-import type { ModsComparsion } from 'mct-curseforge'
-import { fetchMods, modList } from 'mct-curseforge'
-import type { InstalledAddon, Minecraftinstance } from 'mct-curseforge/minecraftinstance'
+import type { ModsComparsion } from '@mct/curseforge'
+import { fetchMods, modList } from '@mct/curseforge'
+import type { InstalledAddon, Minecraftinstance } from '@mct/curseforge/minecraftinstance'
 
 const { readFileSync } = fse
 

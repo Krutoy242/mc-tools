@@ -1,5 +1,5 @@
 {
-  "name": "mct-modlist",
+  "name": "@mct/modlist",
   "version": "0.0.0",
   "description": "Generate .md file with all mods listed",
   "license": "MIT",
@@ -31,9 +31,9 @@
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
+    "@mct/curseforge": "workspace:*",
     "fs-extra": "^11.1.1",
     "handlebars": "^4.7.7",
-    "mct-curseforge": "workspace:^",
     "yargs": "^17.7.1"
   },
   "devDependencies": {

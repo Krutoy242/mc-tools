@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { dirname, join, parse, resolve } from 'path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, parse, resolve } from 'node:path'
 import yargs from 'yargs'
 import fast_glob from 'fast-glob'
 import { parse as csvParseSync } from 'csv-parse/sync'
@@ -19,7 +19,7 @@ function assertPath(f: string, errorText?: string) {
 const argv = yargs(process.argv.slice(2))
   .alias('h', 'help')
   .detectLocale(false)
-  .scriptName('mct-tcon')
+  .scriptName('@mct/tcon')
   .strict()
   .version()
   .wrap(null)

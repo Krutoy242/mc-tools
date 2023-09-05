@@ -14,7 +14,7 @@ const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
 =                Arguments                    =
 ============================================= */
 const argv = yargs(process.argv.slice(2))
-  .scriptName('mct-errors')
+  .scriptName('@mct/errors')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()

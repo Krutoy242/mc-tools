@@ -1,4 +1,4 @@
-<h1 align="center">mct-format</h1>
+<h1 align="center">@mct/format</h1>
 
 Format .zs files by using ESLint for typescript
 
@@ -15,13 +15,13 @@ Format .zs files by using ESLint for typescript
 
 3. Run:
     ```sh
-    > npx mct-format --help
+    > npx @mct/format --help
     ```
 
 ### Options
 
 ```shell
-mct-format <files>
+@mct/format <files>
 
 Positionals:
   files  Path to file / files for formatting  [string]
@@ -40,9 +40,9 @@ Options:
 ## Other tools
 
 
-* [mct-errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
-* [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
-* [mct-modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
-* [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
-* [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
-* [mct-tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
+* [@mct/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
+* [@mct/manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
+* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mct/reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
+* [@mct/run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
+* [@mct/tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables

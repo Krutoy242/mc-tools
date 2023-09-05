@@ -1,5 +1,5 @@
 {
-  "name": "mct-tcon",
+  "name": "@mct/tcon",
   "version": "0.0.0",
   "description": "Tweaks Tinker Constructs' materials with csv tables",
   "license": "MIT",

@@ -1,9 +1,9 @@
 ###############################
-# Configuration for mct-errors
+# Configuration for @mct/errors
 ###############################
 
 # If you want to make modpack-related config, copy and modify this one
-# and feed it to mct-errors with argument
+# and feed it to @mct/errors with argument
 
 # All strings except replace.to is JS RegExes
 

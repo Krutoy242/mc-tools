@@ -1,4 +1,4 @@
-<h1 align="center">mct-modlist</h1>
+<h1 align="center">@mct/modlist</h1>
 
 Generate .md file with all mods listed
 
@@ -19,7 +19,7 @@ To use as CLI tool:
 
 3. Run:
     ```sh
-    > npx mct-modlist --help
+    > npx @mct/modlist --help
     ```
 
 ### Options
@@ -53,12 +53,12 @@ To use as library:
 
 1. Install package
   > ```shell
-  > npm i mct-modlist
+  > npm i @mct/modlist
   > ```
 
 2. Import functions from package.
   > ```ts
-  > import {...} from "mct-modlist"
+  > import {...} from "@mct/modlist"
   > ```
 
 
@@ -95,9 +95,9 @@ Markdown file based on given Handlebars template
 ## Other tools
 
 
-* [mct-errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
-* [mct-format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format) - Format .zs files by using ESLint for typescript
-* [mct-manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
-* [mct-reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
-* [mct-run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
-* [mct-tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
+* [@mct/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
+* [@mct/format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format) - Format .zs files by using ESLint for typescript
+* [@mct/manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
+* [@mct/reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
+* [@mct/run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
+* [@mct/tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables

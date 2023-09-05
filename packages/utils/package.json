@@ -1,5 +1,5 @@
 {
-  "name": "mct-utils",
+  "name": "@mct/utils",
   "version": "0.0.0",
   "description": "Various utilities for Minecraft-Tools monorepo",
   "license": "MIT",

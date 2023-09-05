@@ -1,5 +1,5 @@
 {
-  "name": "mct-format",
+  "name": "@mct/format",
   "version": "0.0.0",
   "description": "Format .zs files by using ESLint for typescript",
   "license": "MIT",

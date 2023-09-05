@@ -23,8 +23,8 @@
     "skipDefaultLibCheck": true,
     "outDir": "dist",
     "paths": {
-      "mct-utils/*": ["./packages/utils/src/*"],
-      "mct-curseforge/*": ["./packages/curseforge/src/*"],
+      "@mct/utils/*": ["./packages/utils/src/*"],
+      "@mct/curseforge/*": ["./packages/curseforge/src/*"],
     }
   },
   "exclude": ["**/node_modules", "**/*/dist"]

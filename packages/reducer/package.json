@@ -1,5 +1,5 @@
 {
-  "name": "mct-reducer",
+  "name": "@mct/reducer",
   "version": "0.0.0",
   "description": "Partially disable minecraft mods",
   "license": "MIT",

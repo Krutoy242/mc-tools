@@ -8,7 +8,7 @@ import { generateManifest } from '.'
 const { readFileSync } = fse
 
 const args = yargs(process.argv.slice(2))
-  .scriptName('mct-curseforge')
+  .scriptName('@mct/curseforge')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()
