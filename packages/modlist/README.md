@@ -46,6 +46,25 @@ Options:
   -o, --output      Path to output file.  [default: "MODS.md"]
   -v, --verbose     Log working process in stdout  [boolean]
   -h, --help        Show help  [boolean]
+
+Examples:
+  npx @mct/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
+                                                     Environment must have variable CURSE_FORGE_API_KEY.
+  npx @mct/modlist --key=~secret_api_key.txt         Create mod list,
+                                                     but take fey from secret_api_key.txt file
+  npx @mct/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
+                                                     that should not present in list.
+  npx @mct/modlist --mcinstance=mci.json             Generate mod list based non-default
+                                                     named minecraftinstance.json file.
+  npx @mct/modlist --old=minecraftinstance_old.json  Generate comparsion of two modpacks / modpack versions.
+                                                     Useful for generating modpack changelog.
+  npx @mct/modlist --template=fancy.hbs              Use custom template for generating list.
+
+  npx @mct/modlist --sort=/cf2Addon.downloadCount    Sort mods in resulted list by their download count
+                                                     instead of by default ID.
+  npx @mct/modlist --output=modlist.md               Rename output list instead of default MODS.md
+
+  npx @mct/modlist --verbose                         Write some information in terminal
 ```
 
 ## API

@@ -77,7 +77,24 @@ Accept deep path like \`cf2Addon.downloadCount\`.
     describe: chalk.gray('Log working process in stdout'),
   })
 
-// .example(chalk.green('npx $0 something'), chalk.gray('Do something'))
+  .example(chalk.green`npx $0`, chalk.gray`If executed from minecraft folder, generate MODS.md file in same folder.
+Environment must have variable CURSE_FORGE_API_KEY.`)
+  .example(chalk.green`npx $0 --key=~secret_api_key.txt`, chalk.gray`Create mod list,
+but take fey from secret_api_key.txt file`)
+  .example(chalk.green`npx $0 --ignore=devonly.ignore`, chalk.gray`Use .gitignore-like file to exclude mods,
+that should not present in list.`)
+  .example(chalk.green`npx $0 --mcinstance=mci.json`, chalk.gray`Generate mod list based non-default
+named minecraftinstance.json file.`)
+  .example(chalk.green`npx $0 --old=minecraftinstance_old.json`, chalk.gray`Generate comparsion of two modpacks / modpack versions.
+Useful for generating modpack changelog.`)
+  .example(chalk.green`npx $0 --template=fancy.hbs`, chalk.gray`Use custom template for generating list.
+`)
+  .example(chalk.green`npx $0 --sort=/cf2Addon.downloadCount`, chalk.gray`Sort mods in resulted list by their download count
+instead of by default ID.`)
+  .example(chalk.green`npx $0 --output=modlist.md`, chalk.gray`Rename output list instead of default MODS.md
+`)
+  .example(chalk.green`npx $0 --verbose`, chalk.gray`Write some information in terminal
+`)
 
   .updateStrings(Object.fromEntries((
     ['Options:', 'Examples:']
@@ -88,8 +105,10 @@ Accept deep path like \`cf2Addon.downloadCount\`.
 
 args.key ??= process.env.CURSE_FORGE_API_KEY as string
 
-if (!args.key)
-  throw new Error('Provide Curse Forge API key with --key cli option or with CURSE_FORGE_API_KEY')
+if (!args.key) {
+  console.error(chalk.red`Provide Curse Forge API key with ` + chalk.yellow`--key` + chalk.red` cli option or with ` + chalk.yellow`CURSE_FORGE_API_KEY` + chalk.red` environment variable`)
+  process.exit(1)
+}
 
 if (args.verbose) console.log('- Generating Modlist -')
 generateModsList(
