@@ -31,7 +31,14 @@ export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96
   const fromCFIds: number[] = []
 
   const cachePath = '~cf_cache.json'
-  const cacheObj: Record<number, ModCached> = readJsonSync(cachePath)
+  let cacheObj: Record<number, ModCached>
+
+  try {
+    cacheObj = readJsonSync(cachePath)
+  }
+  catch (error) {
+    cacheObj = {}
+  }
 
   modIds.forEach((modID) => {
     const cached = cachedMod(cacheObj[modID], timeout)
