@@ -2,7 +2,22 @@
 
 Generate .md file with all mods listed
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- extended_desc -->
+> This tool was created for the mod list of [E2E-E](https://github.com/Krutoy242/Enigmatica2Expert-Extended/blob/cd12cfc750393b2ac4f9fa6ef2a4d103c412cb1b/MODS.md) modpack as well as for its [changelogs](https://github.com/Krutoy242/Enigmatica2Expert-Extended/blob/489f7f9c2dc41efc8c8a7cf565e0de655f61ea20/changelogs/LATEST.md).
+
+This tool can be used for two purposes:
+
+1. Generate modlist with any additional information of mods, such as `mod name`, `description`, `link`, `image`, `download count` and many more.
+2. Generate changes by comparing two `minecraftinstance.json` files. Useful for changelogs or forked modpacks.
+
+Example of resulted file with icons and formatting:
+
+![Example of output file](https://i.imgur.com/ZHMKUiU.png)
+
+Result of comparsion two manifests:
+
+![Example of comparsion](https://i.imgur.com/b7s0AfD.png)
+<!-- /extended_desc -->
 
 ## Usage
 
@@ -12,7 +27,7 @@ To use as CLI tool:
 
 1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `logs/` directory or `crafttweaker.log` file)
+2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
    ```sh
    > cd C:/Instances/MyModpack
    ```
