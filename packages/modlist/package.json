@@ -1,6 +1,6 @@
 {
   "name": "@mctools/modlist",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Generate .md file with all mods listed",
   "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
@@ -22,6 +22,7 @@
   "module": "./dist/index.mjs",
   "bin": "./dist/cli.mjs",
   "files": [
+    "*.hbs",
     "dist"
   ],
   "scripts": {

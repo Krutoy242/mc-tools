@@ -118,7 +118,7 @@ export async function generateModsList(
   Handlebars.registerHelper('padEnd', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padEnd(pad))
   Handlebars.registerHelper('padStart', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padStart(pad))
 
-  const builder = Handlebars.compile(opts?.template ?? readFileSync(relative('default.hbs'), 'utf8'))
+  const builder = Handlebars.compile(opts?.template ?? readFileSync(relative('../default.hbs'), 'utf8'))
 
   return builder(diff)
 }

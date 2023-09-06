@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import yargs from 'yargs'
 import fse from 'fs-extra'
 import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
