@@ -80,7 +80,7 @@ Accept deep path like \`cf2Addon.downloadCount\`.
   .example(chalk.green`npx $0`, chalk.gray`If executed from minecraft folder, generate MODS.md file in same folder.
 Environment must have variable CURSE_FORGE_API_KEY.`)
   .example(chalk.green`npx $0 --key=~secret_api_key.txt`, chalk.gray`Create mod list,
-but take fey from secret_api_key.txt file`)
+but take key from secret_api_key.txt file`)
   .example(chalk.green`npx $0 --ignore=devonly.ignore`, chalk.gray`Use .gitignore-like file to exclude mods,
 that should not present in list.`)
   .example(chalk.green`npx $0 --mcinstance=mci.json`, chalk.gray`Generate mod list based non-default
