@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@mct/run",
+  "name": "@mctools/run",
   "version": "0.0.0",
   "description": "Run several shell commands parralely",
   "license": "MIT",
@@ -47,5 +47,8 @@
     "cli",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

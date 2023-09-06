@@ -1,4 +1,4 @@
-<h1 align="center">@mct/tcon</h1>
+<h1 align="center">@mctools/tcon</h1>
 
 Tweaks Tinker Constructs' materials with csv tables
 
@@ -15,7 +15,7 @@ Tweaks Tinker Constructs' materials with csv tables
 
 3. Run:
     ```sh
-    > npx @mct/tcon --help
+    > npx @mctools/tcon --help
     ```
 
 ### Options
@@ -37,4 +37,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

@@ -1,4 +1,4 @@
-<h1 align="center">@mct/modlist</h1>
+<h1 align="center">@mctools/modlist</h1>
 
 Generate .md file with all mods listed
 
@@ -34,7 +34,7 @@ To use as CLI tool:
 
 3. Run:
     ```sh
-    > npx @mct/modlist --help
+    > npx @mctools/modlist --help
     ```
 
 ### Options
@@ -63,23 +63,23 @@ Options:
   -h, --help        Show help  [boolean]
 
 Examples:
-  npx @mct/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
+  npx @mctools/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
                                                      Environment must have variable CURSE_FORGE_API_KEY.
-  npx @mct/modlist --key=~secret_api_key.txt         Create mod list,
+  npx @mctools/modlist --key=~secret_api_key.txt         Create mod list,
                                                      but take key from secret_api_key.txt file
-  npx @mct/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
+  npx @mctools/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
                                                      that should not present in list.
-  npx @mct/modlist --mcinstance=mci.json             Generate mod list based non-default
+  npx @mctools/modlist --mcinstance=mci.json             Generate mod list based non-default
                                                      named minecraftinstance.json file.
-  npx @mct/modlist --old=minecraftinstance_old.json  Generate comparsion of two modpacks / modpack versions.
+  npx @mctools/modlist --old=minecraftinstance_old.json  Generate comparsion of two modpacks / modpack versions.
                                                      Useful for generating modpack changelog.
-  npx @mct/modlist --template=fancy.hbs              Use custom template for generating list.
+  npx @mctools/modlist --template=fancy.hbs              Use custom template for generating list.
 
-  npx @mct/modlist --sort=/cf2Addon.downloadCount    Sort mods in resulted list by their download count
+  npx @mctools/modlist --sort=/cf2Addon.downloadCount    Sort mods in resulted list by their download count
                                                      instead of by default ID.
-  npx @mct/modlist --output=modlist.md               Rename output list instead of default MODS.md
+  npx @mctools/modlist --output=modlist.md               Rename output list instead of default MODS.md
 
-  npx @mct/modlist --verbose                         Write some information in terminal
+  npx @mctools/modlist --verbose                         Write some information in terminal
 ```
 
 ## API
@@ -87,12 +87,12 @@ To use as library:
 
 1. Install package
   > ```shell
-  > npm i @mct/modlist
+  > npm i @mctools/modlist
   > ```
 
 2. Import functions from package.
   > ```ts
-  > import {...} from "@mct/modlist"
+  > import {...} from "@mctools/modlist"
   > ```
 
 

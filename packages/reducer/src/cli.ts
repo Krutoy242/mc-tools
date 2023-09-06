@@ -20,7 +20,7 @@ function assertPath(f: string, errorText?: string) {
 yargs(process.argv.slice(2))
   .alias('h', 'help')
   .detectLocale(false)
-  .scriptName('@mct/reducer')
+  .scriptName('@mctools/reducer')
   .strict()
   .version()
   .option('mods', {

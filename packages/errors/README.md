@@ -1,4 +1,4 @@
-<h1 align="center">@mct/errors</h1>
+<h1 align="center">@mctools/errors</h1>
 
 Scan debug.log file to find unknown errors
 
@@ -15,7 +15,7 @@ Scan debug.log file to find unknown errors
 
 3. Run:
     ```sh
-    > npx @mct/errors --help
+    > npx @mctools/errors --help
     ```
 
 ### Options
@@ -36,4 +36,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

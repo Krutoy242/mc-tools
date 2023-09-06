@@ -1,4 +1,4 @@
-<h1 align="center">@mct/format</h1>
+<h1 align="center">@mctools/format</h1>
 
 Format .zs files by using ESLint for typescript
 
@@ -15,13 +15,13 @@ Format .zs files by using ESLint for typescript
 
 3. Run:
     ```sh
-    > npx @mct/format --help
+    > npx @mctools/format --help
     ```
 
 ### Options
 
 ```shell
-@mct/format <files>
+@mctools/format <files>
 
 Positionals:
   files  Path to file / files for formatting  [string]
@@ -40,4 +40,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

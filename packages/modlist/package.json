@@ -1,5 +1,5 @@
 {
-  "name": "@mct/modlist",
+  "name": "@mctools/modlist",
   "version": "0.1.0",
   "description": "Generate .md file with all mods listed",
   "license": "MIT",
@@ -31,7 +31,7 @@
   },
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "@mct/curseforge": "workspace:*",
+    "@mctools/curseforge": "workspace:*",
     "fs-extra": "^11.1.1",
     "handlebars": "^4.7.7",
     "yargs": "^17.7.1"
@@ -47,5 +47,8 @@
     "lib",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@mct/reducer",
+  "name": "@mctools/reducer",
   "version": "0.0.0",
   "description": "Partially disable minecraft mods",
   "license": "MIT",
@@ -49,5 +49,8 @@
     "cli",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

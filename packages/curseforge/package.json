@@ -1,5 +1,5 @@
 {
-  "name": "@mct/curseforge",
+  "name": "@mctools/curseforge",
   "version": "0.1.0",
   "description": "Lib for working with CurseForge using minecraftinstance.json",
   "license": "MIT",
@@ -44,5 +44,8 @@
     "lib",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

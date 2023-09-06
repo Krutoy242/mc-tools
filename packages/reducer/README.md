@@ -1,4 +1,4 @@
-<h1 align="center">@mct/reducer</h1>
+<h1 align="center">@mctools/reducer</h1>
 
 Partially disable minecraft mods
 
@@ -15,18 +15,18 @@ Partially disable minecraft mods
 
 3. Run:
     ```sh
-    > npx @mct/reducer --help
+    > npx @mctools/reducer --help
     ```
 
 ### Options
 
 ```shell
-@mct/reducer [command]
+@mctools/reducer [command]
 
 Commands:
-  @mct/reducer levels <path>  Select reduce level with prompt
-  @mct/reducer binary         Reduce mods in half to find error
-  @mct/reducer interactive    Pick mods and manipulate them one by one
+  @mctools/reducer levels <path>  Select reduce level with prompt
+  @mctools/reducer binary         Reduce mods in half to find error
+  @mctools/reducer interactive    Pick mods and manipulate them one by one
 
 Options:
       --version  Show version number                                   [boolean]
@@ -41,4 +41,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

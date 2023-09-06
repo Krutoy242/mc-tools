@@ -9,7 +9,7 @@ import { showTerminal } from '.'
 ============================================= */
 
 const argv = yargs(process.argv.slice(2))
-  .scriptName('@mct/run')
+  .scriptName('@mctools/run')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()
@@ -24,7 +24,7 @@ const argv = yargs(process.argv.slice(2))
   .positional('config', {
     describe : 'Path to configuration JSON',
     type     : 'string',
-    default  : '@mct/run.json',
+    default  : '@mctools/run.json',
     normalize: true,
     coerce   : loadConfig,
   })

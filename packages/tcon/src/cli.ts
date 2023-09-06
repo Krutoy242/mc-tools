@@ -19,7 +19,7 @@ function assertPath(f: string, errorText?: string) {
 const argv = yargs(process.argv.slice(2))
   .alias('h', 'help')
   .detectLocale(false)
-  .scriptName('@mct/tcon')
+  .scriptName('@mctools/tcon')
   .strict()
   .version()
   .wrap(null)

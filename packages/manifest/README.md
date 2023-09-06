@@ -1,4 +1,4 @@
-<h1 align="center">@mct/manifest</h1>
+<h1 align="center">@mctools/manifest</h1>
 
 `manifest.json` generation tool
 
@@ -15,7 +15,7 @@
 
 3. Run:
     ```sh
-    > npx @mct/manifest --help
+    > npx @mctools/manifest --help
     ```
 
 ### Options
@@ -37,4 +37,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

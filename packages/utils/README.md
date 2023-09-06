@@ -1,4 +1,4 @@
-<h1 align="center">@mct/utils</h1>
+<h1 align="center">@mctools/utils</h1>
 
 Various utilities for Minecraft-Tools monorepo
 
@@ -11,12 +11,12 @@ Various utilities for Minecraft-Tools monorepo
 ## API
 1. Install package
   > ```shell
-  > npm i @mct/utils
+  > npm i @mctools/utils
   > ```
 
 2. Import functions from package.
   > ```ts
-  > import {...} from "@mct/utils"
+  > import fnc from "@mctools/utils"
   > ```
 
 
@@ -44,4 +44,4 @@ Various utilities for Minecraft-Tools monorepo
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

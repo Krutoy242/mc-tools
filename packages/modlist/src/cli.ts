@@ -1,6 +1,6 @@
 import yargs from 'yargs'
 import fse from 'fs-extra'
-import type { Minecraftinstance } from '@mct/curseforge/minecraftinstance'
+import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 import chalk from 'chalk'
 import { assertPath } from '../../utils/src/args'
 import { generateModsList } from '.'
@@ -8,7 +8,7 @@ import { generateModsList } from '.'
 const { readFileSync, writeFileSync, readJsonSync } = fse
 
 const args = (yargs(process.argv.slice(2))
-  .scriptName('@mct/modlist')
+  .scriptName('@mctools/modlist')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()

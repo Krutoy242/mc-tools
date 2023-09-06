@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@mct/format",
+  "name": "@mctools/format",
   "version": "0.0.0",
   "description": "Format .zs files by using ESLint for typescript",
   "license": "MIT",
@@ -43,5 +43,8 @@
     "cli",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

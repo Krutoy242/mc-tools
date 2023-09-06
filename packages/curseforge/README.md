@@ -1,4 +1,4 @@
-<h1 align="center">@mct/curseforge</h1>
+<h1 align="center">@mctools/curseforge</h1>
 
 Lib for working with CurseForge using minecraftinstance.json
 
@@ -11,12 +11,12 @@ Lib for working with CurseForge using minecraftinstance.json
 ## API
 1. Install package
   > ```shell
-  > npm i @mct/curseforge
+  > npm i @mctools/curseforge
   > ```
 
 2. Import functions from package.
   > ```ts
-  > import {...} from "@mct/curseforge"
+  > import fnc from "@mctools/curseforge"
   > ```
 
 
@@ -115,4 +115,4 @@ if `old` is omited, returns only `union` field.
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

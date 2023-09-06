@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@mct/tcon",
+  "name": "@mctools/tcon",
   "version": "0.0.0",
   "description": "Tweaks Tinker Constructs' materials with csv tables",
   "license": "MIT",
@@ -46,5 +46,8 @@
     "cli",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@mct/errors",
+  "name": "@mctools/errors",
   "version": "0.0.0",
   "description": "Scan debug.log file to find unknown errors",
   "license": "MIT",
@@ -45,5 +45,8 @@
     "cli",
     "minecraft",
     "tools"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

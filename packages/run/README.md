@@ -1,4 +1,4 @@
-<h1 align="center">@mct/run</h1>
+<h1 align="center">@mctools/run</h1>
 
 Run several shell commands parralely
 
@@ -15,16 +15,16 @@ Run several shell commands parralely
 
 3. Run:
     ```sh
-    > npx @mct/run --help
+    > npx @mctools/run --help
     ```
 
 ### Options
 
 ```shell
-@mct/run [config]
+@mctools/run [config]
 
 Positionals:
-  config  Path to configuration JSON  [string] [default: "@mct/run.json"]
+  config  Path to configuration JSON  [string] [default: "@mctools/run.json"]
 
 Options:
       --version  Show version number  [boolean]
@@ -39,4 +39,4 @@ Options:
 ## Other tools
 
 
-* [@mct/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

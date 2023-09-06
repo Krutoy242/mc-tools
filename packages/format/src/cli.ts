@@ -11,7 +11,7 @@ import { convert, revert } from '.'
 =                Arguments                    =
 ============================================= */
 const argv = yargs(process.argv.slice(2))
-  .scriptName('@mct/format')
+  .scriptName('@mctools/format')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()

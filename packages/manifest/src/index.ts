@@ -6,7 +6,7 @@
  */
 
 import fse from 'fs-extra'
-import { fetchMods, loadMCInstanceFiltered } from '@mct/curseforge'
+import { fetchMods, loadMCInstanceFiltered } from '@mctools/curseforge'
 
 const { readFileSync, readJsonSync, writeFileSync } = fse
 
