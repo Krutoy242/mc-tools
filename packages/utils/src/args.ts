@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import consola from 'consola'
+
+// import consola from 'consola'
 
 import type { Arguments, Argv, CamelCaseKey, /* InferredOptionType,  */Options } from 'yargs'
 import yargs from 'yargs'
@@ -36,7 +37,7 @@ type Parameters<T extends (...args: any[]) => any> = T extends (...args: infer P
 
 type GetArgvT<C extends Argv<any>> = C extends Argv<infer T> ? T : never
 
-type ExtendedArgv<T = {}> = {
+type ExtendedArgv<T = object> = {
   [K in keyof Argv<T>]: Argv<T>[K] extends (...args: any) => Argv<T>
     // @ts-expect-error hard type
     ? (...args: Parameters<Argv<T>[K]>) => ExtendedArgv<GetArgvT<ReturnType<Argv<T>[K]>>>
@@ -47,6 +48,7 @@ type ExtendedArgv<T = {}> = {
 //   [K in keyof Argv<T>]: ExtendedArgv<T>[K]
 // } & ExtendedCommands<T>
 
+/*
 type CheckFnc = (value: string | number | undefined) => boolean
 
 export function getArgs(): ExtendedArgv {
@@ -97,4 +99,4 @@ export function getArgs(): ExtendedArgv {
   }
 
   return yarg
-}
+} */
