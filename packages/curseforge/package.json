@@ -1,6 +1,6 @@
 {
   "name": "@mct/curseforge",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Lib for working with CurseForge using minecraftinstance.json",
   "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
