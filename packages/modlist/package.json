@@ -1,6 +1,6 @@
 {
   "name": "@mct/modlist",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Generate .md file with all mods listed",
   "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
