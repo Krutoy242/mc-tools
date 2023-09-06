@@ -66,7 +66,7 @@ Examples:
   npx @mct/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
                                                      Environment must have variable CURSE_FORGE_API_KEY.
   npx @mct/modlist --key=~secret_api_key.txt         Create mod list,
-                                                     but take fey from secret_api_key.txt file
+                                                     but take key from secret_api_key.txt file
   npx @mct/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
                                                      that should not present in list.
   npx @mct/modlist --mcinstance=mci.json             Generate mod list based non-default
@@ -129,9 +129,3 @@ Markdown file based on given Handlebars template
 ## Other tools
 
 
-* [@mct/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
-* [@mct/format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format) - Format .zs files by using ESLint for typescript
-* [@mct/manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
-* [@mct/reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
-* [@mct/run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
-* [@mct/tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables

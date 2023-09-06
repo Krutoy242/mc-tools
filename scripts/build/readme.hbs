@@ -62,6 +62,6 @@ To use as library:
 
 ## Other tools
 
-{{#each packages}}{{#if (includes package.keywords "cli")}}
+{{#each packages}}{{#if (includes package.keywords "cli")}}{{#if package.private}}{{else}}
 * [{{package.name}}]({{package.homepage}}/tree/master/packages/{{name}}) - {{package.description}}
-{{~/if}}{{/each}}
+{{~/if}}{{~/if}}{{/each}}

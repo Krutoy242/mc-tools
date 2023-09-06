@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "@mct/errors",
   "version": "0.0.0",
   "description": "Scan debug.log file to find unknown errors",

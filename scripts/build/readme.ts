@@ -10,7 +10,7 @@ import chalk from 'chalk'
 
 const execP = promisify(exec)
 
-const { readJSONSync, writeFileSync, existsSync } = fse
+const { readJSONSync, writeFileSync, existsSync, unlinkSync } = fse
 
 function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
@@ -28,6 +28,9 @@ const packages = fast_glob
 log(`Found ${chalk.green(packages.length)} packages`)
 
 fast_glob.sync('packages/*/README.md', { dot: true }).forEach(handleReadme)
+
+// Remove whole "docs/" folder
+unlinkSync('docs')
 
 async function handleReadme(readmePath: string, i: number) {
   const readmeContent = readFileSync(readmePath, 'utf8')
