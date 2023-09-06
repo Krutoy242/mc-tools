@@ -145,6 +145,9 @@ importers:
       '@mctools/curseforge':
         specifier: workspace:*
         version: link:../curseforge
+      chalk:
+        specifier: ^5.3.0
+        version: 5.3.0
       fs-extra:
         specifier: ^11.1.1
         version: 11.1.1
@@ -2793,7 +2796,6 @@ packages:
   /chalk@5.3.0:
     resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-    dev: true
 
   /character-entities-legacy@1.1.4:
     resolution: {integrity: sha512-3Xnr+7ZFS1uxeiUDvV02wQ+QDbc55o97tIV5zHScSPJpcLm/r0DFPcoY3tYRp+VZukxuMeKgXYmsXQHO05zQeA==}
