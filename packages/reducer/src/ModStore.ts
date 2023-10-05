@@ -22,6 +22,7 @@ const mandatoryDeps = {
   'Compact Solars'                 : ['Industrial Craft'],
   'Deep Blood Evolution'           : ['Deep Mob Evolution', 'Blood Magic'],
   'Ender Storage continuation'     : ['CodeChicken Lib 1.8.+'],
+  'valkyrielib'                    : ['RoughlyEnoughIDs'],
 }
 
 interface ModConfig {
