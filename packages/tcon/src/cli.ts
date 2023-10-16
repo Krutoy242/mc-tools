@@ -132,16 +132,16 @@ function parseTweaks(tweaksPath: string) {
   saveText(newConfig, tweakerconstruct_cfg_path)
   process.stdout.write('done\n')
 
-  process.stdout.write('[2/3] Fetching Traits')
-  if (argv.save) {
-    const allTraits = Object.values(
-      parseTraits(argv.default, newConfig)
-    ).map(parts => Object.values(parts).map(s => [...s]))
-      .flat(2)
-    const toSave = [...new Set(allTraits)].join('\n')
-    saveText(toSave, resolve(argv.save, 'Traits.csv'))
-  }
-  process.stdout.write('done\n')
+  // process.stdout.write('[2/3] Fetching Traits')
+  // if (argv.save) {
+  //   const allTraits = Object.values(
+  //     parseTraits(argv.default, newConfig)
+  //   ).map(parts => Object.values(parts).map(s => [...s]))
+  //     .flat(2)
+  //   const toSave = [...new Set(allTraits)].join('\n')
+  //   saveText(toSave, resolve(argv.save, 'Traits.csv'))
+  // }
+  // process.stdout.write('done\n')
 
   // Show invalid tweaks
   Object.entries(invalid).forEach(([key, set]) => {
