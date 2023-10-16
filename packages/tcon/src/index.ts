@@ -98,7 +98,7 @@ function tweakValue(
   if (n == null || n === '' || n === 'd' || n === defVal) return 'd'
 
   // Convert 'n' when its in form of math '*2'
-  if (!isNumber(String(n))) n = parseFloat(evalMathContext(`${defVal}${n}`, { n }))
+  if (!isNumber(String(n))) n = Number.parseFloat(evalMathContext(`${defVal}${n}`, { n }))
   else n = Number(n)
 
   // Calculate output result (usually rounding value or make non-negative)
@@ -131,7 +131,7 @@ function tweakMaterial(
    * @type {number[]}
    */
   const reals: number[] = nums.map((n, i) =>
-    typeof n !== 'number' || isNaN(Number(n))
+    typeof n !== 'number' || Number.isNaN(Number(n))
       ? Number(defaultVals[i]) || 0.0
       : n
   )
@@ -209,7 +209,7 @@ export function parseStats(
 
     const defaultVals = match.groups.rawValues
       .split(':')
-      .map(n => (isNaN(Number(n)) ? 'd' : Number(n)))
+      .map(n => (Number.isNaN(Number(n)) ? 'd' : Number(n)))
 
     existMats.add(matID)
 
