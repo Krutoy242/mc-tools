@@ -260,5 +260,8 @@ export function getQuestTaskItem(q: QuestUid) {
  * OR on the title of quest itself
  */
 export function getTaskName(q: QuestUid) {
-  return getItemName(getQuestTaskItem(q)) ?? q?.tasks?.[0]?.title ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
+  return getItemName(getQuestTaskItem(q))
+  ?? q?.tasks?.[0]?.title
+  ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
+  ?? (q.icon ? getItemName(getItem(q.icon)) : undefined)
 }
