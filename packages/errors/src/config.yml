@@ -149,6 +149,9 @@ ignore:
   # Sledgehammer mod normal behaviour
   - '\[Sledgehammer\]: Skipping reloadSearchTrees'
 
+  # SledgeHammer and RenderLib fix same issue with banner, can be ignored
+  - WARN. .mixin.. Method overwrite conflict for getRenderBoundingBox in mixins.bugfixes.blocks.banner.json:UTBannerBoundingBoxMixin from mod unknown-owner, previously written by meldexun.renderlib.mixin.MixinTileEntityBanner. Skipping method.
+
   # Nutrition cant attach capabilities to Computercraft and Plethora. Doesnt matter since turtles cant eat anyway
   - 'Exception caught during firing event \S+AttachCapabilitiesEvent[\s\S\n]+nutrition.events.EventPlayerJoinWorld[\s\S\n]+'
 
