@@ -46,9 +46,12 @@ export interface ModpackManifest {
   overrides: string
 }
 
+// "test string": "test string \"inside\" "
+
 function formatModList(modsList: ModpackManifestFile[]) {
   return JSON.stringify(modsList)
     .replace(/(":)(\d+)/g, (m, r1, r2) => r1 + r2.padStart(6)) // Table aligning
+    .replace(/"___name":(".+?(?<!\\)")/g, (m, r1) => `"___name":${r1.padEnd(42)}`) // Table aligning
     .replace(/\[{/, '[\n    {')
     .replace(/}]/, '}\n  ]')
     .replace(/},{/g, '},\n    {') // new lines
@@ -91,9 +94,9 @@ export async function generateManifest(
   const modListUnfiltered: ModpackManifestFile[] = addonsListUnfiltered.map((a, i) => ({
     projectID  : a.addonID,
     fileID     : a.installedFile?.id,
-    required   : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
-    downloadUrl: a.installedFile?.downloadUrl,
     ___name    : cfModsList[i].name,
+    downloadUrl: a.installedFile?.downloadUrl,
+    required   : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
   }))
 
   const resultObj: ModpackManifest = {
