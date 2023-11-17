@@ -89,10 +89,11 @@ export async function generateManifest(
   if (options.verbose) process.stdout.write('loaded\n')
 
   const modListUnfiltered: ModpackManifestFile[] = addonsListUnfiltered.map((a, i) => ({
-    projectID: a.addonID,
-    fileID   : a.installedFile?.id,
-    required : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
-    ___name  : cfModsList[i].name,
+    projectID  : a.addonID,
+    fileID     : a.installedFile?.id,
+    required   : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
+    downloadUrl: a.installedFile?.downloadUrl,
+    ___name    : cfModsList[i].name,
   }))
 
   const resultObj: ModpackManifest = {
