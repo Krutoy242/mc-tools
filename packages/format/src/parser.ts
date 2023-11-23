@@ -153,7 +153,7 @@ const conversions: { [name: string]: { convert?: ReplTuple; revert?: ReplTuple }
 
   PARAM_TYPE: {
     convert: [
-      `(?<=function${$.sp}${$.literal}[^;{}]+)${$.sp}${$.type_assign}`,
+      `(?<=function${$.sp}${$.literal}[^;{}]+)${$.ss}${$.type_assign}`,
       ':/* cast param */ $<type>',
     ],
   },

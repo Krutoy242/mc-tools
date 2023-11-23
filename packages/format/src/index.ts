@@ -1,5 +1,38 @@
+/* eslint-disable no-console */
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join, parse } from 'node:path'
 import { declarations } from './eslint'
 import { getConversion } from './parser'
+
+interface FilesList {
+  glob: string
+  list: string[]
+}
+
+export function convertToTs(files: FilesList) {
+  return files.list.map((filePath) => {
+    const fileContent = readFileSync(filePath, 'utf8')
+    const fileParsed = parse(filePath)
+
+    const doConvert = fileParsed.ext === '.zs'
+    const newFilePath = join(fileParsed.dir,
+    `${fileParsed.name}.${doConvert ? 'ts' : 'zs'}`
+    )
+    if (!doConvert) {
+      writeFileSync(newFilePath, revert(fileContent))
+      unlinkSync(filePath)
+      return null
+    }
+
+    // Convert
+    console.log('converting to ts')
+    const converted = convert(fileContent)
+    writeFileSync(newFilePath, converted)
+
+    return newFilePath
+  })
+    .filter(Boolean) as string[]
+}
 
 export function convert(source: string): string {
   // Cut out block comments and transform without them

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join, parse, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import yargs from 'yargs'
 import fast_glob from 'fast-glob'
 import { lintFile } from './eslint'
-import { convert, revert } from '.'
+import { convertToTs, revert } from '.'
 
 /* =============================================
 =                Arguments                    =
@@ -49,27 +49,9 @@ const argv = yargs(process.argv.slice(2))
 async function main() {
   console.log('loading file')
 
-  const convertResult = argv.files.list.map((filePath) => {
-    const fileContent = readFileSync(filePath, 'utf8')
-    const fileParsed = parse(filePath)
+  const convertResult = convertToTs(argv.files)
 
-    const isConvers = fileParsed.ext === '.zs'
-    const newFilePath = join(fileParsed.dir,
-    `${fileParsed.name}.${isConvers ? 'ts' : 'zs'}`
-    )
-    if (!isConvers) {
-      writeFileSync(newFilePath, revert(fileContent))
-      return null
-    }
-
-    // Convert
-    console.log('converting to ts')
-    const converted = convert(fileContent)
-    writeFileSync(newFilePath, converted)
-
-    return newFilePath
-  })
-
+  if (!convertResult.length) return
   if (argv.nolint) return
 
   // Lint & fix
@@ -89,7 +71,6 @@ async function main() {
 
   // Revert TS -> ZS
   convertResult.forEach((newFilePath, i) => {
-    if (!newFilePath) return
     const linted = readFileSync(newFilePath, 'utf8')
     writeFileSync(argv.files.list[i], revert(linted))
     unlinkSync(newFilePath)
