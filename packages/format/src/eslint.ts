@@ -5,7 +5,7 @@ export const declarations
 = `
 // CONVERSION_DEBRIS
 // =============================================================
-/* eslint-disable @typescript-eslint/consistent-type-imports */
+/* eslint max-statements-per-line: "warn" */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/semi */
 /* eslint-disable curly */
@@ -19,7 +19,7 @@ export const declarations
 /* eslint-disable vars-on-top */
 
 ${Object.values(postfixTypes).map(s => `declare function ${s}(n: number): number;`).join('\n')}
-declare function __(s: string): any;
+declare function $$$(s: string): any;
 declare function isNull(o: any): boolean;
 declare const recipes: Record<string, any>;
 declare const mods: Record<string, any>;

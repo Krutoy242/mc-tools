@@ -2,7 +2,8 @@
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, parse } from 'node:path'
 import { declarations } from './eslint'
-import { getConversion } from './parser'
+import { peggyParse } from './peggy'
+import { revertTS_to_ZS } from './parser'
 
 interface FilesList {
   glob: string
@@ -42,18 +43,20 @@ export function convert(source: string): string {
     return `/* COMMENT_${blockComments.length} */`
   })
 
-  // Return block comments
-  const converted = getConversion('convert')(result)
-    // Restore block comments
-    .replace(/\/\* COMMENT_(\d+) \*\//g, (m, r) => blockComments[Number(r) - 1])
-    // Change tabs to spaces
-    .replace(/^(?<s>\s*\t\s*)/gm, s => s.replace(/\t/g, '  '))
+  // // Return block comments
+  // const converted = getConversion('convert')(result)
+  //   // Restore block comments
+  //   .replace(/\/\* COMMENT_(\d+) \*\//g, (m, r) => blockComments[Number(r) - 1])
+  //   // Change tabs to spaces
+  //   .replace(/^(?<s>\s*\t\s*)/gm, s => s.replace(/\t/g, '  '))
+
+  const converted = peggyParse(result)
 
   return declarations + converted
 }
 
 export function revert(source: string): string {
-  const result = getConversion('revert')(source)
+  const result = revertTS_to_ZS(source)
   return result
     // Remove debris
     .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S\n]+?\/\/ CONVERSION_DEBRIS\n*/gm, '')

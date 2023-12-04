@@ -54,144 +54,29 @@ function rgx(rgxString: RegExp | string, fn: string | GroupReplace): readonly [s
 
 type ReplTuple = [RegExp | string, string | GroupReplace ]
 
-const conversions: { [name: string]: { convert?: ReplTuple; revert?: ReplTuple } } = {
+const conversions: { [name: string]: ReplTuple } = {
 
-  PRAGMAS: {
-    convert: [/^(.*?)#(.*)$/gm, '$1//$2'],
-    revert : [/^\/\/\s*((?:priority|loader|modloaded|reloadable|norun) .*$)/gm, '#$1'],
-  },
-
-  IMPORTS: {
-    convert: [/import\s+(?<source>\w+(\.\w+)*)(\s+as\s+(?<alias>\w+))?\s*;/gm, ({ source, alias }) =>
-      `import ${alias ?? source.split('.').pop()} from '${source}';`,
-    ],
-    revert: [
-      'import (?<name>[^ ]+) from \'(?<from>[^\']+)\';',
-      ({ from, name }) => `import ${from}${name !== from.split('.').pop() ? ` as ${name}` : ''};`,
-    ],
-  },
-
-  CAPTURES: {
-    convert: [/<([\w-]+(?::[\w\d\-\*\.=]+)+)>/gm, '__(\'$1\')'],
-    revert : [
-      '__\\(\'(?<cap>[^\']+)\'\\)',
-      ({ cap }) => `<${cap}>`,
-    ],
-  },
-
-  NUMBERPOSTFIX: {
-    convert: [`(?<num>${$.number})(?<postfix>[fFdD])`,
-      ({ num, postfix }) => `${postfixTypes[postfix.toLowerCase()]}(${num})`,
-    ],
-    revert: [
-      `(?<p>${Object.values(postfixTypes).join('|')})\\((?<num>${$.number})\\)`,
-      ({ p, num }) => num + postfixNames[p],
-    ],
-  },
-
-  VARIABLES: {
-    convert: [/val\s+(\w+)/gm, 'const $1'],
-    revert : [`const (?<l>${$.literal})`, ({ l }) => `val ${l}`],
-  },
-
-  STATICS: {
-    convert: [/static\s+(\w+)/gm, '/* static */const $1'],
-    revert : [`\\/\\* static \\*\\/const (?<l>${$.literal})`, ({ l }) => `static ${l}`],
-  },
-
-  FOR_TO: {
-    convert: [
-      `for${$.sp}(?<vars>${$.literal})${$.sp}in${$.sp}(?<from>${$.expression})${$.sp}(?:to${$.sp}|\\.\\.${$.ss})(?<to>${$.expression})${$.ss}\\{`,
-      ({ vars, from, to }) => `for (let ${vars} = ${from}; ${vars} < ${to}; ${vars}++) {`,
-    ],
-    revert: [
-      `for \\(let (?<v>.+?) = (?<from>.+?); \\k<v> < (?<to>${$.expression}); \\k<v>\\+\\+\\) \\{`,
-      ({ v, from, to }) => `for ${v} in ${from} .. ${to} {`,
-    ],
-  },
-
-  FOR_IN: {
-    convert: [
-      /for\s+(?<vars>\w+\s*(?:,\s*\w+)*)\s+in\s+(?<from>[^{]+)\s*\{/gm,
-      'for (const { $1 } of $2) {',
-    ],
-    revert: [
-      'for \\(const \\{ (?<v>[^}]+)\\} of (?<from>[\\s\\S\\n]+?)\\) \\{',
-      ({ v, from }) => `for ${v}in ${from.trim()} {`,
-    ],
-  },
-
-  WHILE_LOOP: {
-    convert: [/\bwhile\s+(.+)\{/gm, 'while ($1) {'],
-    revert : [/while \((.+)\) \{/gm, 'while $1 {'],
-  },
-
-  OBJECT_STRUCTURE: {
-    convert: [
-    `{${$.ss}(?<left>${$.expression})${$.ss}:${$.ss}(?<right>${$.expression})${$.ss}}`,
-    ({ left, right }) => `{${
-        new RegExp(`^${$.literal}$`, 'gm').test(left)
-        ? left
-        : `[${left}]`
-      }: ${right}}`,
-    ],
-    revert: [
-      `\\{\\s?\\[(?<left>${$.expression})\\]: `,
-      ({ left }) => `{ ${left}: `,
-    ],
-  },
-
-  HAS: {
-    convert: [new RegExp(`(?<left>${$.expression})${$.sp}has${$.sp}(?<right>${$.expression})`, 'gm'), '$<left> in $<right>'],
-
-  },
-
-  CONCATENATIONS: {
-    convert: [/\s*~/gm, '/* ~ */ +'],
-    revert : ['/\\* ~ \\*/ \\+|\\s?\\+/\\* ~ \\*/', ' ~'],
-  },
-
-  PARAM_TYPE: {
-    convert: [
-      `(?<=function${$.sp}${$.literal}[^;{}]+)${$.ss}${$.type_assign}`,
-      ':/* cast param */ $<type>',
-    ],
-  },
-
-  PARAM_TYPE_ANON: {
-    convert: [
-      `(?<=function${$.ss}\\(${$.ss}${$.literal})${$.sp}${$.type_assign}`,
-      ':/* cast param */ $<type>',
-    ],
-  },
-
-  DEFINE_TYPE: {
-    convert: [
-      `(?<=(const|var)${$.sp}${$.literal})${$.sp}${$.type_assign}(?=${$.ss}[=;])`,
-      ':/* cast def */ $<type>',
-    ],
-  },
-
-  CAST_REVERT: {
-    revert: [/:\/\* cast( \w+)? \*\/ /gm, ' as '],
-  },
-
-  RESERVED_WORDS: {
-    convert: [/\b(default)\b/gmi, '__literal_$1'],
-    revert : [/\b__literal_(\w+)\b/gmi, '$1'],
-  },
+  PREPROCESSORS   : [/^\/\/\s*((?:no_fix_recipe_book|debug|loader|profile|norun|reloadable|ikwid|zslint|suppress|priority|modloaded|nowarn|notreloadable|ignoreBracketErrors|hardfail|onside|sideonly|disable_search_tree) .*$)/gm, '#$1'],
+  IMPORTS         : ['import(?: type)? (?<name>[^ ]+) from \'(?<from>[^\']+)\';', ({ from, name }) => `import ${from}${name !== from.split('.').pop() ? ` as ${name}` : ''};`],
+  CAPTURES        : ['\\$\\$\\$\\(\'(?<cap>[^\']+)\'\\)', ({ cap }) => `<${cap}>`],
+  NUMBERPOSTFIX   : [`(?<p>${Object.values(postfixTypes).join('|')})\\((?<num>${$.number})\\)`, ({ p, num }) => num + postfixNames[p]],
+  FOR_TO          : [`for \\(let (?<v>.+?) = (?<from>.+?); \\k<v> < (?<to>${$.expression}); \\k<v>\\+\\+\\) \\{`, ({ v, from, to }) => `for ${v} in ${from} .. ${to} {`],
+  FOR_IN          : [/for \(const (?<v>.+?) of (?<from>[\s\S\n]+?)\)\s*\{/gm, ({ v, from }) => `for ${v} in ${from.trim()} {`],
+  CONST           : [`(?<!\\()const (?<l>${$.literal})`, ({ l }) => `val ${l}`],
+  LET             : [`(?<!\\()let (?<l>${$.literal})`, ({ l }) => `var ${l}`],
+  STATICS         : [`\\/\\* static \\*\\/const (?<l>${$.literal})`, ({ l }) => `static ${l}`],
+  WHILE_LOOP      : [/while \((.+)\) \{/gm, 'while $1 {'],
+  OBJECT_STRUCTURE: [`\\{\\s?\\[(?<left>${$.expression})\\]: `, ({ left }) => `{ ${left}: `],
+  CONCATENATIONS  : ['/\\* ~ \\*/\\s*\\+|\\s?\\+/\\* ~ \\*/', '~'],
+  CAST_REVERT     : [/(?<a>\s*):\/\* as \*\/(?<b>\s*)/gm, ({ a, b }) => `${a || ' '}as${b || ' '}`],
 }
 
-export function getConversion(way: 'convert' | 'revert') {
-  return (source: string): string => {
-    let result = source
-    const values = Object.values(conversions)
-    ;(way === 'convert' ? values : values.reverse()).forEach((c) => {
-      const t = c[way]
-      if (!t) return
-      const [from, to] = rgx(...t)
-      result = result.replace(from, to as any)
-    })
-    return result
-  }
+export function revertTS_to_ZS(source: string) {
+  let result = source
+  const values = Object.values(conversions)
+  values.reverse().forEach((c) => {
+    const [from, to] = rgx(...c)
+    result = result.replace(from, to as any)
+  })
+  return result
 }

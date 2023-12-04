@@ -4,6 +4,7 @@ import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import yargs from 'yargs'
 import fast_glob from 'fast-glob'
+import chalk from 'chalk'
 import { lintFile } from './eslint'
 import { convertToTs, revert } from '.'
 
@@ -57,14 +58,19 @@ async function main() {
   // Lint & fix
   console.log('executing ESLint --fix')
   try {
-    console.log(lintFile(argv.files.glob))
+    console.log(lintFile(argv.files.glob.replace(/\.zs/g, '.ts')))
   }
   catch (error) {
-    console.log('ERROR: Managable error during linting.:')
-
     const errStr = (error as any).stdout.toString()
+    const isFatal = !!errStr.match(/\d+\s+error/im)
+
+    if (isFatal)
+      console.log(`${chalk.bgRed('ERROR')}: Fatal error during linting.:`)
+    else
+      console.log(`${chalk.bgYellow('WARN')}: Managable error during linting.:`)
+
     console.log(errStr)
-    if (errStr.match(/\d+ error/im)) return
+    if (isFatal) return
   }
 
   if (argv.ts) return
