@@ -44,7 +44,7 @@ export const postfixNames = Object.fromEntries(
 
 type GroupReplace = (groups: Record<string, string>) => string
 
-function rgx(rgxString: RegExp | string, fn: string | GroupReplace): readonly [string | RegExp, string | ((...args: any[]) => string)] {
+function rgx(rgxString: RegExp | string, fn: GroupReplace | string): readonly [RegExp | string, ((...args: any[]) => string) | string] {
   // console.log('rgx :>> ', new RegExp(rgxString, 'gm'))
   return [
     typeof rgxString === 'string' ? new RegExp(rgxString, 'gm') : rgxString,
@@ -52,29 +52,40 @@ function rgx(rgxString: RegExp | string, fn: string | GroupReplace): readonly [s
   ] as const
 }
 
-type ReplTuple = [RegExp | string, string | GroupReplace ]
+type ReplTuple = [RegExp | string, GroupReplace | string ]
 
 const conversions: { [name: string]: ReplTuple } = {
+  CLASS         : [/class(\s+\w+[\s\n]*\{)/gm, 'zenClass$1'],
+  CLASS_VAL     : [/\/\* class \*\/\s*readonly/gm, 'val'],
+  CLASS_STATIC  : [/\/\* class \*\/\s*static/gm, 'static'],
+  CLASS_VAR     : [/\/\* class \*\/\s?/gm, 'var '],
+  CLASS_FUNCTION: [/\/\* function \*\//gm, 'function'],
 
-  PREPROCESSORS   : [/^\/\/\s*((?:no_fix_recipe_book|debug|loader|profile|norun|reloadable|ikwid|zslint|suppress|priority|modloaded|nowarn|notreloadable|ignoreBracketErrors|hardfail|onside|sideonly|disable_search_tree) .*$)/gm, '#$1'],
+  ANON_FUNCTION_ARROW: [/[\s\n]?=>[\s\n]?/gm, ''],
+  ANON_FUNCTION_ARGS : [/\s?_arg\d+[\s\n]*:[\s\n]?/gm, ''],
+
+  PREPROCESSORS   : [/^import '#preprocessor (.*)';?$/gm, '#$1'],
   IMPORTS         : ['import(?: type)? (?<name>[^ ]+) from \'(?<from>[^\']+)\';', ({ from, name }) => `import ${from}${name !== from.split('.').pop() ? ` as ${name}` : ''};`],
   CAPTURES        : ['\\$\\$\\$\\(\'(?<cap>[^\']+)\'\\)', ({ cap }) => `<${cap}>`],
   NUMBERPOSTFIX   : [`(?<p>${Object.values(postfixTypes).join('|')})\\((?<num>${$.number})\\)`, ({ p, num }) => num + postfixNames[p]],
-  FOR_TO          : [`for \\(let (?<v>.+?) = (?<from>.+?); \\k<v> < (?<to>${$.expression}); \\k<v>\\+\\+\\) \\{`, ({ v, from, to }) => `for ${v} in ${from} .. ${to} {`],
+  FOR_TO          : [/for \(let (?<v>.+?) = (?<from>.+?); \k<v> < (?<to>.+?); \k<v>\+\+\) \{/gm, ({ v, from, to }) => `for ${v} in ${from} .. ${to} {`],
   FOR_IN          : [/for \(const (?<v>.+?) of (?<from>[\s\S\n]+?)\)\s*\{/gm, ({ v, from }) => `for ${v} in ${from.trim()} {`],
-  CONST           : [`(?<!\\()const (?<l>${$.literal})`, ({ l }) => `val ${l}`],
-  LET             : [`(?<!\\()let (?<l>${$.literal})`, ({ l }) => `var ${l}`],
-  STATICS         : [`\\/\\* static \\*\\/const (?<l>${$.literal})`, ({ l }) => `static ${l}`],
+  STATICS         : [/\/\* (static|global) \*\/\s*const/gm, `$1`],
+  REMOVE_DEBRIS   : [/\/\* _ \*\/\s*./gm, ''],
   WHILE_LOOP      : [/while \((.+)\) \{/gm, 'while $1 {'],
   OBJECT_STRUCTURE: [`\\{\\s?\\[(?<left>${$.expression})\\]: `, ({ left }) => `{ ${left}: `],
-  CONCATENATIONS  : ['/\\* ~ \\*/\\s*\\+|\\s?\\+/\\* ~ \\*/', '~'],
-  CAST_REVERT     : [/(?<a>\s*):\/\* as \*\/(?<b>\s*)/gm, ({ a, b }) => `${a || ' '}as${b || ' '}`],
+  CONCATENATIONS  : [/(?<a>\s*)\/\* ~ \*\/(?<b>\s*)\+|\+(?<c>\s*)\/\* ~ \*\/(?<d>\s*)/gm, ({ a, b, c, d }) => `${(a || b) ?? ''}~${(c || d) ?? ''}`],
+  HAS             : [/\/\*\s*has\s*\*\/s*in/gm, 'has'],
+  CAST_REVERT     : [/(?<a>\s*):\s*\/\* as \*\/(?<b>\s*)/gm, ({ a, b }) => `${a || ' '}as${b || ' '}`],
+  RESRVED         : [/_\$_(default)/gm, '$1'],
+  CONST           : [`(?<!\\()const (?<l>${$.literal})`, ({ l }) => `val ${l}`],
+  LET             : [`(?<!\\()let (?<l>${$.literal})`, ({ l }) => `var ${l}`],
 }
 
 export function revertTS_to_ZS(source: string) {
   let result = source
   const values = Object.values(conversions)
-  values.reverse().forEach((c) => {
+  values.forEach((c) => {
     const [from, to] = rgx(...c)
     result = result.replace(from, to as any)
   })

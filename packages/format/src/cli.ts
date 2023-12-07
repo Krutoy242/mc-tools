@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
+import { execSync } from 'node:child_process'
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import yargs from 'yargs'
-import fast_glob from 'fast-glob'
+import process from 'node:process'
+
 import chalk from 'chalk'
-import { lintFile } from './eslint'
+import fast_glob from 'fast-glob'
+import yargs from 'yargs'
+
 import { convertToTs, revert } from '.'
 
 /* =============================================
@@ -46,9 +49,13 @@ const argv = yargs(process.argv.slice(2))
 /* ============================================
 =                                             =
 ============================================= */
+function lintFile(glob: string) {
+  const command = `npx eslint --fix --quiet "${glob.replace(/\\/g, '/')}"`
+  return execSync(command).toString().trim()
+}
 
 async function main() {
-  console.log('loading file')
+  process.stdout.write('loading file')
 
   const convertResult = convertToTs(argv.files)
 
@@ -56,20 +63,20 @@ async function main() {
   if (argv.nolint) return
 
   // Lint & fix
-  console.log('executing ESLint --fix')
+  process.stdout.write('executing ESLint --fix')
   try {
-    console.log(lintFile(argv.files.glob.replace(/\.zs/g, '.ts')))
+    process.stdout.write(lintFile(argv.files.glob.replace(/\.zs/g, '.ts')))
   }
   catch (error) {
     const errStr = (error as any).stdout.toString()
     const isFatal = !!errStr.match(/\d+\s+error/im)
 
     if (isFatal)
-      console.log(`${chalk.bgRed('ERROR')}: Fatal error during linting.:`)
+      process.stdout.write(`${chalk.bgRed('ERROR')}: Fatal error during linting.:`)
     else
-      console.log(`${chalk.bgYellow('WARN')}: Managable error during linting.:`)
+      process.stdout.write(`${chalk.bgYellow('WARN')}: Managable error during linting.:`)
 
-    console.log(errStr)
+    process.stdout.write(errStr)
     if (isFatal) return
   }
 
