@@ -1,26 +1,34 @@
 {
-  "private": true,
   "name": "mc-tools",
+  "type": "module",
   "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@8.11.0",
   "description": "Automation tools for Minecraft modpack development",
-  "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
   "homepage": "https://github.com/Krutoy242/mc-tools",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Krutoy242/mc-tools.git"
   },
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
-  "type": "module",
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools"
+  ],
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     }
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -31,8 +39,6 @@
     "test": "lerna run test",
     "verify": "lerna run verify --stream"
   },
-  "sideEffects": false,
-  "types": "./dist/index.d.ts",
   "workspaces": [
     "packages/*"
   ],
@@ -40,31 +46,21 @@
     "handlebars": "^4.7.8"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^0.41.0",
-    "@types/eslint": "^8.44.2",
-    "@types/lodash": "^4.14.197",
-    "@types/node": "^18.17.14",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^18.19.2",
     "@vitest/coverage-c8": "^0.33.0",
     "bumpp": "^9.2.0",
-    "eslint": "^8.48.0",
-    "eslint-plugin-unused-imports": "^3.0.0",
-    "esno": "^0.17.0",
-    "lerna": "^7.2.0",
+    "esno": "^4.0.0",
+    "lerna": "^7.4.2",
     "magic-regexp": "^0.7.0",
     "sanitize-filename": "^1.6.3",
     "ts-deepmerge": "^6.2.0",
     "ts-node": "^10.9.1",
-    "typedoc": "^0.25.0",
-    "typedoc-plugin-markdown": "^3.16.0",
-    "typescript": "^5.2.2",
+    "typedoc": "^0.25.4",
+    "typedoc-plugin-markdown": "^3.17.1",
+    "typescript": "^5.3.2",
     "unbuild": "^2.0.0",
-    "vitest": "^0.34.3",
+    "vitest": "^0.34.6",
     "yargs": "^17.7.2"
-  },
-  "keywords": [
-    "automation",
-    "minecraft",
-    "tools"
-  ],
-  "packageManager": "pnpm@8.7.1"
+  }
 }
