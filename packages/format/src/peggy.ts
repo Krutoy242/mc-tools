@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+
 import peggy from 'peggy'
 
 function relative(relPath: string) {
@@ -16,5 +17,5 @@ export function peggyParse(text: string) {
 function initParser() {
   const filePath = relative('zenscript.peggy')
   const fileContent = readFileSync(filePath, 'utf8')
-  return peggy.generate(fileContent)
+  return peggy.generate(fileContent, { cache: true })
 }

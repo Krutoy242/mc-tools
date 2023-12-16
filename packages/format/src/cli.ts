@@ -27,11 +27,11 @@ const argv = yargs(process.argv.slice(2))
     type        : 'string',
     normalize   : true,
     demandOption: true,
-    coerce      : (glob: string) => {
-      const list = fast_glob.sync(glob.replace(/\\/g, '/'), { dot: true })
-      if (!list.length) throw new Error(`${resolve(glob)} doesnt exist. Provide correct path.`)
-      return { glob, list }
-    },
+  })
+  .option('ignore-pattern', {
+    alias   : 'i',
+    type    : 'string',
+    describe: 'Same as --ignore-pattern for ESLint',
   })
   .option('ts', {
     alias    : 't',
@@ -49,43 +49,51 @@ const argv = yargs(process.argv.slice(2))
 /* ============================================
 =                                             =
 ============================================= */
-function lintFile(glob: string) {
-  const command = `npx eslint --fix --quiet "${glob.replace(/\\/g, '/')}"`
-  return execSync(command).toString().trim()
+function lintFile(glob: string, ignorePattern: string | undefined) {
+  const command = `npx eslint --fix --quiet`
+    + `${ignorePattern ? ` --ignore-pattern ${ignorePattern}` : ''}`
+    + ` "${glob.replace(/\\/g, '/')}"`
+  return execSync(command, { stdio: 'inherit' })?.toString().trim() ?? ''
 }
 
 async function main() {
-  process.stdout.write('loading file')
+  const fileList = fast_glob.sync(argv.files.replace(/\\/g, '/'), {
+    dot   : true,
+    ignore: argv.ignorePattern ? [argv.ignorePattern] : [],
+  })
+  if (!fileList.length) throw new Error(`${resolve(argv.files)} doesnt exist. Provide correct path.`)
 
-  const convertResult = convertToTs(argv.files)
+  const convertResult = convertToTs(fileList)
 
-  if (!convertResult.length) return
+  if (!convertResult.filter(Boolean).length) return
   if (argv.nolint) return
 
   // Lint & fix
   process.stdout.write('executing ESLint --fix')
   try {
-    process.stdout.write(lintFile(argv.files.glob.replace(/\.zs/g, '.ts')))
+    process.stdout.write(lintFile(argv.files.replace(/\.zs/g, '.ts'), argv.ignorePattern))
   }
-  catch (error) {
-    const errStr = (error as any).stdout.toString()
+  catch (error: any) {
+    const errStr = (error.stdout ?? error).toString()
     const isFatal = !!errStr.match(/\d+\s+error/im)
 
-    if (isFatal)
-      process.stdout.write(`${chalk.bgRed('ERROR')}: Fatal error during linting.:`)
-    else
-      process.stdout.write(`${chalk.bgYellow('WARN')}: Managable error during linting.:`)
+    if (isFatal) {
+      process.stdout.write(`\n${chalk.bgRed(' ERROR ')}: Fatal error during linting.:\n`)
+      // eslint-disable-next-line no-console
+      console.log(error)
+      if (isFatal) return
+    }
 
-    process.stdout.write(errStr)
-    if (isFatal) return
+    process.stdout.write(`\n${chalk.bgYellow(' WARN ')}: Have some managable errors during linting.\n`)
   }
 
   if (argv.ts) return
 
   // Revert TS -> ZS
   convertResult.forEach((newFilePath, i) => {
+    if (!newFilePath) return
     const linted = readFileSync(newFilePath, 'utf8')
-    writeFileSync(argv.files.list[i], revert(linted))
+    writeFileSync(fileList[i], revert(linted))
     unlinkSync(newFilePath)
   })
 }

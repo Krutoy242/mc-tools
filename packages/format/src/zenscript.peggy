@@ -10,44 +10,50 @@ Start
 // CONVERSION_DEBRIS
 // =============================================================
 /* eslint max-statements-per-line: "warn" */
+/* eslint style/no-multi-spaces: ["error", { ignoreEOLComments: true, exceptions: { "VariableDeclarator": true, "ArrayExpression": true }}] */
+/* eslint style/quote-props: ["warn", "consistent-as-needed"] */
 /* eslint style/semi: ["error", "always"] */
 /* eslint-disable antfu/consistent-list-newline */
 /* eslint-disable curly */
+/* eslint-disable dot-notation */
 /* eslint-disable eqeqeq */
 /* eslint-disable import/first */
-/* eslint-disable no-multi-spaces */
 /* eslint-disable no-unreachable-loop */
 /* eslint-disable no-var */
 /* eslint-disable object-shorthand */
 /* eslint-disable prefer-arrow-callback */
 /* eslint-disable prefer-template */
+/* eslint-disable style/comma-spacing */
+/* eslint-disable style/no-multi-spaces */
+/* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
+/* eslint-disable ts/no-use-before-define */
 /* eslint-disable vars-on-top */
 
-declare function __float(n: number): number;
-declare function __double(n: number): number;
-declare function __byte(n: number): number;
-declare function __short(n: number): number;
-declare function __long(n: number): number;
-declare function $$$(s: string): any;
-declare function isNull(o: any): boolean;
-declare const recipes: Record<string, any>;
-declare const mods: Record<string, any>;
-declare const craft: Record<string, any>;
-declare const scripts: Record<string, any>;
-declare const furnace: Record<string, any>;
-declare const itemUtils: Record<string, any>;
-declare const oreDict: Record<string, any>;
-declare const game: Record<string, any>;
-declare const crafttweaker: any;
-declare const events: any;
-declare type int = number;
-declare type byte = number;
-declare type float = number;
-declare type double = number;
-declare type short = number;
-declare type long = number;
-declare type bool = boolean;
+declare function __float(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
+declare function __double(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
+declare function __byte(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
+declare function __short(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
+declare function __long(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
+declare function $(s: any): any; // eslint-disable-line unused-imports/no-unused-vars
+declare function isNull(o: any): boolean; // eslint-disable-line unused-imports/no-unused-vars
+declare const recipes: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const mods: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const craft: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const scripts: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const furnace: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const itemUtils: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const oreDict: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const game: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
+declare const crafttweaker: any; // eslint-disable-line unused-imports/no-unused-vars
+declare const events: any; // eslint-disable-line unused-imports/no-unused-vars
+declare type int = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type byte = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type float = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type double = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type short = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type long = number; // eslint-disable-line unused-imports/no-unused-vars
+declare type bool = boolean; // eslint-disable-line unused-imports/no-unused-vars
 // =============================================================
 // CONVERSION_DEBRIS
 
@@ -153,11 +159,19 @@ TypeCast
   = TypeSingle (__ TypeSingle)*
 
 TypeSingle
-  = "as" !Letter _ TypeLiteral
+  = "as" !Letter _ TypeMutated
+
+TypeMutated
+  = head:TypeLiteral tail:("$" IdentifierName)? {
+    return [head, tail ? ['/* ', tail, ' */'] : undefined]
+  }
 
 TypeLiteral
-  = FunctionType 
-  / TypePath ("[" _ TypeLiteral? _ "]")*
+  = FunctionType
+  / "[" body:(_ TypeLiteral? _) "]" {
+  	return [...body, "[]"]
+  }
+  / TypePath (_ "[" _ TypeLiteral? _ "]")*
 
 TypePath
   = IdentifierName (_ "." _ IdentifierName)*
@@ -224,14 +238,15 @@ HexDigit
 // -----------------------------------------------
 
 StringLiteral "string"
-  = '"' (!('"') .)* '"'
-  / "'" (!("'") .)* "'"
+  = '"' ("\\" . / !('"') .)* '"'
+  / "'" ("\\" . / !("'") .)* "'"
 
 // -----------------------------------------------
 // Statement
 // -----------------------------------------------
 Statement
   = Block
+  / BlockWhile
   / Conditional
   / Loop
   / StatementBody _ ";"
@@ -245,6 +260,11 @@ StatementBody
 
 Block
   = "{" _ (StatementList _)? "}"
+
+BlockWhile
+  =  a:("while" _) head:Expression body:(_ "{" _ (StatementList _)? "}") {
+    return [a, '(', head, ')', body]
+  }
 
 StatementList
   = Statement (_ Statement)*
@@ -270,24 +290,28 @@ Return
   = "return" _ Expression
 
 Import
-  = head:("import" _) classpath:(TypePath) {
-    const s = flat(classpath).split(".").pop()
-    return [head, s ? `${s} from ` : '', "'", classpath, "'"];
+  = head:("import" _) classpath:(TypePath) rename:(__ "as" __ Identifier)? {
+    const classpathFlat = flat(classpath)
+    const s = rename ? flat(rename[3]) : classpathFlat.split(".").pop()
+    return [
+      head, s ? `${s} from ` : '', "'",
+      classpathFlat.startsWith('scripts') ? './' : '',
+      classpath, "'"];
   }
 
 VariableDeclaration
-  = (Var / Val / Static / Global) _ Declaration
+  = (Var / Val / Static / Global) __ Declaration
 
-Var = "var" {return 'let'}
-Val = "val" {return 'const'}
+Var = "var" {return '/* $ */let'}
+Val = "val" {return '/* $ */const'}
 Static = "static" {return '/* static */const'}
 Global = "global" {return '/* global */const'}
 
 Declaration
-  = Identifier (_ Type)? _ AssignmentOperator _ Expression
+  = Identifier (_ Type)? (_ AssignmentOperator _ Expression)?
 
 Assignment
-  = Member _ AssignmentOperator _ Expression
+  = Call _ AssignmentOperator _ Expression
 
 AssignmentOperator "Assignment"
   = "="
@@ -315,7 +339,7 @@ Primary
 
 Capture
   = "<" body:(!">" .)+ ">" {
-    return ["$$$('", body, "')"]
+    return ["$`", body, "`"]
   }
 
 ArrayLiteral
@@ -323,25 +347,33 @@ ArrayLiteral
 
 ObjectLiteral
   = "{" _ "}"
-  / "{" _ (PropertyAssignment (Comma PropertyAssignment)*)? Comma? _ "}"
+  / "{" _ PropertyNameAndValueList _ "}"
+  / "{" _ PropertyNameAndValueList _ "," _ "}"
 
 Comma
   = _","_
+  
+PropertyNameAndValueList
+  = PropertyAssignment (Comma PropertyAssignment)*
 
 PropertyAssignment
   = PropertyKey _ ":" _ Expression
 
 PropertyKey
-  = PropertyName
-  / "[" _ Expression _ "]"
-  / capture:Capture {
-    return ['/* _ */[',...capture,'/* _ */]']
-  }
+  = PropertyName &(_ ":")
+  / "[" _ Expression _ "]" &(_ ":")
+  / body:(Capture &(_ ":") / Expression) {
+    return ['/* _ */[',...body,'/* _ */]']
+    }
 
 PropertyName
   = IdentifierName
   / StringLiteral
-  / "-"? NumericLiteral
+  / minus:($"-"?) body:NumericLiteral {
+    return minus
+      ? ['/* _ */[', ...minus, ...body, '/* _ */]']
+      : body
+  }
 
 Call
   = (Member _ Arguments) (_ Arguments / _ "[" _ Expression _ "]" / _ "." _ IdentifierName)*
@@ -375,6 +407,7 @@ Operator
 OperatorLiteral "operator"
   = "~" { return '/* ~ */ +' }
   / "has" { return '/* has */in' }
+  / "instanceof"
   /"=="/"<="/">="/"%"/"&&"/"&"/"||"/"|"/"*"/"+"/"-"/"/"/"in"/"!="/"<"/">"/"^"
 
 // -----------------------------------------------
@@ -387,10 +420,12 @@ SourceElement
   / Class
 
 Function "function"
-  = "function" _ FunctionDefinition
+  = body:("function" _ FunctionDefinition) {
+    return ['export ', ...body]
+  }
 
 FunctionDefinition
-  = Identifier _ 
+  = Identifier _
     "(" _ ParameterList? ")" (_ Type)? _
     "{" _ SourceElements? _ "}"
 
@@ -398,16 +433,21 @@ ParameterList
   = Parameter (_ "," _ Parameter)* _
 
 Parameter
-  = Identifier _ Type (_ "=" _ Literal)?
+  = Identifier _ Type (_ "=" _ ParameterDefault)?
+
+ParameterDefault
+  = Literal
+  / "["_"]"
+  / Capture
 
 FunctionAnon
   = "function" _
     "(" _ (ParameterAnon (_ "," _ ParameterAnon)* _)? ")" (_ Type)? _
     "{" _ SourceElements? _ "}"
- 
+
  ParameterAnon
    = Identifier (_ Type)?
- 
+
  FunctionType
   = "function" _
     a:("(" _) list:TypeLiteral|.., Comma| b:(_? ")")
@@ -415,7 +455,7 @@ FunctionAnon
       return [
         '/* function */', a,
         interleave(list.map((o,i)=>[`_arg${i}: `, o]), ', '),
-        b, type ? [' => ',type] : undefined
+        b, type ? ['/* => */=> ',type] : undefined
       ]
     }
 
@@ -447,7 +487,7 @@ ClassVariableDeclaration
 CVar = "var" _ {}
 CVal = "val" _ { return 'readonly '}
 CStatic = "static" _
-  
+
 Constructor
   = "zenConstructor" _
     "(" _ ParameterList? ")"_
