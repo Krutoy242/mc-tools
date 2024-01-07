@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import yargs from 'yargs'
-import { loadConfig } from './config'
+
 import { showTerminal } from '.'
+import { loadConfig } from './config'
 
 /* =============================================
 =                Arguments                    =
@@ -22,9 +23,8 @@ const argv = yargs(process.argv.slice(2))
   })
   .command('$0 [config]', '')
   .positional('config', {
-    describe : 'Path to configuration JSON',
+    describe : 'Path to configuration JSON OR package.json/scripts key regexp',
     type     : 'string',
-    default  : '@mctools/run.json',
     normalize: true,
     coerce   : loadConfig,
   })
