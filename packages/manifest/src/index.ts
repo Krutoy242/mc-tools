@@ -99,16 +99,16 @@ export async function generateManifest(
     required   : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
   }))
 
+  const forgeVersion = readFileSync('logs/debug.log', 'utf8').match(
+    /Forge Mod Loader version ([^\s]+) for Minecraft 1.12.2 loading/
+  )?.[1]
+
   const resultObj: ModpackManifest = {
     minecraft: {
       version   : '1.12.2',
       modLoaders: [
         {
-          id: `forge-${
-            readFileSync('logs/debug.log', 'utf8').match(
-              /Forge Mod Loader version ([^\s]+) for Minecraft 1.12.2 loading/
-            )?.[1]
-          }`,
+          id: `forge-${!forgeVersion || forgeVersion?.endsWith('.0') ? '14.23.5.2860' : forgeVersion}`,
           primary: true,
         },
       ],
