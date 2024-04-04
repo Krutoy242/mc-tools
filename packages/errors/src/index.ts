@@ -3,9 +3,14 @@ export interface Config {
     from?: string
     to?: string
   }
-  match: string
-  replace: { from: string; to: string }[]
+  groupBy?: string[]
   ignore: string | string[]
+  match: string
+  replace: { from: string, to: string }[]
+}
+
+function naturalSort(a: string, b: string) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
 }
 
 export async function findErrors(debugLogText: string, config: Config): Promise<string[]> {
@@ -19,7 +24,7 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
     if (debugLogText.length <= 0) throw new Error('After applying boundries, no log text left')
   }
 
-  const result: string[] = []
+  let result: string[] = []
 
   const allErrors = [...debugLogText
     .matchAll(new RegExp(config.match, 'gm')),
@@ -42,6 +47,29 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
     if (ignoreRegexps.some(r => r.test(res))) continue
     replaces.forEach(r => res = res.replace(r.from, r.to))
     result.push(res)
+  }
+
+  if (config.groupBy?.length) {
+    const rgxs = config.groupBy.map(s => new RegExp(s, 'm'))
+    const groupFirstIndexes: number[] = Array.from({ length: rgxs.length })
+    const newResult: string[][] = result.map(() => [])
+    result
+      .forEach((s, i) => {
+        rgxs.some((rgx, j) => {
+          if (rgx.test(s)) {
+            if (groupFirstIndexes[j] !== undefined) {
+              newResult[groupFirstIndexes[j]].push(s)
+              return true
+            }
+            else {
+              groupFirstIndexes[j] = i
+              return false
+            }
+          }
+          return false
+        }) || newResult[i].push(s)
+      })
+    result = newResult.map(r => r.sort(naturalSort)).flat().filter(Boolean)
   }
 
   return result

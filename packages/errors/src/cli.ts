@@ -2,10 +2,13 @@
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
 import fse from 'fs-extra'
-import yargs from 'yargs'
 import { parse } from 'yaml'
+import yargs from 'yargs'
+
 import type { Config } from '.'
+
 import { findErrors } from '.'
 
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
