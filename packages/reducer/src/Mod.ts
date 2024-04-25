@@ -6,7 +6,16 @@ import levenshtein from 'fast-levenshtein'
 import { Memoize } from 'typescript-memoize'
 import terminal_kit from 'terminal-kit'
 import { style } from './binary'
-import type { InstalledAddon } from './minecraftinstance'
+import { type InstalledAddon } from './minecraftinstance'
+
+
+export enum DependencyLevel {
+  All,
+  Emmbed,
+  Optional,
+  Required,
+  Tool
+}
 
 export type ModdedAddon = InstalledAddon & { mod?: Mod }
 
@@ -90,7 +99,7 @@ export class Mod {
   private get dependencies(): Mod[] {
     const depsArr = (this.addon?.installedFile.dependencies ?? [])
     const deps = depsArr
-      .filter(({ type }) => type === 3 || type === 2)
+      .filter(({ type }) => type === DependencyLevel.Required)
       .map((d) => {
         const r = Mod.getAddonById(d.addonId)
         if (!r && d.type === 3) {
