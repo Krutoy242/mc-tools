@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
-import yargs from 'yargs'
-import fse from 'fs-extra'
 import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
+
+import process from 'node:process'
+
 import chalk from 'chalk'
-import { assertPath } from '../../utils/src/args'
+import fse from 'fs-extra'
+import yargs from 'yargs'
+
 import { generateModsList } from '.'
+import { assertPath } from '../../utils/src/args'
 
 const { readFileSync, writeFileSync, readJsonSync } = fse
 

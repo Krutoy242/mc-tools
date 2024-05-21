@@ -5,14 +5,15 @@
  * @link https://github.com/Krutoy242
  */
 
+import type { ModsComparsion } from '@mctools/curseforge'
+import type { InstalledAddon, Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
+
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import fse from 'fs-extra'
-
-import Handlebars from 'handlebars'
-import type { ModsComparsion } from '@mctools/curseforge'
 import { fetchMods, modList } from '@mctools/curseforge'
-import type { InstalledAddon, Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
+import fse from 'fs-extra'
+import Handlebars from 'handlebars'
 
 const { readFileSync } = fse
 
@@ -24,7 +25,7 @@ function relative(relPath: string) {
 // Handles arrays, objects, and any nested combination of the two.
 // Also handles undefined as a valid value - see test case for details.
 // Based on: https://gist.github.com/harish2704/d0ee530e6ee75bad6fd30c98e5ad9dab
-function deepGet(obj: { [x: string]: any }, query: string | (string | number)[], defaultVal?: any) {
+function deepGet(obj: { [x: string]: any }, query: (number | string)[] | string, defaultVal?: any) {
   query = Array.isArray(query)
     ? query
     : query.replace(/(\[(\d)\])/g, '.$2').replace(/^\./, '').split('.')
@@ -42,20 +43,14 @@ function deepGet(obj: { [x: string]: any }, query: string | (string | number)[],
  * Options for mod list generator
  */
 export interface ModListOpts {
-  /** CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys */
-  key: string
-
   /**
    * .gitignore-like file content with mods to ignore.
    * @see modList
    */
   ignore?: string
 
-  /** Custom Handlebars template to generate result */
-  template?: string
-
-  /** Output information about working process in stdout */
-  verbose?: boolean
+  /** CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys */
+  key: string
 
   /**
    * Sort field of CurseForge addon.
@@ -63,6 +58,12 @@ export interface ModListOpts {
    * `/` symbol at start of value flip sort order.
    */
   sort?: string
+
+  /** Custom Handlebars template to generate result */
+  template?: string
+
+  /** Output information about working process in stdout */
+  verbose?: boolean
 }
 
 /**
