@@ -5,9 +5,12 @@
  * @link https://github.com/Krutoy242
  */
 
+import type { Ignore } from 'ignore'
+
+import process from 'node:process'
+
 import CFV2 from 'curseforge-v2'
 import fse from 'fs-extra'
-import type { Ignore } from 'ignore'
 import ignore from 'ignore'
 
 import type { InstalledAddon, Minecraftinstance } from './minecraftinstance'
@@ -150,21 +153,33 @@ export interface ModsUnion {
 }
 
 /**
+ * Old and new addons
+ * @internal
+ */
+export interface AddonDifference {
+  now: InstalledAddon
+  was: InstalledAddon
+}
+
+/**
  * Result of comparsion of two `minecraftinstance`s
  * @internal
  */
 export interface ModsComparsion extends ModsUnion {
+  /** Mods that exist in new instance, but absent in old */
+  added?: InstalledAddon[]
+
   /** Intersection, mods that present in both instances */
   both?: InstalledAddon[]
 
-  /** Mods that exist in new instance, but absent in old */
-  added?: InstalledAddon[]
+  // /** Array of mods with same file ID but different file sizes */
+  // changed?: AddonDifference[]
 
   /** Mods that exist in old, but absent in new */
   removed?: InstalledAddon[]
 
   /** Array of mods with same ID but different versions */
-  updated?: { was: InstalledAddon; now: InstalledAddon }[]
+  updated?: AddonDifference[]
 }
 
 /**
@@ -193,15 +208,28 @@ export function modList(fresh: Minecraftinstance, old?: Minecraftinstance | unde
   const map_B = keyBy(B, 'addonID')
   const map_union = { ...map_A, ...map_B }
 
-  const result = {
+  const result: ModsComparsion = {
     union  : Object.values(map_union),
     both   : B.filter(o => map_A[o.addonID]),
     added  : B.filter(o => !map_A[o.addonID]),
     removed: A.filter(o => !map_B[o.addonID]),
-    updated: B
-      .filter(o => map_A[o.addonID] && map_A[o.addonID].installedFile?.id !== o.installedFile?.id)
-      .map(o => ({ was: map_A[o.addonID], now: o })),
   }
+
+  result.updated = result.both
+    ?.filter(o => map_A[o.addonID].installedFile?.id !== o.installedFile?.id)
+    .map(o => ({ now: o, was: map_A[o.addonID] }))
+
+  // result.changed = result.both
+  //   ?.filter((old) => {
+  //     const fresh = map_A[old.addonID]
+  //     return fresh.installedFile?.id === old.installedFile?.id
+  //       && (
+  //         fresh.installedFile?.fileLength !== old.installedFile?.fileLength
+  //         || fresh.installedFile?.fileNameOnDisk !== old.installedFile?.fileNameOnDisk
+  //       )
+  //   })
+  //   .map(o => ({ now: o, was: map_A[o.addonID] }))
+
   return result
 }
 
