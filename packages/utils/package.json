@@ -32,6 +32,7 @@
   "types": "./dist/index.d.ts",
   "dependencies": {
     "consola": "^3.1.0",
+    "ftbq-nbt": "^1.4.1",
     "typescript-memoize": "^1.1.1",
     "yargs": "^17.7.1"
   },
