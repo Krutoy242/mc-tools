@@ -1,26 +1,33 @@
 {
-  "private": true,
   "name": "@mctools/utils",
+  "type": "module",
   "version": "0.0.0",
+  "private": true,
   "description": "Various utilities for Minecraft-Tools monorepo",
-  "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
   "homepage": "https://github.com/Krutoy242/mc-tools",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Krutoy242/mc-tools.git"
   },
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
-  "type": "module",
+  "keywords": [
+    "automation",
+    "lib",
+    "minecraft",
+    "tools"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -29,7 +36,6 @@
     "coverage": "vitest run --coverage",
     "test": "vitest"
   },
-  "types": "./dist/index.d.ts",
   "dependencies": {
     "consola": "^3.1.0",
     "ftbq-nbt": "^1.4.1",
@@ -39,12 +45,6 @@
   "devDependencies": {
     "@types/yargs": "^17.0.24"
   },
-  "keywords": [
-    "automation",
-    "lib",
-    "minecraft",
-    "tools"
-  ],
   "publishConfig": {
     "access": "public"
   }

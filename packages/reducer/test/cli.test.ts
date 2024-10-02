@@ -1,18 +1,20 @@
-import { execSync } from 'child_process'
-import { expect, test } from 'vitest'
+import { execSync } from 'node:child_process'
+
+import { expect, it } from 'vitest'
+
 import { getFetchInModsDir } from '../src/index'
 
 function exec(params: string) {
   return execSync(
-    `esno src/cli.ts ${params}`
+    `tsx src/cli.ts ${params}`
   ).toString().trim()
 }
 
-test('Run app no arguments', async () => {
+it('run app no arguments', async () => {
   expect(() => exec('')).toThrowError()
 })
 
-test('Disable and enable some jars', async () => {
+it('disable and enable some jars', async () => {
   expect(exec(
     '--levels=test/reduce_mods.json'
     + ' --mods=test/mods'

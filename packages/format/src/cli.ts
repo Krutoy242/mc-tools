@@ -75,11 +75,11 @@ async function main() {
   }
   catch (error: any) {
     const errStr = (error.stdout ?? error).toString()
-    const isFatal = !!errStr.match(/\d+\s+error/im)
+    const isFatal = !!errStr.match(/\d+\s+error/i)
 
     if (isFatal) {
       process.stdout.write(`\n${chalk.bgRed(' ERROR ')}: Fatal error during linting.:\n`)
-      // eslint-disable-next-line no-console
+
       console.log(error)
       if (isFatal) return
     }

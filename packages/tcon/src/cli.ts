@@ -2,11 +2,14 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, parse, resolve } from 'node:path'
-import yargs from 'yargs'
-import fast_glob from 'fast-glob'
+
 import { parse as csvParseSync } from 'csv-parse/sync'
+import fast_glob from 'fast-glob'
+import yargs from 'yargs'
+
 import type { TweakName, TweakObj } from '.'
-import { genStatsTable, getLookup, parseStats, parseTraits } from '.'
+
+import { genStatsTable, getLookup, parseStats } from '.'
 
 /* =============================================
 =                Arguments                    =
@@ -68,9 +71,11 @@ function saveText(txt: string, filename: string) {
 
 function parseTweaks(tweaksPath: string) {
   const tweaksCSVList = fast_glob.sync(
-    join(tweaksPath, '*.csv').replace(/\\/g, '/'), {
+    join(tweaksPath, '*.csv').replace(/\\/g, '/'),
+    {
       dot: true,
-    })
+    }
+  )
 
   if (!tweaksCSVList.length)
     throw new Error('Cant find any tweak .csv files')

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import yargs from 'yargs'
 import fse from 'fs-extra'
-import { assertPath } from '../../utils/src/args'
+import yargs from 'yargs'
+
 import { generateManifest } from '.'
+import { assertPath } from '../../utils/src/args'
 
 const { readFileSync } = fse
 

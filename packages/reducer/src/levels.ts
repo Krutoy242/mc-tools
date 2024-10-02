@@ -3,14 +3,15 @@ import _ from 'lodash'
 import terminal_kit from 'terminal-kit'
 
 import type { Mod } from './Mod'
+
 import { ModStore } from './ModStore'
 
 const { terminal: T } = terminal_kit
 
 export type ReduceLevels = {
-  name: string
   description: string
-  list: string[]
+  list       : string[]
+  name       : string
 }[]
 
 export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIndex?: number) {
@@ -48,7 +49,8 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
   if (severalVariations.length) {
     T(
       'This lines have several variations :>> \n',
-      severalVariations.join('\n'), '\n'
+      severalVariations.join('\n'),
+      '\n'
     )
   }
 
@@ -71,8 +73,8 @@ export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIn
     let cumulativeReduction = allLevelsGlobs.length
     function getLevelLine(l: ReduceLevels[number], i: number) {
       return `${i + 1}: `
-      + `${getLevelText(i)} `
-      + `(${chalk.yellow.dim.italic(
+        + `${getLevelText(i)} `
+        + `(${chalk.yellow.dim.italic(
         `${cumulativeReduction -= l.list.length}`
       )}/${chalk.gray.italic(store.mods.length)}) `
       + `${chalk.rgb(100, 100, 100)(l.description)}`

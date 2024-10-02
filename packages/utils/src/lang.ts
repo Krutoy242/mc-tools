@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync } from 'node:fs'
+
 import fast_glob from 'fast-glob'
 import { Memoize } from 'typescript-memoize'
 
@@ -53,7 +54,8 @@ export class Lang {
   @Memoize()
   public getCodes() {
     return fast_glob.sync(
-      '*.lang', { cwd: `resources/${this.langOwner}/lang/` }
+      '*.lang',
+      { cwd: `resources/${this.langOwner}/lang/` }
     ).map(s => s.replace(/.lang$/, ''))
   }
 

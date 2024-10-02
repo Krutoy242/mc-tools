@@ -4,10 +4,9 @@ import { resolve } from 'node:path'
 // import consola from 'consola'
 
 import type { Arguments, Argv, CamelCaseKey, /* InferredOptionType,  */Options } from 'yargs'
-import yargs from 'yargs'
 
 type DemandedOption = Options & {
-  errorMessage: string | ((value?: string) => string | undefined)
+  errorMessage: ((value?: string) => string | undefined) | string
 }
 
 export function assertPath(f: string, errorText?: string) {
@@ -19,16 +18,16 @@ export function assertPath(f: string, errorText?: string) {
 
 interface ExtendedCommands<T> {
   /** Add option, but check if file exist */
-  demandFile<K extends string>(key: K, options: DemandedOption): ExtendedArgv<T & { [key in K]: string }>
-
-  /** Check if file exist only if option provided */
-  optionalFile<K extends string>(key: K, options: DemandedOption): ExtendedArgv<T & { [key in K]: string }>
+  demandFile: <K extends string>(key: K, options: DemandedOption) => ExtendedArgv<T & { [key in K]: string }>
 
   /** Check if we can create file and write in it */
-  demandWrite<K extends string>(key: K, options: DemandedOption): ExtendedArgv<T & { [key in K]: string }>
+  demandWrite: <K extends string>(key: K, options: DemandedOption) => ExtendedArgv<T & { [key in K]: string }>
+
+  /** Check if file exist only if option provided */
+  optionalFile: <K extends string>(key: K, options: DemandedOption) => ExtendedArgv<T & { [key in K]: string }>
 
   /** Same as `yargs.parseSync()` but check demanded files and exit if not fulfill */
-  parseWithChecks(): { [key in keyof Arguments<T> as key | CamelCaseKey<key>]: Arguments<T>[key] }
+  parseWithChecks: () => { [key in keyof Arguments<T> as CamelCaseKey<key> | key]: Arguments<T>[key] }
 }
 /**
  * Obtain the parameters of a function type in a tuple

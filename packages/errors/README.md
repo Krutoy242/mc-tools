@@ -35,5 +35,4 @@ Options:
 
 ## Other tools
 
-
 * [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

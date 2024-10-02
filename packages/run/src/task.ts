@@ -1,13 +1,16 @@
 import chalk from 'chalk'
 import cliTruncate from 'cli-truncate'
 import stringWidth from 'string-width'
+
 import { execute } from './execute'
 
-const filter = (s: string) => s
-  .replace(/^Debugger listening on ws:.+\n?/gm, '')
-  .replace(/^For help, see: https:\/\/nodejs\.org\/en\/docs\/inspector\n?/gm, '')
-  .replace(/^Debugger attached.\n?/gm, '')
-  .replace(/^Waiting for the debugger to disconnect...\n?/gm, '')
+function filter(s: string) {
+  return s
+    .replace(/^Debugger listening on ws:.+\n?/gm, '')
+    .replace(/^For help, see: https:\/\/nodejs\.org\/en\/docs\/inspector\n?/gm, '')
+    .replace(/^Debugger attached.\n?/gm, '')
+    .replace(/^Waiting for the debugger to disconnect...\n?/gm, '')
+}
 
 export class Task {
   private stdOut = ''
@@ -26,12 +29,10 @@ export class Task {
   }
 
   public execute() {
-    const p = execute(this.command,
-      (chunk) => { this.dirty = true; this.stdOut += chunk },
+    const p = execute(this.command,      (chunk) => { this.dirty = true; this.stdOut += chunk },
       // this.logger(''),
       // this.logger(chalk.red('X'))
-      (chunk) => { this.dirty = true; this.stdErr += chunk }
-    )
+      (chunk) => { this.dirty = true; this.stdErr += chunk })
     p.then(() => {
       this.finished = true
       this.dirty = true
@@ -53,7 +54,7 @@ export class Task {
     const err = this.getError(true)
     const textToFlush = (this.finished && err)
       ? err
-      : (this.stdOut.trim().split(/\s*\n\s*/gm).pop() as string).trim()
+      : (this.stdOut.trim().split(/\s*\n\s*/g).pop() as string).trim()
 
     const label = this.nameStyle(`${this.name.padStart(maxNameLen)}: `)
     const maxMsgWidth = maxBodyWidth - stringWidth(label)
@@ -71,7 +72,7 @@ export class Task {
     }
     else {
       return x + err
-        .split(/\s*\n\s*/gm)
+        .split(/\s*\n\s*/g)
         .map((l, i) => i === 0
           ? l
           : chalk.rgb((128 / i) | 0, (128 / i) | 0, (128 / i) | 0)(l)

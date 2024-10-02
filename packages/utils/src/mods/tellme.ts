@@ -1,8 +1,10 @@
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
+
 import { parse as csvParseSync } from 'csv-parse/sync'
 
-export const getCSV = (filename: string) =>
-  csvParseSync(readFileSync(filename, 'utf8'), { columns: true }) as Record<string, string>[]
+export function getCSV(filename: string) {
+  return csvParseSync(readFileSync(filename, 'utf8'), { columns: true }) as Record<string, string>[]
+}
 
 export function getItemNames() {
   const csv = getCSV('config/tellme/items-csv.csv')
@@ -14,4 +16,3 @@ export function getItemNames() {
     {} as Record<string, Record<string, string>>
   )
 }
-

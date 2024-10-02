@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
-import { resolve } from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import yargs from 'yargs'
 
 import type { ReduceLevels } from './levels'
-import { levels } from './levels'
+
 import { binary } from './binary'
 import { interactive } from './interactive'
+import { levels } from './levels'
 
 /* =============================================
 =                Arguments                    =

@@ -1,178 +1,178 @@
 export interface Minecraftinstance {
-  baseModLoader: BaseModLoader;
-  isUnlocked: boolean;
-  javaArgsOverride?: any;
-  lastPlayed: string;
-  playedCount: number;
-  manifest?: any;
-  fileDate: string;
-  installedModpack?: any;
-  projectID: number;
-  fileID: number;
-  customAuthor: string;
-  modpackOverrides: any[];
-  isMemoryOverride: boolean;
-  allocatedMemory: number;
-  profileImagePath: string;
-  isVanilla: boolean;
-  guid: string;
-  gameTypeID: number;
-  installPath: string;
-  name: string;
-  cachedScans: any[];
-  isValid: boolean;
-  lastPreviousMatchUpdate: string;
-  lastRefreshAttempt: string;
-  isEnabled: boolean;
-  gameVersion: string;
-  gameVersionFlavor?: any;
-  gameVersionTypeId?: any;
-  preferenceAlternateFile: boolean;
-  preferenceAutoInstallUpdates: boolean;
-  preferenceQuickDeleteLibraries: boolean;
-  preferenceDeleteSavedVariables: boolean;
-  preferenceProcessFileCommands: boolean;
-  preferenceReleaseType: number;
-  preferenceModdingFolderPath?: any;
-  syncProfile: SyncProfile;
-  installDate: string;
-  installedAddons: InstalledAddon[];
-  wasNameManuallyChanged: boolean;
+  allocatedMemory               : number
+  baseModLoader                 : BaseModLoader
+  cachedScans                   : any[]
+  customAuthor                  : string
+  fileDate                      : string
+  fileID                        : number
+  gameTypeID                    : number
+  gameVersion                   : string
+  gameVersionFlavor?            : any
+  gameVersionTypeId?            : any
+  guid                          : string
+  installDate                   : string
+  installedAddons               : InstalledAddon[]
+  installedModpack?             : any
+  installPath                   : string
+  isEnabled                     : boolean
+  isMemoryOverride              : boolean
+  isUnlocked                    : boolean
+  isValid                       : boolean
+  isVanilla                     : boolean
+  javaArgsOverride?             : any
+  lastPlayed                    : string
+  lastPreviousMatchUpdate       : string
+  lastRefreshAttempt            : string
+  manifest?                     : any
+  modpackOverrides              : any[]
+  name                          : string
+  playedCount                   : number
+  preferenceAlternateFile       : boolean
+  preferenceAutoInstallUpdates  : boolean
+  preferenceDeleteSavedVariables: boolean
+  preferenceModdingFolderPath?  : any
+  preferenceProcessFileCommands : boolean
+  preferenceQuickDeleteLibraries: boolean
+  preferenceReleaseType         : number
+  profileImagePath              : string
+  projectID                     : number
+  syncProfile                   : SyncProfile
+  wasNameManuallyChanged        : boolean
 }
 
 export interface InstalledAddon {
-  instanceID: string;
-  modSource: number;
-  addonID: number;
-  gameID: number;
-  gameInstanceID: string;
-  name: string;
-  modFolderPath?: any;
-  fileNameOnDisk: string;
-  authors: Author[];
-  primaryAuthor: string;
-  primaryCategoryId: number;
-  packageType: number;
-  webSiteURL: string;
-  thumbnailUrl: string;
-  tags: any[];
-  installedFile: InstalledFile;
-  dateInstalled: string;
-  dateUpdated: string;
-  dateLastUpdateAttempted: string;
-  status: number;
-  installSource: number;
-  preferenceReleaseType?: any;
-  preferenceAutoInstallUpdates?: any;
-  preferenceAlternateFile: boolean;
-  preferenceIsIgnored: boolean;
-  isModified: boolean;
-  isWorkingCopy: boolean;
-  isFuzzyMatch: boolean;
-  manifestName?: any;
-  installedTargets: any[];
-  latestFile: LatestFile;
+  addonID                      : number
+  authors                      : Author[]
+  dateInstalled                : string
+  dateLastUpdateAttempted      : string
+  dateUpdated                  : string
+  fileNameOnDisk               : string
+  gameID                       : number
+  gameInstanceID               : string
+  installedFile                : InstalledFile
+  installedTargets             : any[]
+  installSource                : number
+  instanceID                   : string
+  isFuzzyMatch                 : boolean
+  isModified                   : boolean
+  isWorkingCopy                : boolean
+  latestFile                   : LatestFile
+  manifestName?                : any
+  modFolderPath?               : any
+  modSource                    : number
+  name                         : string
+  packageType                  : number
+  preferenceAlternateFile      : boolean
+  preferenceAutoInstallUpdates?: any
+  preferenceIsIgnored          : boolean
+  preferenceReleaseType?       : any
+  primaryAuthor                : string
+  primaryCategoryId            : number
+  status                       : number
+  tags                         : any[]
+  thumbnailUrl                 : string
+  webSiteURL                   : string
 }
 
 export interface LatestFile {
-  id: number;
-  fileName: string;
-  fileDate: string;
-  fileLength: number;
-  releaseType: number;
-  fileStatus: number;
-  downloadUrl: string;
-  isAlternate: boolean;
-  alternateFileId: number;
-  dependencies: Dependency[];
-  isAvailable: boolean;
-  modules: Module[];
-  packageFingerprint: number;
-  gameVersion: string[];
-  sortableGameVersion: SortableGameVersion[];
-  hasInstallScript: boolean;
-  isCompatibleWithClient: boolean;
-  isEarlyAccessContent: boolean;
-  restrictProjectFileAccess: number;
-  projectStatus: number;
-  projectId: number;
-  fileNameOnDisk: string;
-  Hashes: Hash[];
+  alternateFileId          : number
+  dependencies             : Dependency[]
+  downloadUrl              : string
+  fileDate                 : string
+  fileLength               : number
+  fileName                 : string
+  fileNameOnDisk           : string
+  fileStatus               : number
+  gameVersion              : string[]
+  Hashes                   : Hash[]
+  hasInstallScript         : boolean
+  id                       : number
+  isAlternate              : boolean
+  isAvailable              : boolean
+  isCompatibleWithClient   : boolean
+  isEarlyAccessContent     : boolean
+  modules                  : Module[]
+  packageFingerprint       : number
+  projectId                : number
+  projectStatus            : number
+  releaseType              : number
+  restrictProjectFileAccess: number
+  sortableGameVersion      : SortableGameVersion[]
 }
 
 export interface InstalledFile {
-  id: number;
-  fileName: string;
-  fileDate: string;
-  fileLength: number;
-  releaseType: number;
-  fileStatus: number;
-  downloadUrl: string;
-  isAlternate: boolean;
-  alternateFileId: number;
-  dependencies: Dependency[];
-  isAvailable: boolean;
-  modules: Module[];
-  packageFingerprint: number;
-  gameVersion: string[];
-  sortableGameVersion: SortableGameVersion[];
-  hasInstallScript: boolean;
-  isCompatibleWithClient: boolean;
-  isEarlyAccessContent: boolean;
-  restrictProjectFileAccess: number;
-  projectStatus: number;
-  projectId: number;
-  fileNameOnDisk: string;
-  Hashes: Hash[];
+  alternateFileId          : number
+  dependencies             : Dependency[]
+  downloadUrl              : string
+  fileDate                 : string
+  fileLength               : number
+  fileName                 : string
+  fileNameOnDisk           : string
+  fileStatus               : number
+  gameVersion              : string[]
+  Hashes                   : Hash[]
+  hasInstallScript         : boolean
+  id                       : number
+  isAlternate              : boolean
+  isAvailable              : boolean
+  isCompatibleWithClient   : boolean
+  isEarlyAccessContent     : boolean
+  modules                  : Module[]
+  packageFingerprint       : number
+  projectId                : number
+  projectStatus            : number
+  releaseType              : number
+  restrictProjectFileAccess: number
+  sortableGameVersion      : SortableGameVersion[]
 }
 
 export interface Hash {
-  Value: string;
+  Value: string
 }
 
 export interface SortableGameVersion {
-  gameVersion: string;
-  gameVersionName: string;
-  gameVersionTypeId: number;
+  gameVersion      : string
+  gameVersionName  : string
+  gameVersionTypeId: number
 }
 
 export interface Module {
-  foldername: string;
-  fingerprint: number;
-  invalidFingerprint: boolean;
+  fingerprint       : number
+  foldername        : string
+  invalidFingerprint: boolean
 }
 
 export interface Dependency {
-  addonId: number;
-  type: number;
+  addonId: number
+  type   : number
 }
 
 export interface Author {
-  Name: string;
+  Name: string
 }
 
 export interface SyncProfile {
-  PreferenceEnabled: boolean;
-  PreferenceAutoSync: boolean;
-  PreferenceAutoDelete: boolean;
-  PreferenceBackupSavedVariables: boolean;
-  GameInstanceGuid: string;
-  SyncProfileID: number;
-  SavedVariablesProfile?: any;
-  LastSyncDate: string;
+  GameInstanceGuid              : string
+  LastSyncDate                  : string
+  PreferenceAutoDelete          : boolean
+  PreferenceAutoSync            : boolean
+  PreferenceBackupSavedVariables: boolean
+  PreferenceEnabled             : boolean
+  SavedVariablesProfile?        : any
+  SyncProfileID                 : number
 }
 
 export interface BaseModLoader {
-  forgeVersion: string;
-  name: string;
-  type: number;
-  downloadUrl: string;
-  filename: string;
-  installMethod: number;
-  latest: boolean;
-  recommended: boolean;
-  versionJson: string;
-  librariesInstallLocation: string;
-  minecraftVersion: string;
-  installProfileJson: string;
+  downloadUrl             : string
+  filename                : string
+  forgeVersion            : string
+  installMethod           : number
+  installProfileJson      : string
+  latest                  : boolean
+  librariesInstallLocation: string
+  minecraftVersion        : string
+  name                    : string
+  recommended             : boolean
+  type                    : number
+  versionJson             : string
 }

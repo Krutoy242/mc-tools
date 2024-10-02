@@ -1,19 +1,20 @@
-import { execSync } from 'child_process'
-import { readFileSync, rmSync } from 'fs'
-import { resolve } from 'path'
-import { expect, test } from 'vitest'
+import { execSync } from 'node:child_process'
+import { readFileSync, rmSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+import { expect, it } from 'vitest'
 
 function exec(params: string) {
   return execSync(
-    `esno src/cli.ts ${params}`
+    `tsx src/cli.ts ${params}`
   ).toString().trim()
 }
 
-test('Run app no arguments', async () => {
+it('run app no arguments', async () => {
   expect(() => exec('')).toThrowError()
 })
 
-test('Run app with all args', async () => {
+it('run app with all args', async () => {
   expect(exec(
     '--default=test/def_tweakersconstruct.cfg'
     + ' --tweaks=test'

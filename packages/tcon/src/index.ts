@@ -11,11 +11,11 @@ export type TweakName =
 
 /** Structure of custom tweaking files */
 export interface TweakObj {
-  /** Names of material parameter, like `CoreDurability` or `MiningSpeed` */
-  _names: string[]
-
   /** Formula of impact on `power` */
   _importancy: string[]
+
+  /** Names of material parameter, like `CoreDurability` or `MiningSpeed` */
+  _names: string[]
 
   /** How value would be transformed before save */
   _output: string[]
@@ -25,20 +25,20 @@ export interface TweakObj {
 
 /** Result of parsing and tweaking */
 export interface TweakedMaterial {
-  /** Floating-point result of tweaking */
-  nums: (number | 'd')[]
-
-  /** Same as `nums` but with mandatory number based on default or 0.0 */
-  reals: number[]
-
   /** ID of material */
   mat: string
+
+  /** Floating-point result of tweaking */
+  nums: ('d' | number)[]
 
   /** Total power of material after tweaks */
   power: number
 
   /** Line as it would be in config file */
   raw: string
+
+  /** Same as `nums` but with mandatory number based on default or 0.0 */
+  reals: number[]
 
   /** Is value was being changed from default */
   tweaked: boolean
@@ -65,14 +65,14 @@ function evalMathContext(code: string, context = {}) {
 }
 
 function isNumber(s: string) {
-  return /^\d+\.?\d*$/.test(s)
+  return /^\d+(?:\.\d*)?$/.test(s)
 }
 
-function nice(v: string | number) {
+function nice(v: number | string) {
   return Math.round(Number(v) * 100) / 100
 }
 
-function d_nice(v: number | 'd') {
+function d_nice(v: 'd' | number) {
   return v === 'd' ? 'd' : nice(v)
 }
 
@@ -91,10 +91,10 @@ function veryNice(v: number) {
  * @param _output string to be evaluated to get result
  */
 function tweakValue(
-  defVal: number | 'd',
-  n: string | number,
+  defVal: 'd' | number,
+  n: number | string,
   _output: string
-): number | 'd' {
+): 'd' | number {
   if (n == null || n === '' || n === 'd' || n === defVal) return 'd'
 
   // Convert 'n' when its in form of math '*2'
@@ -120,7 +120,7 @@ function tweakValue(
 function tweakMaterial(
   matID: string,
   tweakObj: TweakObj,
-  defaultVals: (number | 'd')[]
+  defaultVals: ('d' | number)[]
 ): TweakedMaterial {
   const nums = defaultVals.map((defVal, i) =>
     tweakValue(defVal, tweakObj[matID]?.[i], tweakObj._output?.[i] ?? 'n')
@@ -243,9 +243,7 @@ export function parseTraits(
       .map(l =>
         l.trim().match(
           /^(?<mat>[^:\n]+):(?<part>[^:\n]+):(?<traits>.+)$/
-        )?.groups as { mat: string
-          part: string
-          traits: string }
+        )?.groups as { mat: string,          part: string,          traits: string }
       )
       .filter(Boolean)
       .forEach((o) => {

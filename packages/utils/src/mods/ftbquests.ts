@@ -1,8 +1,11 @@
+import type { Byte, TagMap } from 'ftbq-nbt'
+
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
 import fast_glob from 'fast-glob'
-import type { Byte, TagMap } from 'ftbq-nbt'
 import { Int, parse, stringify } from 'ftbq-nbt'
+
 import { getItemNames } from './tellme'
 
 /*
@@ -15,78 +18,78 @@ import { getItemNames } from './tellme'
 */
 
 export interface Item {
-  id: string
+  Count? : Int
   Damage?: Int
-  Count?: Int
-  tag?: TagMap
+  id     : string
+  tag?   : TagMap
 }
 
 export interface RewardItem {
-  item: string | Item
+  count? : Int
+  item   : Item | string
   weight?: Int
-  count?: Int
 }
 
 export interface Reward {
-  title: string
-  loot_size: number
-  rewards: RewardItem[]
   loot_crate?: {
-    string_id: string
-    item_name: string
     color: Int
     drops: {
-      passive: Int
+      boss   : Int
       monster: Int
-      boss: Int
+      passive: Int
     }
+    item_name: string
+    string_id: string
   }
+  loot_size: number
+  rewards  : RewardItem[]
+  title    : string
 }
 
 export interface ChapterConfig {
-  title: string
-  icon: string
-  description: string[]
-  always_invisible: boolean
-  group: number
+  always_invisible   : boolean
   default_quest_shape: string
+  description        : string[]
+  group              : number
+  icon               : string
+  title              : string
 }
 
 export type ChapterConfigUid = ChapterConfig & { uid: string }
 
 export interface QuestReward {
-  uid: string
-  type: string
-  item: string | Item
-  auto?: string
+  auto?   : string
   command?: string
+  item    : Item | string
+  type    : string
+  uid     : string
 }
 
 export interface ItemQuestTask {
-  type: 'item'
-  items: (Item | { item: string })[]
   ignore_nbt?: Byte
+  items      : ({ item: string } | Item)[]
+  type       : 'item'
 }
 
 export interface FluidQuestTask {
-  type: 'fluid'
   fluid: string
+  type : 'fluid'
 }
 
-export type QuestTask = (ItemQuestTask | FluidQuestTask) & {
-  uid: string
+export type QuestTask = (FluidQuestTask | ItemQuestTask) & {
   title?: string
+  uid   : string
 }
 
 export interface Quest {
-  title?: string
-  icon?: string | Item
-  x: number
-  y: number
-  text?: string[]
   dependencies?: string[]
-  tasks: QuestTask[]
-  rewards: QuestReward[]
+  icon?        : Item | string
+  rewards      : QuestReward[]
+  tasks        : QuestTask[]
+  text?        : string[]
+  title?       : string
+  x            : number
+  y            : number
 }
 
 export type QuestUid = Quest & { uid: string }
@@ -95,8 +98,8 @@ export type Chapter = ChapterConfigUid & { quests: QuestUid[] }
 
 export function parseFtbqSNbt(sNbt: string) {
   const replaced = sNbt
-    .replace(/(\[[BILbil];([\s\n]*\-?\d+(\.\d+)?[BILbil]\b,?)+[\s\n]*\])/gm, (m, r) => {
-      return r.replace(/(\d+)[BILbil]\b/gm, '$1')
+    .replace(/(\[[BIL];(\s*-?\d+(\.\d+)?[BIL]\b,?)+\s*\])/gi, (m, r) => {
+      return r.replace(/(\d+)[BIL]\b/gi, '$1')
     }) // Remove list types
   try {
     return parse(replaced, { useBoolean: true })
@@ -106,7 +109,7 @@ export function parseFtbqSNbt(sNbt: string) {
   }
 }
 
-export function stringifyFTBQSNbt(tag: Object) {
+export function stringifyFTBQSNbt(tag: object) {
   return `${stringify(tag as any, {
     pretty      : true,
     breakLength : 0,
@@ -119,9 +122,7 @@ export function stringifyFTBQSNbt(tag: Object) {
 }
 
 function getFile<T>(subPath: string, mc = './'): T {
-  const text = readFileSync(resolve(mc,
-    `config/ftbquests/normal/${subPath}.snbt`),
-  'utf8')
+  const text = readFileSync(resolve(mc,    `config/ftbquests/normal/${subPath}.snbt`),  'utf8')
   return parseFtbqSNbt(text) as unknown as T
 }
 
@@ -143,7 +144,7 @@ export function getQuest(chapUid: string, questUid: string, mc = './'): QuestUid
   }
 }
 
-function saveFile(obj: Object, filePath: string, mc = './') {
+function saveFile(obj: object, filePath: string, mc = './') {
   const p = resolve(mc, `config/ftbquests/normal/${filePath}.snbt`)
   writeFileSync(p, stringifyFTBQSNbt(obj))
 }
@@ -207,7 +208,7 @@ export function getChapters(): Chapter[] {
   chapters.forEach(ch =>
     ch.quests
       = fast_glob.sync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
-        .map(f => f.split(/[\/\\]/)[1].replace(/\.snbt$/, ''))
+        .map(f => f.split(/[/\\]/)[1].replace(/\.snbt$/, ''))
         .filter(f => f !== 'chapter')
         .map(uid => getQuest(ch.uid, uid))
   )
@@ -261,7 +262,7 @@ export function getQuestTaskItem(q: QuestUid) {
  */
 export function getTaskName(q: QuestUid) {
   return getItemName(getQuestTaskItem(q))
-  ?? q?.tasks?.[0]?.title
-  ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
-  ?? (q.icon ? getItemName(getItem(q.icon)) : undefined)
+    ?? q?.tasks?.[0]?.title
+    ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
+    ?? (q.icon ? getItemName(getItem(q.icon)) : undefined)
 }

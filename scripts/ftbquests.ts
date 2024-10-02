@@ -1,14 +1,17 @@
+import type { Byte, Short } from 'ftbq-nbt'
+
 import { readFileSync, renameSync, writeFileSync } from 'node:fs'
+
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
-import type { Byte, Short } from 'ftbq-nbt'
 import { Int, parse } from 'ftbq-nbt'
 import sanitize from 'sanitize-filename'
-import { Lang } from '../packages/utils/src/lang'
+
 import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
-import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, parseFtbqSNbt, saveChapter, saveQuest, saveReward, stringifyFTBQSNbt, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 import { naturalSort } from '../packages/utils/src'
+import { Lang } from '../packages/utils/src/lang'
+import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, parseFtbqSNbt, saveChapter, saveQuest, saveReward, stringifyFTBQSNbt, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 /**
  * Converts FTBQuests reward tables to chests with saved content
@@ -39,7 +42,7 @@ export function renameChapters() {
 
   const indexPath = `${chapPath}/index.snbt`
   const text = readFileSync(indexPath, 'utf8')
-  const index = (parseFtbqSNbt(text) as any)
+  const index = parseFtbqSNbt(text) as any
   const uid = uidGenerator()
 
   ;(index.index as string[]).forEach((hash, i) => {
@@ -113,7 +116,7 @@ export function renameQuestsLangs() {
 
   const usedLangs = new Set<string>()
 
-  const rename = (obj: string[] | { title?: string } | undefined, key: 0 | 'title', fresh: string) => {
+  const rename = (obj: { title?: string } | string[] | undefined, key: 'title' | 0, fresh: string) => {
     const old = obj?.[key]
     if (!old || !isLangKeyInParenth(old)) return false
     lang.rename(langKeyWithoutParenth(old), fresh)
@@ -124,7 +127,7 @@ export function renameQuestsLangs() {
 
   // Rename Entries
   const uidChap = uidGenerator(20, '')
-  const trim = (s: string) => s.toLocaleLowerCase().replace(/[^\d\w]+/g, '_')
+  const trim = (s: string) => s.toLocaleLowerCase().replace(/\W+/g, '_')
   const toKey = (s: string) => trim(lang.getClear(langKeyWithoutParenth(s)))
 
   chaps.forEach((ch) => {
@@ -161,10 +164,10 @@ export function renameQuestsLangs() {
 // lang.save()
 
 interface MCItem {
-  id: string
-  Count: Byte
-  tag?: any
+  Count : Byte
   Damage: Short
+  id    : string
+  tag?  : any
 }
 
 export function injectLatestLine() {

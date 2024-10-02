@@ -6,8 +6,6 @@ Various utilities for Minecraft-Tools monorepo
 
 ## Usage
 
-
-
 ## API
 1. Install package
   > ```shell
@@ -16,9 +14,8 @@ Various utilities for Minecraft-Tools monorepo
 
 2. Import functions from package.
   > ```ts
-  > import fnc from "@mctools/utils"
+  > import fnc from '@mctools/utils'
   > ```
-
 
 ### Functions
 
@@ -42,6 +39,5 @@ Various utilities for Minecraft-Tools monorepo
 * https://github.com/Krutoy242
 
 ## Other tools
-
 
 * [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

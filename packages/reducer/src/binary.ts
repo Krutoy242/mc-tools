@@ -1,7 +1,9 @@
 import chalk from 'chalk'
 import _ from 'lodash'
 import terminal_kit from 'terminal-kit'
+
 import type { Mod } from './Mod'
+
 import { getStatusText } from './Mod'
 import { ModStore } from './ModStore'
 
@@ -69,7 +71,7 @@ function drawMods(mods: Mod[]) {
     .map(chunk => chunk.map(m => m.statusText).join(''))
     .join('\n')
 
-  const keys = (Object.keys(style) as (keyof (typeof style))[])
+  const keys = Object.keys(style) as (keyof (typeof style))[]
 
   return `${
     keys.map(k => `Enabled ${chalk.gray(k)} ${getStatusText(k, false)}`).join('\n')

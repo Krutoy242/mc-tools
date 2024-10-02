@@ -1,7 +1,8 @@
-import { execSync } from 'child_process'
-import { expect, test } from 'vitest'
+import { execSync } from 'node:child_process'
 
-test('Run app without arguments', async () => {
-  expect(() => execSync('esno src/cli.ts'))
+import { expect, it } from 'vitest'
+
+it('run app without arguments', async () => {
+  expect(() => execSync('tsx src/cli.ts'))
     .toThrowError(Error)
 })

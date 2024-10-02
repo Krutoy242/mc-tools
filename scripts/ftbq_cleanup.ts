@@ -1,8 +1,9 @@
 import chalk from 'chalk'
+
 import type { QuestUid } from '../packages/utils/src/mods/ftbquests'
-import { getChapters, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 import { Lang } from '../packages/utils/src/lang'
+import { getChapters, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 /**
  * Change every text entry in quest book to lang code
@@ -54,14 +55,14 @@ export function cleanupLangEntries() {
     return langify(obj, 'title', newLangKey, sortWeight)
   }
 
-  const langifyDesc = (obj: { description?: string[]; text?: string[] }, newLangKey: string, sortWeight: number) => {
+  const langifyDesc = (obj: { description?: string[], text?: string[] }, newLangKey: string, sortWeight: number) => {
     return (['description', 'text'] as const).map(k => langify(obj, k, newLangKey, sortWeight)).some(Boolean)
   }
 
   const uidChap = uidGenerator(20, '')
 
   /** Make string lang-key compatible */
-  const trim = (s: string) => s.toLocaleLowerCase().replace(/[^\d\w]+/g, '_')
+  const trim = (s: string) => s.toLocaleLowerCase().replace(/\W+/g, '_')
   const toKey = (s: string) => trim(lang.getClear(langKeyWithoutParenth(s)))
 
   /** Get key that would be used in lang key */
@@ -74,8 +75,9 @@ export function cleanupLangEntries() {
     const chapName = uidChap(titleToName(ch.title))
 
     if (+langifyTitle(ch, `q.${chapName}.name`, chapWeight)
-      + +langifyDesc(ch, `q.${chapName}.desc`, chapWeight))
+      + +langifyDesc(ch, `q.${chapName}.desc`, chapWeight)) {
       saveChapter(ch)
+    }
 
     const uidQuest = uidGenerator(20, '')
     ch.quests.forEach((q, questIndex) => {
@@ -96,8 +98,9 @@ export function cleanupLangEntries() {
       }
 
       if (+langifyTitle(q, `q.${chapName}.${questName}.name`, questWeight)
-        + +langifyDesc(q, `q.${chapName}.${questName}.desc`, questWeight + 0.000001))
+        + +langifyDesc(q, `q.${chapName}.${questName}.desc`, questWeight + 0.000001)) {
         saveQuest(ch.uid, q)
+      }
     })
   })
 

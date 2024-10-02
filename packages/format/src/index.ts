@@ -52,7 +52,7 @@ export function revert(source: string): string {
   const result = revertTS_to_ZS(source)
   return result
     // Remove debris
-    .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S\n]+?\/\/ CONVERSION_DEBRIS\n*/gm, '')
+    .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S]+?\/\/ CONVERSION_DEBRIS\n*/g, '')
     // Remove escaped strings
-    .replace(/'(.*(\\'.*)+)'/g, (m, r) => `"${r.replace(/\\'/g, '\'')}"`)
+    .replace(/'(.*(\\'.*))'/g, (m, r) => `"${r.replace(/\\'/g, '\'')}"`)
 }

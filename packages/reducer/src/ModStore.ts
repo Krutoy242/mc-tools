@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { bind } from './bind'
+
 import type { MCInstance } from './minecraftinstance'
-import { Mod } from './Mod'
+
 import { getFetchInModsDir } from '.'
+import { Mod } from './Mod'
+import { bind } from './bind'
 
 function naturalSort(a: string, b: string) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })

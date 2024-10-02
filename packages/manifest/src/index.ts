@@ -5,8 +5,8 @@
  * @link https://github.com/Krutoy242
  */
 
-import fse from 'fs-extra'
 import { fetchMods, loadMCInstanceFiltered } from '@mctools/curseforge'
+import fse from 'fs-extra'
 
 const { readFileSync, readJsonSync, writeFileSync } = fse
 
@@ -16,34 +16,34 @@ export interface ModLoader {
 }
 
 export interface Minecraft {
-  version: string
   modLoaders?: ModLoader[]
+  version    : string
 }
 
 export interface ExternalDependency {
   name: string
-  url: string
-  sha: string
+  sha : string
+  url : string
 }
 
 export interface ModpackManifestFile {
+  fileID   : number
   projectID: number
-  fileID: number
-  required: boolean
-  sides?: ('client' | 'server')[]
+  required : boolean
+  sides?   : ('client' | 'server')[]
 }
 
 export interface ModpackManifest {
-  minecraft: Minecraft
-  manifestType: string
-  manifestVersion: number
-  name: string
-  version: string
-  author: string
-  projectID: number
+  author               : string
   externalDependencies?: ExternalDependency[]
-  files: ModpackManifestFile[]
-  overrides: string
+  files                : ModpackManifestFile[]
+  manifestType         : string
+  manifestVersion      : number
+  minecraft            : Minecraft
+  name                 : string
+  overrides            : string
+  projectID            : number
+  version              : string
 }
 
 // "test string": "test string \"inside\" "
@@ -52,21 +52,21 @@ function formatModList(modsList: ModpackManifestFile[]) {
   return JSON.stringify(modsList)
     .replace(/(":)(\d+)/g, (m, r1, r2) => r1 + r2.padStart(6)) // Table aligning
     .replace(/"___name":(".+?(?<!\\)")/g, (m, r1) => `"___name":${r1.padEnd(42)}`) // Table aligning
-    .replace(/\[{/, '[\n    {')
-    .replace(/}]/, '}\n  ]')
-    .replace(/},{/g, '},\n    {') // new lines
+    .replace(/\[\{/, '[\n    {')
+    .replace(/\}\]/, '}\n  ]')
+    .replace(/\},\{/g, '},\n    {') // new lines
 }
 
 export interface ManifestGenerationOptions {
-  key: string
-  ignore?: string
-  verbose?: boolean
-
+  ignore?     : string
+  key         : string
   /** Version of the pack that would be written into manifest file */
   packVersion?: string
 
   /** manifest[postfix].json */
   postfix?: string
+
+  verbose?: boolean
 }
 
 export async function generateManifest(
@@ -100,7 +100,7 @@ export async function generateManifest(
   }))
 
   const forgeVersion = readFileSync('logs/debug.log', 'utf8').match(
-    /Forge Mod Loader version ([^\s]+) for Minecraft 1.12.2 loading/
+    /Forge Mod Loader version (\S+) for Minecraft 1.12.2 loading/
   )?.[1]
 
   const resultObj: ModpackManifest = {
@@ -108,7 +108,7 @@ export async function generateManifest(
       version   : '1.12.2',
       modLoaders: [
         {
-          id: `forge-${!forgeVersion || forgeVersion?.endsWith('.0') ? '14.23.5.2860' : forgeVersion}`,
+          id     : `forge-${!forgeVersion || forgeVersion?.endsWith('.0') ? '14.23.5.2860' : forgeVersion}`,
           primary: true,
         },
       ],

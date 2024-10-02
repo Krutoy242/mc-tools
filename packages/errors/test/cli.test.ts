@@ -1,14 +1,15 @@
-import { execSync } from 'child_process'
-import { expect, test } from 'vitest'
+import { execSync } from 'node:child_process'
+
+import { expect, it } from 'vitest'
 
 function exec(params: string): string {
   return execSync(
-    `esno src/cli.ts --log=test/debug.log ${params}`
+    `tsx src/cli.ts --log=test/debug.log ${params}`
   ).toString()
     .trim()
 }
 
-test('Run app no arguments', async () => {
+it('run app no arguments', async () => {
   const appResult = exec('')
 
   expect(appResult).toMatchInlineSnapshot(`
@@ -22,7 +23,7 @@ test('Run app no arguments', async () => {
   `)
 })
 
-test('Run app with additional filter', async () => {
+it('run app with additional filter', async () => {
   const appResult = exec('--blacklist=test/custom_filter.cfg')
 
   expect(appResult).toMatchInlineSnapshot(`
@@ -31,7 +32,7 @@ test('Run app with additional filter', async () => {
   `)
 })
 
-test('Run app with file output', async () => {
+it('run app with file output', async () => {
   const appResult = exec('--output=test/output.log')
 
   expect(appResult).toMatchInlineSnapshot('"Found 6 errors"')

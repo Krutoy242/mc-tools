@@ -95,7 +95,6 @@ To use as library:
   > import {...} from "@mctools/modlist"
   > ```
 
-
 ### Interfaces
 
 - [ModListOpts](interfaces/ModListOpts.md)
@@ -127,5 +126,3 @@ Markdown file based on given Handlebars template
 * https://github.com/Krutoy242
 
 ## Other tools
-
-

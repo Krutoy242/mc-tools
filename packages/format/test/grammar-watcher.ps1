@@ -8,7 +8,7 @@ $watcher.EnableRaisingEvents = $true
 $action = {
     $log = "File changed at $(Get-Date)"
     Write-Output $log
-    & esno "mc-tools\packages\format\src\cli" "scripts\process.zs" --nolint
+    & tsx "mc-tools\packages\format\src\cli" "scripts\process.zs" --nolint
 }
 
 $onChange = Register-ObjectEvent $watcher "Changed" -Action $action

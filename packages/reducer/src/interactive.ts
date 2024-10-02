@@ -1,8 +1,11 @@
 import type { Terminal } from 'terminal-kit'
-import terminal_kit from 'terminal-kit'
+
 import chalk from 'chalk'
-import { ModStore } from './ModStore'
+import terminal_kit from 'terminal-kit'
+
 import type { Mod } from './Mod'
+
+import { ModStore } from './ModStore'
 
 const { terminal: T } = terminal_kit
 
@@ -30,7 +33,10 @@ export async function interactive(modsPath: string) {
   }
 
   while (true) {
-    T(`Select mod to disable. Leave ${chalk.gray`empty string`} to enable everything\n`)
+    T(`Select mod to disable.\n`)
+    T(`${chalk.green`●`} Leave ${chalk.gray`empty string`} to enable everything.\n`)
+    T(`${chalk.green`●`} Use ${chalk.gray`*`} to disable everything.\n`)
+
     const res = await T.inputField({
       autoComplete    : autoCompleter,
       autoCompleteHint: true,
@@ -38,6 +44,11 @@ export async function interactive(modsPath: string) {
     }).promise
 
     if (!res) return await enableAndExit(store.mods)
+
+    if (res === '*') {
+      for (const m of store.mods) await m.disable()
+      continue
+    }
 
     const prefix = res.charAt(0)
     const pure = prefixes[prefix] ? res.substring(1) : res

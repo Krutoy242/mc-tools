@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
 import merge from 'ts-deepmerge'
 
 // @ts-check

@@ -1,5 +1,7 @@
 import stringWidth from 'string-width'
+
 import type { Config } from './config'
+
 import { Task } from './task'
 
 export async function showTerminal(options: {
@@ -34,7 +36,7 @@ export async function showTerminal(options: {
         const prev = (lines[j] ?? '')
         const rep = maxBodyWidth * i - stringWidth(prev)
         lines[j] = prev + (i === 0 || rep <= 0 ? '' : ' '.repeat(rep))
-              + t.flush(maxNameLen, maxBodyWidth)
+        + t.flush(maxNameLen, maxBodyWidth)
       })
     }
     return lines

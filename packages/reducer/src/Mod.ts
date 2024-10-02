@@ -1,13 +1,15 @@
 import { rename } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import _ from 'lodash'
+
 import chalk from 'chalk'
 import levenshtein from 'fast-levenshtein'
-import { Memoize } from 'typescript-memoize'
+import _ from 'lodash'
 import terminal_kit from 'terminal-kit'
-import { style } from './binary'
-import { type InstalledAddon } from './minecraftinstance'
+import { Memoize } from 'typescript-memoize'
 
+import type { InstalledAddon } from './minecraftinstance'
+
+import { style } from './binary'
 
 export enum DependencyLevel {
   All,
@@ -20,7 +22,7 @@ export enum DependencyLevel {
 export type ModdedAddon = InstalledAddon & { mod?: Mod }
 
 export function purify(fileName?: string) {
-  return fileName?.replace(/(\-patched)?(\.jar|(\.jar)?(\.disabled)+)$/gm, '')
+  return fileName?.replace(/(-patched)?(\.jar|(\.jar)?(\.disabled)+)$/gm, '')
 }
 
 const { terminal: T } = terminal_kit
@@ -82,8 +84,10 @@ export class Mod {
       if (levArr[1].lev - levArr[0].lev < 5) {
         T(
           chalk.bgYellow(' No addon '),
-          chalk.gray(this.fileName), ' ',
-          chalk.rgb(250, 250, 250)(this.pureName), '\n'
+          chalk.gray(this.fileName),
+          ' ',
+          chalk.rgb(250, 250, 250)(this.pureName),
+          '\n'
         )
         return
       }
@@ -103,9 +107,7 @@ export class Mod {
       .map((d) => {
         const r = Mod.getAddonById(d.addonId)
         if (!r && d.type === 3) {
-          T(chalk.inverse(' No Dependency '), ' ',
-            this.addon?.name, chalk.gray(` id: ${d.addonId} \n`)
-          )
+          T(chalk.inverse(' No Dependency '), ' ',            this.addon?.name, chalk.gray(` id: ${d.addonId} \n`))
         }
         return r?.mod
       })
@@ -153,7 +155,8 @@ export class Mod {
       : this.fileName.replace(/\.disabled/g, '')
     T(
       `${toDisable ? chalk.bgRgb(60, 30, 30)('disable') : chalk.bgRgb(30, 60, 30)('enable')} `,
-      chalk.gray(this.pureName), '\n'
+      chalk.gray(this.pureName),
+      '\n'
     )
     try {
       await rename(

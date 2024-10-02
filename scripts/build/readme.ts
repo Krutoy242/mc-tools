@@ -1,12 +1,13 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { parse } from 'node:path'
-import { promisify } from 'node:util'
 import { exec, execSync } from 'node:child_process'
-import fast_glob from 'fast-glob'
-import Handlebars from 'handlebars'
-import fse from 'fs-extra'
+import { readFileSync } from 'node:fs'
+import { parse } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
 import chalk from 'chalk'
+import fast_glob from 'fast-glob'
+import fse from 'fs-extra'
+import Handlebars from 'handlebars'
 
 const execP = promisify(exec)
 
@@ -36,7 +37,7 @@ async function handleReadme(readmePath: string, i: number) {
   const readmeContent = readFileSync(readmePath, 'utf8')
 
   const extended_desc = readmeContent.match(
-    /<!-- extended_desc -->([\s\S\n]*?)<!-- \/extended_desc -->/m
+    /<!-- extended_desc -->([\s\S]*?)<!-- \/extended_desc -->/
   )?.[1] ?? ''
 
   const pkg = packages[i].package
@@ -47,7 +48,7 @@ async function handleReadme(readmePath: string, i: number) {
 
   log(`${isCli ? 'Executing' : 'Writing'} ${chalk.green(pkg.name)}${isCli ? chalk.green(' --help') : ''}`)
   const helpOutput = isCli
-    ? (await execP(`esno ${cliPath} --help`)).stdout.trim()
+    ? (await execP(`tsx ${cliPath} --help`)).stdout.trim()
     : undefined
 
   const data = {

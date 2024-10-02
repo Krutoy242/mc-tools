@@ -1,25 +1,31 @@
 {
   "name": "@mctools/",
+  "type": "module",
   "version": "0.0.0",
   "description": "Automation tool for Minecraft modpack development",
-  "license": "MIT",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
   "homepage": "https://github.com/Krutoy242/mc-tools",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Krutoy242/mc-tools.git"
   },
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
-  "type": "module",
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     }
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -28,12 +34,6 @@
     "coverage": "vitest run --coverage",
     "test": "vitest"
   },
-  "types": "./dist/index.d.ts",
-  "keywords": [
-    "automation",
-    "minecraft",
-    "tools"
-  ],
   "publishConfig": {
     "access": "public"
   }
