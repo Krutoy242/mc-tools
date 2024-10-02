@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import type { MCInstance } from './minecraftinstance'
 
@@ -35,20 +36,19 @@ export class ModStore {
   readonly mods: Mod[]
 
   constructor(
-    modsPath: string,
-    mcInstancePath: string,
+    mcPath: string,
     config: ModConfig = {
       mandatoryDeps,
     }
   ) {
-    Mod.modsPath = modsPath
+    Mod.modsPath = join(mcPath, 'mods')
 
     const mcInstance: MCInstance = JSON.parse(
-      readFileSync(mcInstancePath, 'utf8')
+      readFileSync(join(mcPath, 'minecraftinstance.json'), 'utf8')
     )
     Mod.addons = mcInstance.installedAddons
 
-    const fetchInModsDir = getFetchInModsDir(modsPath)
+    const fetchInModsDir = getFetchInModsDir(Mod.modsPath)
     this.mods = [...new Set([
       ...fetchInModsDir('*.jar?(.disabled)?(.disabled)?(.disabled)?(.disabled)'),
       ...fetchInModsDir('*.jar'),

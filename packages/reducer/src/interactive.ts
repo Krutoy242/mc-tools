@@ -9,8 +9,8 @@ import { ModStore } from './ModStore'
 
 const { terminal: T } = terminal_kit
 
-export async function interactive(modsPath: string) {
-  const store = new ModStore(modsPath, 'minecraftinstance.json')
+export async function interactive(mcPath: string) {
+  const store = new ModStore(mcPath)
 
   const prefixes = {
     '-': (m: Mod) => m.disable(),

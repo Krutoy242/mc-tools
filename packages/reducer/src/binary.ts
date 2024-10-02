@@ -14,8 +14,8 @@ export const style = {
   trusted   : chalk.rgb(0, 120, 30),
 }
 
-export async function binary(modsPath: string) {
-  const store = new ModStore(modsPath, 'minecraftinstance.json')
+export async function binary(mcPath: string) {
+  const store = new ModStore(mcPath)
 
   while (true) {
     T('There is ', chalk.green(store.mods.length), ' mods:\n', drawMods(store.mods), '\n')

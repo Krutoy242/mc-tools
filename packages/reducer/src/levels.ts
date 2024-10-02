@@ -14,8 +14,8 @@ export type ReduceLevels = {
   name       : string
 }[]
 
-export async function levels(modsPath: string, reduceLevels: ReduceLevels, cmdIndex?: number) {
-  const store = new ModStore(modsPath, 'minecraftinstance.json')
+export async function levels(mcPath: string, reduceLevels: ReduceLevels, cmdIndex?: number) {
+  const store = new ModStore(mcPath)
 
   // T.clear()
 

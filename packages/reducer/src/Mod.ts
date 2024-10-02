@@ -41,7 +41,7 @@ export function getStatusText(status: keyof typeof style, isDisabled: boolean) {
 
 export class Mod {
   static modsPath: string
-  static addons: ModdedAddon[]
+  static addons  : ModdedAddon[]
 
   static getAddonById(addonId: number): ModdedAddon | undefined {
     return Mod.addons.find(o =>
@@ -51,8 +51,8 @@ export class Mod {
   }
 
   private isDisabled: boolean
-  public pureName?: string
-  public addon?: ModdedAddon
+  public pureName?  : string
+  public addon?     : ModdedAddon
   public dependents = new Set<Mod>()
 
   public status: keyof typeof style = 'suspective'
@@ -81,7 +81,7 @@ export class Mod {
         .sortBy('lev')
         .value()
 
-      if (levArr[1].lev - levArr[0].lev < 5) {
+      if (levArr[1]?.lev - levArr[0]?.lev < 5) {
         T(
           chalk.bgYellow(' No addon '),
           chalk.gray(this.fileName),
@@ -92,11 +92,11 @@ export class Mod {
         return
       }
       else {
-        this.addon = levArr[0].addon
+        this.addon = levArr[0]?.addon
       }
     }
 
-    this.addon.mod = this
+    if (this.addon) this.addon.mod = this
   }
 
   @Memoize()

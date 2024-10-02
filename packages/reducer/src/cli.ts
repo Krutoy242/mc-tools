@@ -25,11 +25,11 @@ yargs(process.argv.slice(2))
   .scriptName('@mctools/reducer')
   .strict()
   .version()
-  .option('mods', {
+  .option('mc', {
     alias    : 'm',
     type     : 'string',
-    describe : 'Minecraft mods/ folder path',
-    default  : 'mods',
+    describe : 'Minecraft dir with mods/ and minecaftinstance.json',
+    default  : './',
     normalize: true,
     coerce   : assertPath,
   })
@@ -54,7 +54,7 @@ yargs(process.argv.slice(2))
         describe: 'Select reduce level without prompt',
       }),
     handler: async (argv) => {
-      await levels(argv.mods, argv.path!, argv.index)
+      await levels(argv.mc, argv.path!, argv.index)
     },
   })
   .command({
@@ -62,7 +62,7 @@ yargs(process.argv.slice(2))
     describe: 'Reduce mods in half to find error',
     builder : ya => ya,
     handler : async (argv) => {
-      await binary(argv.mods)
+      await binary(argv.mc)
     },
   })
   .command({
@@ -70,7 +70,7 @@ yargs(process.argv.slice(2))
     describe: 'Pick mods and manipulate them one by one',
     builder : ya => ya,
     handler : async (argv) => {
-      await interactive(argv.mods)
+      await interactive(argv.mc)
     },
   })
   .parse()
