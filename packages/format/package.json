@@ -36,7 +36,7 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "peggy": "^3.0.2",

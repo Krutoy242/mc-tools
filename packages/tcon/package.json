@@ -36,7 +36,7 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "csv-parse": "^5.3.8",
