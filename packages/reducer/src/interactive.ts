@@ -34,8 +34,9 @@ export async function interactive(mcPath: string) {
 
   while (true) {
     T(`Select mod to disable.\n`)
-    T(`${chalk.green`●`} Leave ${chalk.gray`empty string`} to enable everything.\n`)
     T(`${chalk.green`●`} Use ${chalk.gray`*`} to disable everything.\n`)
+    T(`${chalk.green`●`} Use ${chalk.gray`+`} to enable mod.\n`)
+    T(`${chalk.green`●`} Leave ${chalk.gray`empty string`} to enable everything.\n`)
 
     const res = await T.inputField({
       autoComplete    : autoCompleter,
