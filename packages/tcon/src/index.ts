@@ -1,5 +1,7 @@
 import { getBorderCharacters, table } from 'table'
 
+import type { MatTraits } from './traits'
+
 /** Names of config entries from `tweakerconstruct.cfg` */
 export type TweakName =
   'Armory Stat Tweaks'
@@ -8,6 +10,14 @@ export type TweakName =
   | 'Fletching Stat Tweaks'
   | 'Stat Tweaks'
   | 'Trait tweaks'
+
+const partGroups = {
+  'Armory Stat Tweaks'     : ['core', 'plates', 'trim'],
+  'Arrow Shaft Stat Tweaks': ['shaft'],
+  'Bowstring Stat Tweaks'  : ['bowstring'],
+  'Fletching Stat Tweaks'  : ['fletching'],
+  'Stat Tweaks'            : ['head', 'projectile', 'handle', 'extra', 'bow'],
+}
 
 /** Structure of custom tweaking files */
 export interface TweakObj {
@@ -39,6 +49,9 @@ export interface TweakedMaterial {
 
   /** Same as `nums` but with mandatory number based on default or 0.0 */
   reals: number[]
+
+  /** Average power of traits for each part */
+  traitPower: number
 
   /** Is value was being changed from default */
   tweaked: boolean
@@ -79,9 +92,9 @@ function d_nice(v: 'd' | number) {
 function veryNice(v: number) {
   const val = nice(v)
   const left = val | 0
-  const right = nice(val - left)
+  const right = Math.round((Math.abs(val) - Math.abs(left)) * 100)
   return (
-    String(left).padStart(10) + (right ? `.${String(right).substring(2, 4)}` : '')
+    String(left).padStart(10) + (right ? `.${String(right)}` : '')
   )
 }
 
@@ -120,7 +133,8 @@ function tweakValue(
 function tweakMaterial(
   matID: string,
   tweakObj: TweakObj,
-  defaultVals: ('d' | number)[]
+  defaultVals: ('d' | number)[],
+  traitPower: number
 ): TweakedMaterial {
   const nums = defaultVals.map((defVal, i) =>
     tweakValue(defVal, tweakObj[matID]?.[i], tweakObj._output?.[i] ?? 'n')
@@ -142,11 +156,15 @@ function tweakMaterial(
     power += evalMathContext(tweakObj._importancy[i], { n: real })
   })
 
+  // Add Trait value
+  power += traitPower
+
   return {
     nums,
     reals,
     mat    : matID,
     power,
+    traitPower,
     raw    : `        ${matID}:${nums.map(d_nice).join(':')}`,
     tweaked: nums.some(
       (v, i) => v !== 'd' && v !== Number(defaultVals[i])
@@ -156,8 +174,13 @@ function tweakMaterial(
 
 export function genStatsTable(tweakHead: string[], list: TweakedMaterial[]) {
   const outputTable = [
-    ['', 'Total Power', ...tweakHead], // Header
-    ...list.map(l => [l.mat, veryNice(l.power), ...l.reals.map(veryNice)]),
+    ['', 'Total Power', 'Trats Value', ...tweakHead], // Header
+    ...list.map(l => [
+      l.mat,
+      veryNice(l.power),
+      veryNice(l.traitPower),
+      ...l.reals.map(veryNice),
+    ]),
   ]
 
   return table(outputTable, {
@@ -189,7 +212,8 @@ export function getLookup(tweakGroup: TweakName) {
 export function parseStats(
   default_tweakers_cfg: string,
   tweakGroup: TweakName,
-  tweakObj: TweakObj
+  tweakObj: TweakObj,
+  traitPowers?: MatTraits<number>
 ) {
   const rgx = new RegExp(getLookup(tweakGroup))
   const cfgListChunk = default_tweakers_cfg.match(rgx)?.[0]
@@ -201,7 +225,12 @@ export function parseStats(
   /** Materials that exists in current pack */
   const existMats: Set<string> = new Set()
 
+  // Trait power
+  const parts: string[] = partGroups[tweakGroup]
+  const noTraitsMaterials:string[] = []
+
   for (const match of cfgListChunk.matchAll(
+    // eslint-disable-next-line regexp/no-super-linear-backtracking
     /^ *(?<matID>[^:\n]+):(?<rawValues>[^<\n]+)$/gm
   )) {
     if (!match.groups) throw new Error('Wrong tweakerconstruct.cfg format')
@@ -213,84 +242,25 @@ export function parseStats(
 
     existMats.add(matID)
 
-    const tweaked = tweakMaterial(matID, tweakObj, defaultVals)
+    // Calculate trait power
+    const partsValues: number[] = []
+    if (traitPowers) {
+      for (const part of parts) {
+        const val = traitPowers[matID]?.[part]
+        if (val === undefined) noTraitsMaterials.push(`${matID}/${part}`)
+        else partsValues.push(val)
+      }
+    }
+    const traitPower = partsValues.length
+      ? partsValues.reduce((a, b) => (a || 0) + (b || 0), 0) / partsValues.length
+      : 0
+
+    const tweaked = tweakMaterial(matID, tweakObj, defaultVals, traitPower)
     tweakedMat.push(tweaked)
   }
+
+  // if (noTraitsMaterials.length) process.stderr.write(`⚠️ [${tweakGroup}] No values for material/part:\n${noTraitsMaterials.join('\n')}\n`)
 
   tweakedMat.sort((a, b) => a.power - b.power)
   return { tweakedMat, existMats: [...existMats] }
 }
-
-/**
- * take traits from both configs to make table of traits
- */
-export function parseTraits(
-  tweakers_cfg: string,
-  default_tweakers_cfg: string
-) {
-  const traits: { [name: string]: { [part: string]: Set<string> } } = {}
-  mergeChunk(default_tweakers_cfg)
-  mergeChunk(tweakers_cfg, true)
-
-  function mergeChunk(fileContent: string, rewrite = false) {
-    const rgx = new RegExp(getLookup('Trait tweaks'), 'i')
-    const chunk = fileContent.match(rgx)?.[0]
-    if (!chunk) throw new Error('Can\'t parse tweakerconstruct.cfg')
-
-    const added = new Set<string>()
-
-    chunk.trim().split('\n')
-      .map(l =>
-        l.trim().match(
-          /^(?<mat>[^:\n]+):(?<part>[^:\n]+):(?<traits>.+)$/
-        )?.groups as { mat: string,          part: string,          traits: string }
-      )
-      .filter(Boolean)
-      .forEach((o) => {
-        o.traits.split(',').forEach((trait) => {
-          // Tweakerconstruct fully rewrite all materials traits
-          if (rewrite && !added.has(o.mat)) {
-            added.add(o.mat)
-            traits[o.mat] = {}
-          }
-          ((traits[o.mat] ??= {})[o.part] ??= new Set()).add(trait)
-        })
-      })
-  }
-
-  return traits
-}
-
-/*
-
-## Unused TC traits
-
------------
-
-- [x] darktraveler  | Surrounding mobs get randomly afflicted with damage.
-- [x] hailhydra     | Random explosions plague your enemies. Also, when you are attacked, there is a chance to get Absorption.
-- [x] hearts        | The higher your health, the more damage you do.
-- [x] heavy_metal   | Increased knockback + Slowness on target.
-- [x] illuminati    | While the tool is in your hand, nearby entities (that do not hold a tool with this trait) glow, and you become invisible.
-- [x] morganlefay   | Bonus magic damage (ranging from 0.0 to 5.0; Gaussian distributed) is afflicted (it is absolute).
-- [x] rudeawakening | Damage pierces armor (mobs only).
-- [x] spades        | The lower your health, the more damage you do.
-- [x] starfishy     | Press the "set portal" key (default "N") to set a virtual portal on the block you are pointing at. If you are on the brink of death, you have %d enori crystals to spare, and the portal has enough space above, then the crystals are consumed, you are teleported to the virtual portal, and you are spared. (The tool must be in your hand.)
-- [x] thundering    | Summon a thunderbolt on impact.
-- [x] unnamed       | Bonus damage accrued for each entity of the same type as the target close to it.
-- [x] vindictive    | Bonus damage to players, and you gain some health by attacking.
-- [x] blindbandit   | A mob called the "Blind Bandit" will sometimes be summoned for a limited time after you attack or are attacked. She will attack hostile mobs, and will also attack those who dare attack her (except you), piercing armor on mobs.
-- [x] botanical2    |
-- [x] barrett       | ❌ As health decreases, there is an increasing chance of a critical hit.
-- [x] divineshield  | ❌ While this tool is in your hand, you are granted fire resistance. Also, damage is reduced, but at a durability cost.
-- [x] dprk          | ❌ When attacking or defending, Supreme Leaders will spawn, exploding on opponents in the same manner as a creeper.
-- [x] ghastly       | ❌ If the holder is attacked while sneaking, the attacker is inflicted with Slowness.
-- [x] ignoble       | ❌ As one takes damage, one starts to harbor feelings of ignoble jealousy as the offender is killed. When this trait is enabled, those feelings are vented when attacking while sneaking.
-- [x] jaded         | ❌ Mobs attacked with this tool have their ability to heal temporarily hindered.
-- [x] mystical_fire | ❌ Sets the target on fire, and damages the target with magic for a certain amount of time.
-- [x] naphtha       | ❌ Arrows (and bolts) burn the target on impact.
-- [x] trash         | ❌ Random stuff is slowly generated when the tool is selected, but the tool is damaged slowly in this way.
-
-❌ - Could not find trait
-
-*/

@@ -8,8 +8,10 @@ import fast_glob from 'fast-glob'
 import yargs from 'yargs'
 
 import type { TweakName, TweakObj } from '.'
+import type { MatTraits } from './traits'
 
 import { genStatsTable, getLookup, parseStats } from '.'
+import { parseTraits } from './traits'
 
 /* =============================================
 =                Arguments                    =
@@ -101,9 +103,28 @@ function parseTweaks(tweaksPath: string) {
     absent  : new Set<string>(),
   }
 
-  process.stdout.write('[2/3] Applying tweaks')
+  process.stdout.write('[2/3] Fetching Traits')
+  let traitPower: MatTraits<number> | undefined
+
+  if (argv.save) {
+    const traits = parseTraits(newConfig, argv.default)
+    const traitValues = csvParseSync(readFileSync(resolve(argv.save, 'Traits.csv'), 'utf8'))
+    const traitMap = Object.fromEntries(traitValues.map(([,id, value]) => [id, Number(value)]))
+    traitPower = {}
+    for (const [mat, parts] of Object.entries(traits)) {
+      for (const [part, traitIds] of Object.entries(parts)) {
+        (traitPower[mat] ??= {})[part] ??= 0
+        traitPower[mat][part] += [...traitIds]
+          .map(id => traitMap[id])
+          .reduce((a, b) => (a || 0) + (b || 0), 0)
+      }
+    }
+  }
+  process.stdout.write('done\n')
+
+  process.stdout.write('[3/3] Applying tweaks')
   for (const [tweakGroup, tweakObj] of parseTweaks(argv.tweaks)) {
-    const { tweakedMat, existMats } = parseStats(argv.default, tweakGroup, tweakObj)
+    const { tweakedMat, existMats } = parseStats(argv.default, tweakGroup, tweakObj, traitPower)
 
     // Save changes in new config text
     newConfig = newConfig.replace(
@@ -136,17 +157,6 @@ function parseTweaks(tweaksPath: string) {
   }
   saveText(newConfig, tweakerconstruct_cfg_path)
   process.stdout.write('done\n')
-
-  // process.stdout.write('[2/3] Fetching Traits')
-  // if (argv.save) {
-  //   const allTraits = Object.values(
-  //     parseTraits(argv.default, newConfig)
-  //   ).map(parts => Object.values(parts).map(s => [...s]))
-  //     .flat(2)
-  //   const toSave = [...new Set(allTraits)].join('\n')
-  //   saveText(toSave, resolve(argv.save, 'Traits.csv'))
-  // }
-  // process.stdout.write('done\n')
 
   // Show invalid tweaks
   Object.entries(invalid).forEach(([key, set]) => {
