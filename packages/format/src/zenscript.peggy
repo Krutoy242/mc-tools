@@ -13,6 +13,7 @@ Start
 /* eslint style/no-multi-spaces: ["error", { ignoreEOLComments: true, exceptions: { "VariableDeclarator": true, "ArrayExpression": true }}] */
 /* eslint style/quote-props: ["warn", "consistent-as-needed"] */
 /* eslint style/semi: ["error", "always"] */
+/* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable antfu/consistent-list-newline */
 /* eslint-disable curly */
 /* eslint-disable dot-notation */
@@ -29,30 +30,30 @@ Start
 /* eslint-disable ts/no-use-before-define */
 /* eslint-disable vars-on-top */
 
-declare function __float(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
-declare function __double(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
-declare function __byte(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
-declare function __short(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
-declare function __long(n: number): number; // eslint-disable-line unused-imports/no-unused-vars
-declare function $(s: any): any; // eslint-disable-line unused-imports/no-unused-vars
-declare function isNull(o: any): boolean; // eslint-disable-line unused-imports/no-unused-vars
-declare const recipes: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const mods: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const craft: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const scripts: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const furnace: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const itemUtils: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const oreDict: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const game: Record<string, any>; // eslint-disable-line unused-imports/no-unused-vars
-declare const crafttweaker: any; // eslint-disable-line unused-imports/no-unused-vars
-declare const events: any; // eslint-disable-line unused-imports/no-unused-vars
-declare type int = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type byte = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type float = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type double = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type short = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type long = number; // eslint-disable-line unused-imports/no-unused-vars
-declare type bool = boolean; // eslint-disable-line unused-imports/no-unused-vars
+declare function __float(n: number): number;
+declare function __double(n: number): number;
+declare function __byte(n: number): number;
+declare function __short(n: number): number;
+declare function __long(n: number): number;
+declare function $(s: any): any;
+declare function isNull(o: any): boolean;
+declare const recipes: Record<string, any>;
+declare const mods: Record<string, any>;
+declare const craft: Record<string, any>;
+declare const scripts: Record<string, any>;
+declare const furnace: Record<string, any>;
+declare const itemUtils: Record<string, any>;
+declare const oreDict: Record<string, any>;
+declare const game: Record<string, any>;
+declare const crafttweaker: any;
+declare const events: any;
+declare type int = number;
+declare type byte = number;
+declare type float = number;
+declare type double = number;
+declare type short = number;
+declare type long = number;
+declare type bool = boolean;
 // =============================================================
 // CONVERSION_DEBRIS
 
