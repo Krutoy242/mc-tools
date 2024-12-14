@@ -84,6 +84,8 @@ const conversions: { [name: string]: ReplTuple } = {
   CONST        : [`\\/\\* \\$ \\*\\/const`, 'val'],
   LET          : [`\\/\\* \\$ \\*\\/let`, 'var'],
   LIST         : [/Array<(?<a>.+?)>/gi, ({ a }) => `[${a}]`],
+  DECORATOR    : [/@(?<a>\w+(\.\w+)*)\(\s*\)/g, ({ a }) => `#${a.split('.').join(' ')}`],
+  DECORATOR_OBJ: [/(?<s>[ \t]*)@(?<a>\w+(\.\w+)*)\((?<b>[\s\S]*?)\)\s*\/\* MIXIN_END \*\//g, ({ s, a, b }) => `${s}#${a.split('.').join(' ')} ${b.includes('\n') ? `\n${s}#` : ''}${b.replace(/\n(\s*)/g, (_, m) => `\n${s}#${m.substring(s.length)}`)}`],
   // LOADEDMODS      : [/loadedMods(?<a>[\s\n\r]*)\.(?<b>[\s\n\r]*)(?<name>[a-zA-Z]+)/gm, ({ name, a, b }) => `loadedMods${a}.${b}['${name}']`],
 }
 

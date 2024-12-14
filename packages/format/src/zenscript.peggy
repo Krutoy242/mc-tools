@@ -47,6 +47,7 @@ declare const oreDict: Record<string, any>;
 declare const game: Record<string, any>;
 declare const crafttweaker: any;
 declare const events: any;
+declare const mixin: any;
 declare type int = number;
 declare type byte = number;
 declare type float = number;
@@ -92,6 +93,41 @@ SingleLineComment
   = ("//" / "#") body:(!LineTerminator .)* {return '//' + flat(body)}
 
 Preprocessor
+  = PreprocessorMultipleMixin
+  / PreprocessorBasic
+  
+PreprocessorMultipleMixin
+  = head:MixinHead tail:((WhiteSpace / LineTerminatorSequence)* PreprocessorMultipleMixin) {
+    return [head, "()", tail]
+  }
+  / head:MixinHead PreprocessorSpace* tail:PreprocessorData {
+    return [head, "(", tail, ") /* MIXIN_END */"]
+  }
+  / head:MixinHead {
+    return [head, "()"]
+  }
+
+MixinHead
+  = "#mixin" head:MixinHeadIdentifier? {
+    return [`@mixin`, head ? "." : "", head]
+  }
+
+MixinHeadIdentifier
+ = PreprocessorSpace+ body:IdentifierName { return body }
+
+PreprocessorSpace
+  = (WhiteSpace / LineTerminatorSequence / "#")
+
+PreprocessorData
+  = "{" PreprocessorBody (LineTerminator PreprocessorLine)*
+
+PreprocessorLine
+  = head:WhiteSpace* "#" body:PreprocessorBody { return [head, body] }
+  
+PreprocessorBody
+  = (!LineTerminator .)*
+
+PreprocessorBasic
   = "#" tail:(PreprocessorList (!LineTerminator .)*) {
     return ["import '#preprocessor ", tail, "';"]
   }
