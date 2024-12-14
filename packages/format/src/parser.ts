@@ -55,7 +55,7 @@ function rgx(rgxString: RegExp | string, fn: GroupReplace | string): readonly [R
 type ReplTuple = [RegExp | string, GroupReplace | string ]
 
 const conversions: { [name: string]: ReplTuple } = {
-  CLASS         : [/class(\s+\w+\s*\{)/g, 'zenClass$1'],
+  CLASS         : [/class(\s+\w+(\s+extends\s+\w+)?\s*\{)/g, 'zenClass$1'],
   CLASS_VAL     : [/\/\* class \*\/\s*readonly/g, 'val'],
   CLASS_STATIC  : [/\/\* class \*\/\s*static/g, 'static'],
   CLASS_VAR     : [/\/\* class \*\/\s?/g, 'var '],

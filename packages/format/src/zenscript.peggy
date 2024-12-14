@@ -506,7 +506,7 @@ FunctionAnon
 // CLASSES
 // -----------------------------------------------
 Class
-  = "zenClass" __  body:(Identifier _
+  = "zenClass" __  body:(Identifier (__ "extends" __ Identifier)? _
       "{" _ (ClassMember (_ ClassMember)*)? _ "}"
     ) {
       return ['class ', body]
