@@ -168,10 +168,13 @@ TypeMutated
 
 TypeLiteral
   = FunctionType
-  / "[" body:(_ TypeLiteral? _) "]" {
-  	return [...body, "[]"]
-  }
+  / TypeList
   / TypePath (_ "[" _ TypeLiteral? _ "]")*
+
+TypeList
+  = "[" body:(_ TypeLiteral? _) "]" {
+  	return ['Array<',...body, ">"]
+  }
 
 TypePath
   = IdentifierName (_ "." _ IdentifierName)*

@@ -83,6 +83,7 @@ const conversions: { [name: string]: ReplTuple } = {
   RESRVED      : [/_\$_(default)/g, '$1'],
   CONST        : [`\\/\\* \\$ \\*\\/const`, 'val'],
   LET          : [`\\/\\* \\$ \\*\\/let`, 'var'],
+  LIST         : [/Array<(?<a>.+?)>/gi, ({ a }) => `[${a}]`],
   // LOADEDMODS      : [/loadedMods(?<a>[\s\n\r]*)\.(?<b>[\s\n\r]*)(?<name>[a-zA-Z]+)/gm, ({ name, a, b }) => `loadedMods${a}.${b}['${name}']`],
 }
 
