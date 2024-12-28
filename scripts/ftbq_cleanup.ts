@@ -25,7 +25,7 @@ export function cleanupLangEntries() {
         const found = ch.quests.find(q => q.uid === uid)
         if (found) return getQuestDeph(found) + 1
       }
-      throw new Error(`Cant found lang for ${uid}`)
+      // Dependency exist but not quest file found. Probably chapter wasnt updated.
     }).reduce((a, b) => a + b) ?? 0
     questDeps.set(quest, v)
     return v
