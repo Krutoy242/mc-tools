@@ -5,6 +5,12 @@ import type { QuestUid } from '../packages/utils/src/mods/ftbquests'
 import { Lang } from '../packages/utils/src/lang'
 import { getChapters, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
+interface TextSource {
+  description?: string | string[]
+  text       ?: string | string[]
+  title      ?: string | string[]
+}
+
 /**
  * Change every text entry in quest book to lang code
  * for easily translate to other languages
@@ -26,6 +32,7 @@ export function cleanupLangEntries() {
         if (found) return getQuestDeph(found) + 1
       }
       // Dependency exist but not quest file found. Probably chapter wasnt updated.
+      return 0
     }).reduce((a, b) => a + b) ?? 0
     questDeps.set(quest, v)
     return v
@@ -35,7 +42,7 @@ export function cleanupLangEntries() {
    * Replace old text in field to lang code
    * @returns true if replaced
    */
-  function langify<T extends Record<string, string | string[]>>(obj: T, key: keyof T, newLangKey: string, sortWeight: number) {
+  function langify(obj: TextSource, key: keyof TextSource, newLangKey: string, sortWeight: number) {
     const text = obj[key]
     if (text === undefined || !text.length) return false // Skip if no desc or already lang key
     const oldKey = Array.isArray(text) ? text[0] : text as string
@@ -49,14 +56,6 @@ export function cleanupLangEntries() {
     ;(obj as any)[key] = Array.isArray(obj[key]) ? [t] : t
     console.log(`${`${chalk.green('+')} ${chalk.gray(newLangKey)}`} = ${chalk.rgb(10, 10, 10)(JSON.stringify(text).substring(0, 100))}`)
     return true
-  }
-
-  const langifyTitle = (obj: { title?: string }, newLangKey: string, sortWeight: number) => {
-    return langify(obj, 'title', newLangKey, sortWeight)
-  }
-
-  const langifyDesc = (obj: { description?: string[], text?: string[] }, newLangKey: string, sortWeight: number) => {
-    return (['description', 'text'] as const).map(k => langify(obj, k, newLangKey, sortWeight)).some(Boolean)
   }
 
   const uidChap = uidGenerator(20, '')
@@ -74,8 +73,11 @@ export function cleanupLangEntries() {
     const chapWeight = chapIndex * 1000000
     const chapName = uidChap(titleToName(ch.title))
 
-    if (+langifyTitle(ch, `q.${chapName}.name`, chapWeight)
-      + +langifyDesc(ch, `q.${chapName}.desc`, chapWeight)) {
+    if (
+      +langify(ch, 'title', `q.${chapName}.name`, chapWeight)
+      + +langify(ch, 'description', `q.${chapName}.desc`, chapWeight + 0.000001)
+      + +langify(ch, 'text', `q.${chapName}.desc`, chapWeight + 0.000002)
+    ) {
       saveChapter(ch)
     }
 
@@ -97,8 +99,11 @@ export function cleanupLangEntries() {
         return
       }
 
-      if (+langifyTitle(q, `q.${chapName}.${questName}.name`, questWeight)
-        + +langifyDesc(q, `q.${chapName}.${questName}.desc`, questWeight + 0.000001)) {
+      if (
+        +langify(q, 'title', `q.${chapName}.${questName}.name`, questWeight)
+        + +langify(q, 'description', `q.${chapName}.${questName}.subtitle`, questWeight + 0.000001)
+        + +langify(q, 'text', `q.${chapName}.${questName}.desc`, questWeight + 0.000002)
+      ) {
         saveQuest(ch.uid, q)
       }
     })
