@@ -33,6 +33,11 @@ export const forks = {
   268387: [398267], // Extended Crafting
   243121: [417392], // Quark
   434516: [261348], // Avaritia
+  74072 : [1242239], // Tinker's Construct
+  236542: [1024225], // Advanced Rocketry
+  248453: [456403], // Forgelin
+  268560: [813408], // Mekanism
+  245211: [977883], // TOP
 }
 
 export function getStatusText(status: keyof typeof style, isDisabled: boolean) {
