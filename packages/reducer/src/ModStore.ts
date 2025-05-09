@@ -56,9 +56,20 @@ export class ModStore {
 
     // Add mandatory addons list
     Object.entries(config.mandatoryDeps).forEach(([modName, deps]) => {
-      this.toMod(modName)?.addDependency(
-        deps.map(this.toMod).filter((d): d is Mod => !!d)
-      )
+      const modNeedDep = this.findMod(modName)
+      if (!modNeedDep) return
+      const depMods = deps.map(this.findMod)
+        .filter((d): d is Mod => !!d)
+        .filter(d => d !== modNeedDep)
+      if (!depMods.length) {
+        console.log(
+          `Mod "${modName}" must have dependencies `
+          + `[${deps.map(s => `'${s}'`).join(', ')}] but none found!`
+        )
+      }
+      else {
+        modNeedDep.addDependency(depMods)
+      }
     })
 
     this.mods.sort((a, b) =>
@@ -68,7 +79,15 @@ export class ModStore {
   }
 
   @bind
-  private toMod(name: string) {
-    return this.mods.find(m => m.addon?.name === name || m.fileName.startsWith(name))
+  private findMod(name: string): Mod | undefined {
+    const rgx = new RegExp(name, 'i')
+    const list = this.mods.filter(m =>
+      m.addon?.name === name
+      || m.addon?.name.match(rgx)
+      || rgx.test(m.fileName)
+    )
+    list.sort((a, b) => (a.addon?.name.length ?? 0) - (b.addon?.name.length ?? 0))
+    if (list.length > 1) console.log(`Multiple matches of mod "${name}"`, list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`))
+    return list[0]
   }
 }
