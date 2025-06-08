@@ -33,6 +33,8 @@ const mandatoryDeps = {
   'Trinity'                        : ['NuclearCraft(: Overhauled)?$'],
   'CofH Core'                      : ['Redstone Flux'],
   'Actually Baubles'               : ['Actually Additions'],
+  '^Quark$'                        : ['AutoRegLib'],
+  '^Quark: RotN'                   : ['AutoRegLib'],
 
   // Fugue deps
   'Advanced Rocketry'          : ['Fugue'],
