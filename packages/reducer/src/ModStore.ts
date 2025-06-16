@@ -17,6 +17,7 @@ const mandatoryDeps = {
   'AE2 Wireless Fluid Terminal'    : ['p455w0rd\'s Library', 'AE2 Wireless Terminal Library'],
   'Wireless Pattern Terminal'      : ['p455w0rd\'s Library', 'AE2 Wireless Terminal Library'],
   'ContentTweaker Registry Orderer': ['ContentTweaker-'],
+  'ContentTweaker-'                : ['base-'],
   'FindMeAnyDurability'            : ['Had Enough Items'],
   'ModTweaker'                     : ['MTLib'],
   'JEIExporter-'                   : ['Had Enough Items'],

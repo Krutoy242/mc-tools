@@ -27,7 +27,7 @@ export async function interactive(mcPath: string) {
         m.addon?.name.toLocaleLowerCase().includes(pure)
         || m.fileName.toLocaleLowerCase().includes(pure)
       )
-      .map(m => (prefix ?? '') + m.addon?.name ?? m.fileName)
+      .map(m => (prefix ?? '') + (m.addon?.name ?? m.fileName))
 
     return (result && result.length) ? result : ''
   }
@@ -65,11 +65,12 @@ export async function interactive(mcPath: string) {
       continue
     }
 
-    T`\n`
+    T(`\n`)
 
-    await prefixes[prefix]
-      ? prefixes[prefix](selectedMod)
-      : selectedMod.disable()
+    if (prefixes[prefix])
+      await prefixes[prefix](selectedMod)
+    else
+      await selectedMod.disable()
   }
 }
 
