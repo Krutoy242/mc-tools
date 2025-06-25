@@ -13,7 +13,6 @@ Start
 /* eslint style/no-multi-spaces: ["error", { ignoreEOLComments: true, exceptions: { "VariableDeclarator": true, "ArrayExpression": true }}] */
 /* eslint style/quote-props: ["warn", "consistent-as-needed"] */
 /* eslint style/semi: ["error", "always"] */
-/* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable antfu/consistent-list-newline */
 /* eslint-disable curly */
 /* eslint-disable dot-notation */
@@ -24,10 +23,12 @@ Start
 /* eslint-disable object-shorthand */
 /* eslint-disable prefer-arrow-callback */
 /* eslint-disable style/comma-spacing */
+/* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
 /* eslint-disable ts/no-use-before-define */
+/* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable vars-on-top */
 
 declare function __float(n: number): number;
@@ -48,6 +49,7 @@ declare const game: Record<string, any>;
 declare const crafttweaker: any;
 declare const events: any;
 declare const mixin: any;
+declare const native: any;
 declare type int = number;
 declare type byte = number;
 declare type float = number;
@@ -161,7 +163,7 @@ __
 // -----------------------------------------------
 Identifier "Identifier"
   = name:IdentifierName {
-    const reserved = ('default').split(' ')
+    const reserved = ('default class').split(' ')
     return reserved.includes(flat(name))
       ? ['_$_',name]
       : name
@@ -315,19 +317,30 @@ StatementList
 Conditional
   = "while" _ "(" _ Expression _ ")" _ Statement
   / "if" _ "(" _ Expression _ ")" _ Statement (_ "else" _ Statement)?
+  / pre:("if" _) head:Expression _ body:Statement tail:(_ "else" _ Statement)? {
+    return [pre, '(', head, ')', body, tail]
+  }
 
 Loop
-  = LoopOf / LoopIn
+  = LoopOf / LoopInPair / LoopIn
 
 LoopOf
-  = "for" _ vars:(Identifier (Comma Identifier)*) _ "in" _ from:Expression _ (".."/"to") _ to:Expression _ body:Statement {
+  = "for" _ vars:LoopVars _ "in" _ from:Expression _ (".."/"to") _ to:Expression _ body:Statement {
     return ['for (let ', vars, ' = ', from, ';', vars, ' < ', to, ';', vars, '++) ', body]
   }
 
+LoopInPair
+  = "for" _ vars:(Identifier Comma Identifier) _ "in" _ from:Expression _ body:Statement {
+    return ['for (const [', vars, '] of (', from, ').entries()/**/)', body]
+  }
+
 LoopIn
-  = "for" _ vars:(Identifier (Comma Identifier)*) _ "in" _ from:Expression _ body:Statement {
+  = "for" _ vars:Identifier _ "in" _ from:Expression _ body:Statement {
     return ['for (const ', vars, ' of ', from, ')', body]
   }
+
+LoopVars
+  = first:Identifier rest:(Comma Identifier)*
 
 Return
   = "return" _ Expression

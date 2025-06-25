@@ -25,7 +25,6 @@ const argv = yargs(process.argv.slice(2))
   .positional('files', {
     describe    : 'Path to file / files for formatting',
     type        : 'string',
-    normalize   : true,
     demandOption: true,
   })
   .option('ignore-pattern', {
@@ -63,9 +62,14 @@ async function main() {
   })
   if (!fileList.length) throw new Error(`${resolve(argv.files)} doesnt exist. Provide correct path.`)
 
-  const convertResult = convertToTs(fileList)
+  const convertResult = convertToTs(fileList).filter(Boolean) as string[]
 
-  if (!convertResult.filter(Boolean).length) return
+  if (!convertResult.length) return
+
+  // Convert using jscodeshift
+  // process.stdout.write(`refactoring with ${chalk.green('jscodeshift')}...\n`)
+  // refactor(convertResult)
+
   if (argv.nolint) return
 
   // Lint & fix
@@ -91,7 +95,6 @@ async function main() {
 
   // Revert TS -> ZS
   convertResult.forEach((newFilePath, i) => {
-    if (!newFilePath) return
     const linted = readFileSync(newFilePath, 'utf8')
     writeFileSync(fileList[i], revert(linted))
     unlinkSync(newFilePath)

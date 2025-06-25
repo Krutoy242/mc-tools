@@ -39,10 +39,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "jscodeshift": "^17.3.0",
     "peggy": "^3.0.2",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@types/jscodeshift": "^17.3.0",
     "@types/yargs": "^17.0.24"
   },
   "publishConfig": {

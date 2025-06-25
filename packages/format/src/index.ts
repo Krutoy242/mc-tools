@@ -49,7 +49,7 @@ export function convertToTs(fileList: string[]) {
 }
 
 export function revert(source: string): string {
-  const result = revertTS_to_ZS(source)
+  const result = revertTS_to_ZS(source.replace(/\r/g, ''))
   return result
     // Remove debris
     .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S]+?\/\/ CONVERSION_DEBRIS\n*/g, '')
