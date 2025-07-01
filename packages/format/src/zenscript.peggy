@@ -461,7 +461,8 @@ Operator
   = Unary (_ OperatorLiteral _ Unary)*
 
 OperatorLiteral "operator"
-  = "~" { return '/* ~ */ +' }
+  = "??"
+  / "~" { return '/* ~ */ +' }
   / "has" { return '/* has */in' }
   / "instanceof"
   /"=="/"<="/">="/"%"/"&&"/"&"/"||"/"|"/"*"/"+"/"-"/"/"/"in"/"!="/"<"/">"/"^"
