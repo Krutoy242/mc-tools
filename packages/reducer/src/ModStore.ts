@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import type { MCInstance } from './minecraftinstance'
 
 import { getFetchInModsDir } from '.'
-import { Mod } from './Mod'
 import { bind } from './bind'
+import { Mod } from './Mod'
 
 function naturalSort(a: string, b: string) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
@@ -34,8 +34,8 @@ const mandatoryDeps = {
   'Trinity'                        : ['NuclearCraft(: Overhauled)?$'],
   'CofH Core'                      : ['Redstone Flux'],
   'Actually Baubles'               : ['Actually Additions'],
-  '^Quark$'                        : ['AutoRegLib'],
-  '^Quark: RotN'                   : ['AutoRegLib'],
+  '^Quark$'                        : ['AutoRegLib', 'Fugue'],
+  '^Quark: RotN'                   : ['AutoRegLib', 'Fugue'],
   'DeepMobEvolution'               : ['^Patchouli( ROFL Edition)?$'],
   'ScalingHealth'                  : ['SilentLib', 'Fugue'],
 
