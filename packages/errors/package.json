@@ -1,7 +1,7 @@
 {
   "name": "@mctools/errors",
   "type": "module",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Scan debug.log file to find unknown errors",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",

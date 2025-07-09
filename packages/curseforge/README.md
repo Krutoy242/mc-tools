@@ -177,4 +177,5 @@ if `old` is omited, returns only `union` field.
 
 ## Other tools
 
+* [@mctools/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
 * [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

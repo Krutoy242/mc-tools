@@ -21,5 +21,6 @@ return fast_glob
   .join('\n')
 -->
 * [@mctools/curseforge](packages/curseforge) - Lib for working with CurseForge using minecraftinstance.json
+* [@mctools/errors](packages/errors) - Scan debug.log file to find unknown errors
 * [@mctools/modlist](packages/modlist) - Generate .md file with all mods listed
 <!-- eval:end -->
