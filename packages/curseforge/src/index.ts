@@ -39,6 +39,7 @@ export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96
   try {
     cacheObj = readJsonSync(cachePath)
   }
+  // eslint-disable-next-line unused-imports/no-unused-vars
   catch (error) {
     cacheObj = {}
   }

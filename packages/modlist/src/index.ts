@@ -5,7 +5,7 @@
  * @link https://github.com/Krutoy242
  */
 
-import type { ModsComparsion } from '@mctools/curseforge'
+import type { AddonDifference, ModsComparsion } from '@mctools/curseforge'
 import type { InstalledAddon, Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 
 import process from 'node:process'
@@ -99,8 +99,8 @@ export async function generateModsList(
     sortDirection = false
     sortKey = sortKey.substring(1)
   }
-  const sortFn = (a: InstalledAddon, b: InstalledAddon) => deepGet(a, sortKey) - deepGet(b, sortKey)
-  const sort = (a: InstalledAddon, b: InstalledAddon) => sortDirection ? sortFn(a, b) : sortFn(b, a)
+  const sortFn = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon) => deepGet(a, sortKey) - deepGet(b, sortKey)
+  const sort = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon) => sortDirection ? sortFn(a, b) : sortFn(b, a)
 
   for (const key of (Object.keys(diff) as (keyof ModsComparsion)[])) {
     diff[key]?.forEach((o: any) => {

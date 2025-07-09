@@ -10,9 +10,9 @@ async function cli(args: string[] = []) {
 }
 
 describe('cli test', () => {
-  const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => {})
-  afterEach(() => { exitMock.mockClear() })
-  afterAll(() => { exitMock.mockRestore() })
+  const exitMock = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
+  afterEach(() => exitMock.mockClear())
+  afterAll(() => exitMock.mockRestore())
 
   it('disable and enable some jars', async () => {
     await cli([

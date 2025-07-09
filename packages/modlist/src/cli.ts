@@ -102,10 +102,10 @@ instead of by default ID.`)
   .example(chalk.green`npx $0 --verbose`, chalk.gray`Write some information in terminal
 `)
 
-  .updateStrings(Object.fromEntries((
+  .updateStrings(Object.fromEntries(
     ['Options:', 'Examples:']
       .map(w => [w, chalk.underline.bold(w)])
-  )))
+  ))
 
   .parseSync()
 

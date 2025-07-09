@@ -62,8 +62,8 @@ export function renameChapters() {
     try {
       renameSync(oldPath, newPath)
     }
-    catch (e) {
-      console.error('cant rename!')
+    catch (error) {
+      console.error(`cant rename!\n${error}`)
     }
 
     index.index[i] = newName
@@ -191,9 +191,9 @@ export function injectLatestLine() {
             Count : undefined,
             Damage: l.Damage.value !== 0 ? l.Damage : undefined,
           }
-        : (l.Damage && l.Damage.value !== 0)
-            ? `${l.id} 1 ${l.Damage.value}`
-            : l.id
+        : l.Damage && l.Damage.value !== 0
+          ? `${l.id} 1 ${l.Damage.value}`
+          : l.id
 
       return {
         item,
