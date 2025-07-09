@@ -1,12 +1,12 @@
 export interface Config {
   boundries?: {
     from?: string
-    to?: string
+    to?  : string
   }
   groupBy?: string[]
-  ignore: string | string[]
-  match: string
-  replace: { from: string, to: string }[]
+  ignore  : string | string[]
+  match   : string
+  replace : { from: string, to: string }[]
 }
 
 function naturalSort(a: string, b: string) {
@@ -27,8 +27,7 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
   let result: string[] = []
 
   const allErrors = [...debugLogText
-    .matchAll(new RegExp(config.match, 'gm')),
-  ]
+    .matchAll(new RegExp(config.match, 'gm'))]
 
   if (!allErrors.length) throw new Error('No error found, probably wrong Log file')
 
