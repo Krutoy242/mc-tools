@@ -7,41 +7,40 @@
 ## Usage
 
 {{#if (includes package.keywords "cli")}}
-{{~#if (includes package.keywords "lib")}}
+{{#if (includes package.keywords "lib")}}
 You can use this package either as CLI tool or as library.
 
 To use as CLI tool:
 
 {{/if}}
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh
     > npx {{package.name}} --help
     ```
-{{/if}}
 
+{{/if}}
 {{#if helpOutput}}
 ### Options
 
 ```shell
 {{helpOutput}}
 ```
+
 {{/if}}
-
-{{~#if (includes package.keywords "lib")}}
-
+{{#if (includes package.keywords "lib")}}
 ## API
-{{~#if (includes package.keywords "cli")}}
 
+{{#if (includes package.keywords "cli")}}
 To use as library:
-{{/if}}
 
+{{/if}}
 1. Install package
   > ```shell
   > npm i {{package.name}}
@@ -49,19 +48,16 @@ To use as library:
 
 2. Import functions from package.
   > ```ts
-  > import fnc from "{{package.name}}"
+  > import fnc from '{{package.name}}'
   > ```
 
 {{typedoc}}
-
-{{~/if}}
-
+{{/if}}
 ## Author
 
 * https://github.com/Krutoy242
 
 ## Other tools
-
 {{#each packages}}{{#if (includes package.keywords "cli")}}{{#if package.private}}{{else}}
 * [{{package.name}}]({{package.homepage}}/tree/master/packages/{{name}}) - {{package.description}}
 {{~/if}}{{~/if}}{{/each}}

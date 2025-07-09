@@ -1,8 +1,8 @@
 /**
- * @file Get mod data from CurseForge or hashed file
+ * Get mod data from CurseForge or hashed file
  *
  * @author Krutoy242
- * @link https://github.com/Krutoy242
+ * @see {@link https://github.com/Krutoy242}
  */
 
 import type { Ignore } from 'ignore'

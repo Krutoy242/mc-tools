@@ -7,6 +7,7 @@ Various utilities for Minecraft-Tools monorepo
 ## Usage
 
 ## API
+
 1. Install package
   > ```shell
   > npm i @mctools/utils
@@ -17,20 +18,23 @@ Various utilities for Minecraft-Tools monorepo
   > import fnc from '@mctools/utils'
   > ```
 
-### Functions
+## functions
 
-#### naturalSort
+### `naturalSort`
 
-▸ **naturalSort**(`a`, `b`): `number`
+> **naturalSort**(`a`, `b`): `number`
 
-##### Parameters
+### Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `a` | `string` |
-| `b` | `string` |
+#### a
 
-##### Returns
+`string`
+
+#### b
+
+`string`
+
+### Returns
 
 `number`
 

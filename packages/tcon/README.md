@@ -6,12 +6,12 @@ Tweaks Tinker Constructs' materials with csv tables
 
 ## Usage
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh

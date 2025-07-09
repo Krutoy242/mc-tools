@@ -6,12 +6,12 @@ Partially disable minecraft mods
 
 ## Usage
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh
@@ -30,7 +30,8 @@ Commands:
 
 Options:
       --version  Show version number                                   [boolean]
-  -m, --mods     Minecraft mods/ folder path          [string] [default: "mods"]
+  -m, --mc       Minecraft dir with mods/ and minecaftinstance.json
+                                                        [string] [default: "./"]
   -h, --help     Show help                                             [boolean]
 ```
 

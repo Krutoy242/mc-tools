@@ -1,8 +1,8 @@
 /**
- * @file Create MODS.md
+ * Create MODS.md
  *
  * @author Krutoy242
- * @link https://github.com/Krutoy242
+ * @see {@link https://github.com/Krutoy242}
  */
 
 import type { AddonDifference, ModsComparsion } from '@mctools/curseforge'

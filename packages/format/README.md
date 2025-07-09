@@ -6,12 +6,12 @@ Format .zs files by using ESLint for typescript
 
 ## Usage
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh
@@ -27,10 +27,11 @@ Positionals:
   files  Path to file / files for formatting  [string]
 
 Options:
-      --version  Show version number  [boolean]
-  -t, --ts       Create linted .ts file without converting it back.  [boolean]
-  -l, --nolint   Do not lint file
-  -h, --help     Show help  [boolean]
+      --version         Show version number  [boolean]
+  -i, --ignore-pattern  Same as --ignore-pattern for ESLint  [string]
+  -t, --ts              Create linted .ts file without converting it back.  [boolean]
+  -l, --nolint          Do not lint file
+  -h, --help            Show help  [boolean]
 ```
 
 ## Author

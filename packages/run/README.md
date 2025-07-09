@@ -6,12 +6,12 @@ Run several shell commands parralely
 
 ## Usage
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh
@@ -24,7 +24,7 @@ Run several shell commands parralely
 @mctools/run [config]
 
 Positionals:
-  config  Path to configuration JSON  [string] [default: "@mctools/run.json"]
+  config  Path to configuration JSON OR package.json/scripts key regexp  [string]
 
 Options:
       --version  Show version number  [boolean]

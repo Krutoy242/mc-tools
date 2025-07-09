@@ -10,12 +10,16 @@ node --experimental-specifier-resolution=node --no-warnings --loader ts-node/esm
 https://www.kgajera.com/blog/how-to-test-yargs-cli-with-jest/
 -->
 
-## tools
+## Tools
 
-* [@mctools/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
-* [@mctools/format](https://github.com/Krutoy242/mc-tools/tree/master/packages/format) - Format .zs files by using ESLint for typescript
-* [@mctools/manifest](https://github.com/Krutoy242/mc-tools/tree/master/packages/manifest) - `manifest.json` generation tool
-* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
-* [@mctools/reducer](https://github.com/Krutoy242/mc-tools/tree/master/packages/reducer) - Partially disable minecraft mods
-* [@mctools/run](https://github.com/Krutoy242/mc-tools/tree/master/packages/run) - Run several shell commands parralely
-* [@mctools/tcon](https://github.com/Krutoy242/mc-tools/tree/master/packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
+<!-- eval:start
+return fast_glob
+  .sync('packages/*/package.json')
+  .map(f => [f, JSON.parse(fse.readFileSync(f, 'utf8'))])
+  .filter(([, p]) => !p.private)
+  .map(([f, p]) => `* [${p.name}](${f.replace(/.package\.json/, '')}) - ${p.description}`)
+  .join('\n')
+-->
+* [@mctools/curseforge](packages/curseforge) - Lib for working with CurseForge using minecraftinstance.json
+* [@mctools/modlist](packages/modlist) - Generate .md file with all mods listed
+<!-- eval:end -->

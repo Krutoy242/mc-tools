@@ -25,12 +25,12 @@ You can use this package either as CLI tool or as library.
 
 To use as CLI tool:
 
-1. Install latest **NodeJS** for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
+1. Install latest NodeJS for [Windows](https://nodejs.org/en/download/current/) or [Unix](https://nodejs.org/en/download/package-manager/)
 
-2. Open console, navigate to your Minecraft directory (one with the `mods/` directory or `options.txt` file)
-   ```sh
-   > cd C:/Instances/MyModpack
-   ```
+2. Open console, navigate to your Minecraft directory (one with the mods/ directory or options.txt file)
+    ```sh
+    > cd C:/Instances/MyModpack
+    ```
 
 3. Run:
     ```sh
@@ -64,25 +64,26 @@ Options:
 
 Examples:
   npx @mctools/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
-                                                     Environment must have variable CURSE_FORGE_API_KEY.
+                                                         Environment must have variable CURSE_FORGE_API_KEY.
   npx @mctools/modlist --key=~secret_api_key.txt         Create mod list,
-                                                     but take key from secret_api_key.txt file
+                                                         but take key from secret_api_key.txt file
   npx @mctools/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
-                                                     that should not present in list.
+                                                         that should not present in list.
   npx @mctools/modlist --mcinstance=mci.json             Generate mod list based non-default
-                                                     named minecraftinstance.json file.
+                                                         named minecraftinstance.json file.
   npx @mctools/modlist --old=minecraftinstance_old.json  Generate comparsion of two modpacks / modpack versions.
-                                                     Useful for generating modpack changelog.
+                                                         Useful for generating modpack changelog.
   npx @mctools/modlist --template=fancy.hbs              Use custom template for generating list.
 
   npx @mctools/modlist --sort=/cf2Addon.downloadCount    Sort mods in resulted list by their download count
-                                                     instead of by default ID.
+                                                         instead of by default ID.
   npx @mctools/modlist --output=modlist.md               Rename output list instead of default MODS.md
 
   npx @mctools/modlist --verbose                         Write some information in terminal
 ```
 
 ## API
+
 To use as library:
 
 1. Install package
@@ -92,37 +93,98 @@ To use as library:
 
 2. Import functions from package.
   > ```ts
-  > import {...} from "@mctools/modlist"
+  > import fnc from '@mctools/modlist'
   > ```
 
-### Interfaces
+## functions
 
-- [ModListOpts](interfaces/ModListOpts.md)
+### `generateModsList`
 
-### Functions
-
-#### generateModsList
-
-▸ **generateModsList**(`mcInstanceFresh`, `mcInstanceOld?`, `opts?`): `Promise`<`string`\>
+> **generateModsList**(`mcInstanceFresh`, `mcInstanceOld?`, `opts?`): `Promise`\<`string`\>
 
 Generate modlist for given `minecraftinstance.json` file
 
-##### Parameters
+### Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `mcInstanceFresh` | `Minecraftinstance` | Json object from `minecraftinstance.json` of current version |
-| `mcInstanceOld?` | `Minecraftinstance` | Json object from `minecraftinstance.json` of previous version. |
-| `opts?` | [`ModListOpts`](interfaces/ModListOpts.md) | Options for mod list generator |
+#### mcInstanceFresh
 
-##### Returns
+`Minecraftinstance`
 
-`Promise`<`string`\>
+Json object from `minecraftinstance.json` of current version
+
+#### mcInstanceOld?
+
+`Minecraftinstance`
+
+Json object from `minecraftinstance.json` of previous version.
+
+#### opts?
+
+[`ModListOpts`](../interfaces/ModListOpts.md)
+
+Options for mod list generator
+
+### Returns
+
+`Promise`\<`string`\>
 
 Markdown file based on given Handlebars template
+
+## interfaces
+
+### `ModListOpts`
+
+Options for mod list generator
+
+### Properties
+
+#### ignore?
+
+> `optional` **ignore**: `string`
+
+.gitignore-like file content with mods to ignore.
+
+##### See
+
+modList
+
+***
+
+#### key
+
+> **key**: `string`
+
+CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
+
+***
+
+#### sort?
+
+> `optional` **sort**: `string`
+
+Sort field of CurseForge addon.
+Accept deep path like `cf2Addon.downloadCount`.
+`/` symbol at start of value flip sort order.
+
+***
+
+#### template?
+
+> `optional` **template**: `string`
+
+Custom Handlebars template to generate result
+
+***
+
+#### verbose?
+
+> `optional` **verbose**: `boolean`
+
+Output information about working process in stdout
 
 ## Author
 
 * https://github.com/Krutoy242
 
 ## Other tools
+
