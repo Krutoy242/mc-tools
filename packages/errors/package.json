@@ -2,7 +2,6 @@
   "name": "@mctools/errors",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "description": "Scan debug.log file to find unknown errors",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
@@ -34,7 +33,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "unbuild && cp -r src/*.yml dist",
     "coverage": "vitest run --coverage",
     "test": "vitest run"
   },
