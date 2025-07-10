@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import chalk from 'chalk'
+import { stripAnsi } from 'consola/utils'
 import fast_glob from 'fast-glob'
 import fse from 'fs-extra'
 import Handlebars from 'handlebars'
@@ -83,9 +84,9 @@ async function handleReadme(readmePath: string, i: number) {
 
   log(`${isCli ? 'Executing' : 'Writing'} ${chalk.green(pkg.name)}${isCli ? chalk.green(' --help') : ''}`)
   const helpOutput = isCli
-    ? (await execP(`tsx ${cliPath} --help`))
+    ? stripAnsi((await execP(`tsx ${cliPath} --help`))
         .stdout
-        .trim()
+        .trim())
         .replace(`${process.cwd()}\\`, '') // remove relative paths
     : undefined
 

@@ -14,6 +14,9 @@ importers:
       '@types/node':
         specifier: ^18.19.117
         version: 18.19.117
+      consola:
+        specifier: ^3.4.2
+        version: 3.4.2
       ftbq-nbt:
         specifier: ^1.4.1
         version: 1.4.1

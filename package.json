@@ -44,6 +44,7 @@
   "devDependencies": {
     "@types/lodash": "^4.17.20",
     "@types/node": "^18.19.117",
+    "consola": "^3.4.2",
     "ftbq-nbt": "^1.4.1",
     "handlebars": "^4.7.8",
     "sanitize-filename": "^1.6.3",
