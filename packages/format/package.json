@@ -34,7 +34,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "unbuild && cp -r src/*.peggy dist",
     "coverage": "vitest run --coverage",
     "test": "vitest run"
   },
