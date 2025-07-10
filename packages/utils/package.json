@@ -14,9 +14,9 @@
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
-    "lib",
     "minecraft",
-    "tools"
+    "tools",
+    "lib"
   ],
   "exports": {
     ".": {
@@ -36,6 +36,9 @@
     "coverage": "vitest run --coverage",
     "test": "vitest run"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "consola": "^3.1.0",
     "ftbq-nbt": "^1.4.1",
@@ -44,8 +47,5 @@
   },
   "devDependencies": {
     "@types/yargs": "^17.0.24"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

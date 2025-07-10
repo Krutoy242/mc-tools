@@ -1,5 +1,5 @@
 /**
- * @file Functions for working with Minecraft's CurseForge manifest.json file
+ * Functions for working with Minecraft's CurseForge manifest.json file
  *
  * @author Krutoy242
  * @link https://github.com/Krutoy242
@@ -11,7 +11,7 @@ import fse from 'fs-extra'
 const { readFileSync, readJsonSync, writeFileSync } = fse
 
 export interface ModLoader {
-  id: string
+  id     : string
   primary: boolean
 }
 
