@@ -1,6 +1,6 @@
 <h1 align="center">@mctools/utils</h1>
 
-Various utilities for Minecraft-Tools monorepo
+Various utilities for Minecraft-Tools monorepo, intended to be bundled not dependent
 
 <!-- extended_desc --><!-- /extended_desc -->
 
