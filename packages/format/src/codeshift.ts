@@ -1,5 +1,6 @@
 import type { API, FileInfo, JSCodeshift } from 'jscodeshift'
 
+import { consola } from 'consola'
 import fse from 'fs-extra'
 import * as jscodeshift from 'jscodeshift'
 
@@ -11,13 +12,13 @@ function transform(fileInfo: FileInfo, api: API) {
 
   let root: jscodeshift.Collection<any>
   try {
-    root =  j(fileInfo.source, {
+    root = j(fileInfo.source, {
       reuseWhitespace: true,
       comments       : true,
     })
   }
   catch (error) {
-    console.error(`\nERROR parsing ts file "${fileInfo.path}":\n${error}`)
+    consola.error(`\nERROR parsing ts file "${fileInfo.path}"`, error)
     return
   }
 

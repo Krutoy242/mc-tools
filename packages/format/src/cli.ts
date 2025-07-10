@@ -3,102 +3,101 @@
 import { execSync } from 'node:child_process'
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import process from 'node:process'
 
-import chalk from 'chalk'
-import fast_glob from 'fast-glob'
-import yargs from 'yargs'
+import { defineCommand, runMain } from 'citty'
+import { consola } from 'consola'
+import { glob } from 'tinyglobby'
 
 import { convertToTs, revert } from '.'
+import { description, name, version } from '../package.json'
 
 /* =============================================
 =                Arguments                    =
 ============================================= */
-const argv = yargs(process.argv.slice(2))
-  .scriptName('@mctools/format')
-  .alias('h', 'help')
-  .detectLocale(false)
-  .strict()
-  .version()
-  .wrap(null)
-  .command('$0 <files>', '')
-  .positional('files', {
-    describe    : 'Path to file / files for formatting',
-    type        : 'string',
-    demandOption: true,
-  })
-  .option('ignore-pattern', {
-    alias   : 'i',
-    type    : 'string',
-    describe: 'Same as --ignore-pattern for ESLint',
-  })
-  .option('ts', {
-    alias    : 't',
-    type     : 'boolean',
-    conflicts: 'nolint',
-    describe : 'Create linted .ts file without converting it back.',
-  })
-  .option('nolint', {
-    alias    : 'l',
-    conflicts: 'ts',
-    describe : 'Do not lint file',
-  })
-  .parseSync()
+const main = defineCommand({
+  meta: {
+    name,
+    version,
+    description,
+  },
+  args: {
+    files: {
+      type       : 'positional',
+      description: 'Path to file / files for formatting',
+      required   : true,
+    },
+    ignore: {
+      type       : 'string',
+      alias      : 'i',
+      description: 'Same as --ignore-pattern for ESLint',
+    },
+    ts: {
+      type       : 'boolean',
+      alias      : 't',
+      description: 'Create linted .ts file without converting it back',
+      conflicts  : ['nolint'],
+    },
+    nolint: {
+      type       : 'boolean',
+      alias      : 'l',
+      description: 'Do not lint file',
+      conflicts  : ['ts'],
+    },
+  },
+  async run({ args }) {
+    const fileList = await glob(args.files.replace(/\\/g, '/'), {
+      dot   : true,
+      ignore: args.ignore ? [args.ignore] : [],
+    })
+    if (!fileList.length) throw new Error(`${resolve(args.files)} doesnt exist. Provide correct path.`)
+
+    const convertResult = convertToTs(fileList).filter(Boolean) as string[]
+
+    if (!convertResult.length) return
+
+    // Convert using jscodeshift
+    // process.stdout.write(`refactoring with ${chalk.green('jscodeshift')}...\n`)
+    // refactor(convertResult)
+
+    if (args.nolint) return
+
+    // Lint & fix
+    consola.start('executing ESLint --fix')
+    try {
+      const lintResult = lintFile(args.files.replace(/\.zs/g, '.ts'), args.ignore)
+      consola.info(lintResult)
+    }
+    catch (error: any) {
+      const errStr = (error.stdout ?? error).toString()
+      const isFatal = !!errStr.match(/\d+\s+error/i)
+
+      if (isFatal) {
+        consola.error(`Fatal error during linting.: `, error)
+        return
+      }
+
+      consola.warn('Have some managable errors during linting.')
+    }
+
+    if (args.ts) return
+
+    // Revert TS -> ZS
+    convertResult.forEach((newFilePath, i) => {
+      const linted = readFileSync(newFilePath, 'utf8')
+      writeFileSync(fileList[i], revert(linted))
+      unlinkSync(newFilePath)
+    })
+  },
+})
+
+runMain(main)
 
 /* ============================================
 =                                             =
 ============================================= */
-function lintFile(glob: string, ignorePattern: string | undefined) {
+function lintFile(glob: string, ignore: string | undefined) {
   const command = `npx eslint --fix --quiet`
-    + `${ignorePattern ? ` --ignore-pattern ${ignorePattern}` : ''}`
+    + `${ignore ? ` --ignore-pattern ${ignore}` : ''}`
     + ` "${glob.replace(/\\/g, '/')}"`
   return execSync(command, { stdio: 'inherit' })?.toString().trim() ?? ''
 }
-
-async function main() {
-  const fileList = fast_glob.sync(argv.files.replace(/\\/g, '/'), {
-    dot   : true,
-    ignore: argv.ignorePattern ? [argv.ignorePattern] : [],
-  })
-  if (!fileList.length) throw new Error(`${resolve(argv.files)} doesnt exist. Provide correct path.`)
-
-  const convertResult = convertToTs(fileList).filter(Boolean) as string[]
-
-  if (!convertResult.length) return
-
-  // Convert using jscodeshift
-  // process.stdout.write(`refactoring with ${chalk.green('jscodeshift')}...\n`)
-  // refactor(convertResult)
-
-  if (argv.nolint) return
-
-  // Lint & fix
-  process.stdout.write('executing ESLint --fix')
-  try {
-    process.stdout.write(lintFile(argv.files.replace(/\.zs/g, '.ts'), argv.ignorePattern))
-  }
-  catch (error: any) {
-    const errStr = (error.stdout ?? error).toString()
-    const isFatal = !!errStr.match(/\d+\s+error/i)
-
-    if (isFatal) {
-      process.stdout.write(`\n${chalk.bgRed(' ERROR ')}: Fatal error during linting.:\n`)
-
-      console.log(error)
-      if (isFatal) return
-    }
-
-    process.stdout.write(`\n${chalk.bgYellow(' WARN ')}: Have some managable errors during linting.\n`)
-  }
-
-  if (argv.ts) return
-
-  // Revert TS -> ZS
-  convertResult.forEach((newFilePath, i) => {
-    const linted = readFileSync(newFilePath, 'utf8')
-    writeFileSync(fileList[i], revert(linted))
-    unlinkSync(newFilePath)
-  })
-}
-
-main()

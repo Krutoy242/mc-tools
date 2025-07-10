@@ -21,17 +21,19 @@ Format .zs files by using ESLint for typescript
 ### Options
 
 ```shell
-@mctools/format <files>
+Format .zs files by using ESLint for typescript (@mctools/format v0.0.0)
 
-Positionals:
-  files  Path to file / files for formatting  [string]
+USAGE @mctools/format [OPTIONS] <FILES>
 
-Options:
-      --version         Show version number  [boolean]
-  -i, --ignore-pattern  Same as --ignore-pattern for ESLint  [string]
-  -t, --ts              Create linted .ts file without converting it back.  [boolean]
-  -l, --nolint          Do not lint file
-  -h, --help            Show help  [boolean]
+ARGUMENTS
+
+  FILES    Path to file / files for formatting    
+
+OPTIONS
+
+  -i, --ignore    Same as --ignore-pattern for ESLint              
+      -t, --ts    Create linted .ts file without converting it back
+  -l, --nolint    Do not lint file
 ```
 
 ## Author
