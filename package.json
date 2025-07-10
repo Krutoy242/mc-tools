@@ -35,7 +35,8 @@
   "scripts": {
     "build": "pnpm run build:readme && pnpm -r run build",
     "build:readme": "tsx scripts/build/readme.ts",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "release:all": "pnpm -r --workspace-concurrency=1 exec -- npx --no-install semantic-release -e semantic-release-monorepo"
   },
   "workspaces": [
     "packages/*"
@@ -46,6 +47,8 @@
     "ftbq-nbt": "^1.4.1",
     "handlebars": "^4.7.8",
     "sanitize-filename": "^1.6.3",
+    "semantic-release": "^24.2.6",
+    "semantic-release-monorepo": "^8.0.2",
     "ts-deepmerge": "^7.0.3",
     "typedoc": "^0.28.7",
     "typedoc-plugin-markdown": "^4.7.0",
