@@ -2,7 +2,9 @@
 
 Lib for working with CurseForge using minecraftinstance.json
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- extended_desc -->
+Bunch of functions, used for other `@mctools/` packages, such as fetching info for several mods at once.
+<!-- /extended_desc -->
 
 ## Usage
 
