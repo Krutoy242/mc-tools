@@ -13,10 +13,10 @@
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
-    "ci",
-    "cli",
     "minecraft",
-    "tools"
+    "tools",
+    "ci",
+    "cli"
   ],
   "exports": {
     ".": {
@@ -35,7 +35,8 @@
   "scripts": {
     "build": "unbuild && cp -r src/*.yml dist",
     "coverage": "vitest run --coverage",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:demo": "mkdir -p \"$(bat --config-dir)/syntaxes\" && cp scripts/debug.log.sublime-syntax \"$(bat --config-dir)/syntaxes/\" && bat cache --build && echo -e '--theme=\"TwoDark\"\n--wrap=never\n--map-syntax=\"*debug.log:Minecraft Log\"' > \"$(bat --config-file)\" && expect scripts/demo.sh"
   },
   "dependencies": {
     "fs-extra": "^11.1.1",
