@@ -4,6 +4,7 @@ import terminal_kit from 'terminal-kit'
 
 import type { Mod } from './Mod'
 
+import { getConfig } from './config'
 import { getStatusText } from './Mod'
 import { ModStore } from './ModStore'
 
@@ -15,7 +16,8 @@ export const style = {
 }
 
 export async function binary(mcPath: string) {
-  const store = new ModStore(mcPath)
+  const config = await getConfig(mcPath)
+  const store = new ModStore(mcPath, config)
 
   while (true) {
     T('There is ', chalk.green(store.mods.length), ' mods:\n', drawMods(store.mods), '\n')
@@ -36,7 +38,7 @@ async function disableSecondHalf(mods: Mod[]) {
   const susMods = mods.filter(isSus)
   const enabledSusCount = () => susMods.filter(m => m.enabled).length
   for (const m of mods) {
-    (m.status === 'trusted' || enabledSusCount() > susMods.length / 2)
+    m.status === 'trusted' || enabledSusCount() > susMods.length / 2
       ? await m.disable()
       : await m.enable()
   }
@@ -59,7 +61,7 @@ async function askErrorPersist(mods: Mod[]) {
 
 async function ask(options: string[]) {
   const menu = T.singleColumnMenu(options, { cancelable: true })
-  const result = (await menu.promise)
+  const result = await menu.promise
   if (result.canceled) return process.exit(0)
   if (result.selectedIndex > 1) throw new Error('Unimplemented option')
   return result.selectedIndex

@@ -39,6 +39,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "c12": "^1.11.2",
     "chalk": "^5.2.0",
     "citty": "^0.1.6",
     "consola": "^3.4.2",

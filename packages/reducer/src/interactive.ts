@@ -5,12 +5,14 @@ import terminal_kit from 'terminal-kit'
 
 import type { Mod } from './Mod'
 
+import { getConfig } from './config'
 import { ModStore } from './ModStore'
 
 const { terminal: T } = terminal_kit
 
 export async function interactive(mcPath: string) {
-  const store = new ModStore(mcPath)
+  const config = await getConfig(mcPath)
+  const store = new ModStore(mcPath, config)
 
   const prefixes = {
     '-': (m: Mod) => m.disable(),

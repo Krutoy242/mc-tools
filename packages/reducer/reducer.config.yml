@@ -1,0 +1,81 @@
+# Mandatory dependencies
+dependencies:
+  OpenComputers-: Scala
+  Thaumic Computers: [Thaumcraft-, OpenComputers-]
+  AE2 Wireless Fluid Terminal: ["p455w0rd's Library", AE2 Wireless Terminal Library]
+  Wireless Pattern Terminal: ["p455w0rd's Library", AE2 Wireless Terminal Library]
+  ContentTweaker Registry Orderer: ContentTweaker-
+  ContentTweaker-: base-
+  FindMeAnyDurability: Had Enough Items
+  ModTweaker: MTLib
+  JEIExporter-: Had Enough Items
+  thaumicenergistics-: Thaumcraft-
+  ModDirector: thaumicenergistics-
+  Loot Capacitor Tooltips: ^Ender IO$
+  Compact Solars: Industrial Craft
+  Deep Blood Evolution: [Deep Mob Evolution, Blood Magic]
+  Ender Storage continuation: 'CodeChicken Lib 1.8.+'
+  valkyrielib: RoughlyEnoughIDs
+  Mekanism.+Generators: ^Mekanism Community Edition$
+  RandomTweaker: Zen Utils
+  RecurrentComplex: IvToolkit
+  Trinity: 'NuclearCraft(: Overhauled)?$'
+  CofH Core: Redstone Flux
+  Actually Baubles: Actually Additions
+  ^Quark$: AutoRegLib
+  '^Quark: RotN': AutoRegLib
+  DeepMobEvolution: ^Patchouli( ROFL Edition)?$
+  ScalingHealth: SilentLib
+
+# Optional dependents
+dependents:
+  Fugue:
+    - ^Quark$
+    - '^Quark: RotN'
+    - ScalingHealth
+    - Advanced Rocketry
+    - "Armourer's Workshop"
+    - Astral Sorcery
+    - Botania Tweaks
+    - Charset
+    - CodeChickenLib
+    - Custom Main Menu
+    - Custom NPCs
+    - Enchantments Control
+    - EnderCore
+    - Entity Distance
+    - Extra Utilities 2
+    - FoamFix
+    - Forge Multipart
+    - GregTech CE Unofficial
+    - Hammer Lib
+    - Howling Moon
+    - IC2C Extra
+    - In Control!
+    - Lag Goggles
+    - Logistics Pipes
+    - LoliASM
+    - MAGE
+    - Mcjty Core
+    - Nothirium
+    - OpenDisks
+    - OpenModsLib
+    - OpenSecurity
+    - 'Project:Red'
+    - ReplayMod
+    - Shoulder Surfing Reloaded
+    - Simply Hot Spring
+    - Smooth Font
+    - Snow! Real Magic
+    - Solar Flux Reborn
+    - SplashAnimation
+    - Subauqatic
+    - Survival Inc.
+    - TFC Medicinal
+    - Thaumic Speedup
+    - Valkyrie
+    - Vampirism
+    - Water Power
+    - Xaero Plus
+    - ^XNet
+    - ZeroCore
