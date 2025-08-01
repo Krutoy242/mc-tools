@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getFetchInModsDir } from '../src/index'
+import { getFetchInModsDir } from '../src/ModStore'
 
 async function cli(args: string[] = []) {
   const originalArgv = process.argv

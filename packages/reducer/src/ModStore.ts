@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { resolve } from 'node:path/posix'
+
+import fast_glob from 'fast-glob'
 
 import type { MCInstance } from './minecraftinstance'
 
-import { getFetchInModsDir } from '.'
-import { bind } from './bind'
 import { Mod } from './Mod'
 
 function naturalSort(a: string, b: string) {
@@ -118,7 +119,7 @@ export class ModStore {
     Object.entries(config.mandatoryDeps).forEach(([modName, deps]) => {
       const modNeedDep = this.findMod(modName)
       if (!modNeedDep) return
-      const depMods = deps.map(this.findMod)
+      const depMods = deps.map(name => this.findMod(name))
         .filter((d): d is Mod => !!d)
         .filter(d => d !== modNeedDep)
       if (!depMods.length) {
@@ -138,7 +139,6 @@ export class ModStore {
       || naturalSort(a.pureName ?? '', b.pureName ?? ''))
   }
 
-  @bind
   private findMod(name: string): Mod | undefined {
     const rgx = new RegExp(name, 'i')
     const list = this.mods.filter(m =>
@@ -150,4 +150,16 @@ export class ModStore {
     if (list.length > 1) console.log(`Multiple matches of mod "${name}"`, list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`))
     return list[0]
   }
+}
+
+export function getFetchInModsDir(mods: string) {
+  /**
+   * Return relative to mods/ path (only file name with extension)
+   */
+  function fetchInModsDir(globPattern: string): string[] {
+    return fast_glob.sync(globPattern, { dot: true, cwd: resolve(mods) })
+  }
+  if (!fetchInModsDir('*.jar?(.disabled)').length)
+    throw new Error(`${mods} doesn't have mods in it (files ends with .jar and/or .disabled)`)
+  return fetchInModsDir
 }
