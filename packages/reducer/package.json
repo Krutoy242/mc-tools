@@ -40,16 +40,15 @@
   },
   "dependencies": {
     "chalk": "^5.2.0",
+    "citty": "^0.1.6",
+    "consola": "^3.4.2",
     "fast-glob": "^3.2.12",
     "fast-levenshtein": "^3.0.0",
     "lodash": "^4.17.21",
     "terminal-kit": "^3.0.0",
-    "typescript-memoize": "^1.1.1",
-    "yargs": "^17.7.1"
+    "typescript-memoize": "^1.1.1"
   },
-  "devDependencies": {
-    "@types/yargs": "^17.0.24"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public"
   }
