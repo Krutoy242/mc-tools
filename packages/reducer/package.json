@@ -14,10 +14,10 @@
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
-    "ci",
-    "cli",
     "minecraft",
-    "tools"
+    "tools",
+    "ci",
+    "cli"
   ],
   "exports": {
     ".": {
@@ -46,7 +46,6 @@
     "fast-glob": "^3.2.12",
     "fast-levenshtein": "^3.0.0",
     "lodash": "^4.17.21",
-    "terminal-kit": "^3.0.0",
     "typescript-memoize": "^1.1.1"
   },
   "devDependencies": {},

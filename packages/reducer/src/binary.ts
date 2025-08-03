@@ -1,14 +1,12 @@
 import chalk from 'chalk'
+import { consola } from 'consola'
 import _ from 'lodash'
-import terminal_kit from 'terminal-kit'
 
 import type { Mod } from './Mod'
 
 import { getConfig } from './config'
 import { getStatusText } from './Mod'
 import { ModStore } from './ModStore'
-
-const { terminal: T } = terminal_kit
 
 export const style = {
   suspective: chalk.rgb(150, 120, 0),
@@ -20,19 +18,30 @@ export async function binary(mcPath: string) {
   const store = new ModStore(mcPath, config)
 
   while (true) {
-    T('There is ', chalk.green(store.mods.length), ' mods:\n', drawMods(store.mods), '\n')
-    await disableSecondHalf(store.mods)
+    consola.info(`There is ${chalk.green(store.mods.length)} mods:\n${drawMods(store.mods)}\n`)
+    if (!await disableSecondHalf(store.mods)) return
 
-    T('Now, does ', chalk.red('error'), ' still persist?\n', drawMods(store.mods), '\n')
-    await askErrorPersist(store.mods)
+    consola.info(`Now, does ${chalk.red('error')} still persist?\n${drawMods(store.mods)}\n`)
+    if (!await askErrorPersist(store.mods)) return
   }
 }
 
 async function disableSecondHalf(mods: Mod[]) {
-  if (await ask([style.suspective('Disable Second half'), chalk.white('Enable everything and exit')])) {
+  const confirmed = await consola.prompt('', {
+    type   : 'select',
+    options: [
+      {label: 'Disable Second half', value: 'disable', hint: 'Mods sorted by file size'},
+      {label: 'Enable everything and exit', value: '', hint: 'Turn on all the mods'},
+    ],
+    cancel: 'undefined',
+  })
+
+  if (confirmed === undefined) return false
+
+  if (!confirmed) {
     for (const m of mods) await m.enable()
-    T`Enabled `.green`${mods.length}`.styleReset()` mods\n`
-    process.exit(0)
+    consola.success(`Enabled ${chalk.green(mods.length)} mods`)
+    return false
   }
   const isSus = (m: Mod) => m.status !== 'trusted'
   const susMods = mods.filter(isSus)
@@ -42,10 +51,21 @@ async function disableSecondHalf(mods: Mod[]) {
       ? await m.disable()
       : await m.enable()
   }
+  return true
 }
 
 async function askErrorPersist(mods: Mod[]) {
-  const noError = await ask([chalk.green('No error'), chalk.red('Has error')]) === 0
+  const askResult = await consola.prompt('', {
+    type   : 'select',
+    options: [
+      {label: 'No error', value: 'true', hint: ''},
+      {label: 'Has error', value: '', hint: ''},
+    ],
+    cancel: 'undefined',
+  })
+  if (askResult === undefined) return false
+
+  const noError = askResult === 'true'
 
   for (const m of mods) {
     if (noError) {
@@ -57,27 +77,18 @@ async function askErrorPersist(mods: Mod[]) {
       else m.status = 'trusted'
     }
   }
-}
-
-async function ask(options: string[]) {
-  const menu = T.singleColumnMenu(options, { cancelable: true })
-  const result = await menu.promise
-  if (result.canceled) return process.exit(0)
-  if (result.selectedIndex > 1) throw new Error('Unimplemented option')
-  return result.selectedIndex
+  return true
 }
 
 function drawMods(mods: Mod[]) {
-  const w = Math.min(T.width ?? 80, 80)
+  const w = Math.min(process.stdout.columns ?? 80, 80)
   const chunks = _.chunk(mods, w)
     .map(chunk => chunk.map(m => m.statusText).join(''))
     .join('\n')
 
   const keys = Object.keys(style) as (keyof (typeof style))[]
 
-  return `${
-    keys.map(k => `Enabled ${chalk.gray(k)} ${getStatusText(k, false)}`).join('\n')
-  }\n${
-    keys.map(k => `Disabled ${chalk.gray(k)} ${getStatusText(k, true)}`).join('\n')}
+  return `${keys.map(k => `Enabled ${chalk.gray(k)} ${getStatusText(k, false)}`).join('\n')
+  }\n${keys.map(k => `Disabled ${chalk.gray(k)} ${getStatusText(k, true)}`).join('\n')}
 ${chunks}`
 }

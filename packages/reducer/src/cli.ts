@@ -39,8 +39,7 @@ const main = defineCommand({
       },
       args: cwdArg,
       async run({ args }) {
-        assertPath(args.cwd as string)
-        await binary(args.cwd as string)
+        await binary(assertPath(args.cwd as string))
       },
     }),
     interactive: defineCommand({
@@ -50,8 +49,7 @@ const main = defineCommand({
       },
       args: cwdArg,
       async run({ args }) {
-        assertPath(args.cwd as string)
-        await interactive(args.cwd as string)
+        await interactive(assertPath(args.cwd as string))
       },
     }),
   },

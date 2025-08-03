@@ -1,4 +1,5 @@
 # Mandatory dependencies
+# Could exact mod name or regexp test (of the file or mod name)
 dependencies:
   OpenComputers-: Scala
   Thaumic Computers: [Thaumcraft-, OpenComputers-]
@@ -79,3 +80,23 @@ dependents:
     - Xaero Plus
     - ^XNet
     - ZeroCore
+
+# This section maps a base mod's CurseForge project ID to an array of project IDs for its forks or variants.
+# It helps the tool recognize that different versions of a mod (e.g., Tinker's Construct and its forks)
+# should be treated as the same core mod when resolving dependencies.
+# To add a new entry, use the base mod's project ID as the key and list the fork project IDs in the array.
+# Example:
+#   <base_mod_id>: [<fork_1_id>, <fork_2_id>]
+forks:
+  74072: [1242239] # Tinker's Construct
+  223794: [570458] # Applied
+  228404: [1252600] # Actually Additions
+  236542: [1024225] # Advanced Rocketry
+  238222: [557549] # HEI
+  243121: [417392] # Quark
+  245211: [977883] # TOP
+  248453: [456403] # Forgelin
+  268387: [398267] # Extended Crafting
+  268560: [813408] # Mekanism
+  357178: [419286] # MixinBootstrap
+  434516: [261348] # Avaritia
