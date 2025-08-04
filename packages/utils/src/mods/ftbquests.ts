@@ -173,8 +173,8 @@ export function getItem(item: Item | string): Item {
 
   return {
     id,
-    Damage: (meta && meta != '0') ? new Int(Number(meta)) : undefined, // eslint-disable-line eqeqeq
-    Count : (count && count != '1') ? new Int(Number(count)) : undefined, // eslint-disable-line eqeqeq
+    Damage: meta && meta != '0' ? new Int(Number(meta)) : undefined, // eslint-disable-line eqeqeq
+    Count : count && count != '1' ? new Int(Number(count)) : undefined, // eslint-disable-line eqeqeq
   }
 }
 
@@ -182,11 +182,11 @@ export function tagItemToCT(item: Item | string, count = 1): string {
   const it = getItem(item)
 
   return `<${it.id}${it.Damage ? `:${it.Damage}` : ''}>${
-  !it.tag ? '' : `.withTag(sNBT('${stringify(it.tag)}'))`
-}${
+    !it.tag ? '' : `.withTag(sNBT('${stringify(it.tag)}'))`
+  }${
   // eslint-disable-next-line eqeqeq
-  count ? (count != 1 ? ` * ${count}` : '') : (it.Count?.value || '')
-}`
+    count ? (count != 1 ? ` * ${count}` : '') : it.Count?.value || ''
+  }`
 }
 
 export function uidGenerator(maxLen = 80, ch = '…') {
