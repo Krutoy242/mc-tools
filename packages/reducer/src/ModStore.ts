@@ -6,7 +6,7 @@ import { consola } from 'consola'
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
 
-import type { ModRgxMap, ReducerConfig } from './config'
+import type { Branch, ReducerConfig } from './config'
 import type { InstalledAddon, MCInstance } from './minecraftinstance'
 
 import { DependencyLevel, Mod, ModdedAddon, purify } from './Mod'
@@ -83,46 +83,29 @@ export class ModStore {
     }
 
     // Init dependencies
-    this.modRgxToMods(config.dependencies).forEach(([mod, deps]) => {
-      if (!deps.length) {
-        const depsSerialized = deps.map(s => `'${s}'`).join(', ')
-        consola.warn(`Mod "${mod.fileName}" must have dependencies [${depsSerialized}] but none found!`)
+    for (const [mod, dep] of flatTree(config.dependencies)) {
+      const m = this.findMod(mod)
+      if (!m) continue
+      const d = this.findMod(dep)
+      if (!d) {
+        consola.warn(`Mod "${m.fileName}" must have dependencies [${dep}] but none found!`)
+        continue
       }
-      else {
-        mod.addDependency(deps)
-      }
-    })
+      m.addDependency(d)
+    }
 
-    this.modRgxToMods(config.dependents).forEach(([mod, deps]) => {
-      for (const dep of deps) {
-        dep.addDependency(mod)
-      }
-    })
+    for (const [mod, dep] of flatTree(config.dependents)) {
+      const m = this.findMod(mod)
+      if (!m) continue
+      const d = this.findMod(dep)
+      if (!d) continue
+      d.addDependency(m)
+    }
 
     this.mods.sort((a, b) =>
       a.getDepsLevel() - b.getDepsLevel()
       || a.dependents.size - b.dependents.size
       || naturalSort(a.fileName ?? '', b.fileName ?? ''))
-  }
-
-  private modRgxToMods(map: ModRgxMap) {
-    const result: [Mod, Mod[]][] = []
-    Object.entries(map).forEach(([modRgx, deps]) => {
-      const mod = this.findMod(modRgx)
-      if (!mod) return
-
-      const depMods = [deps]
-        .flat()
-        .map(rgx => this.findMod(rgx))
-        .filter(d => !!d)
-        .filter(d => d !== mod)
-
-      result.push([
-        mod,
-        depMods,
-      ])
-    })
-    return result
   }
 
   private findMod(modRegexp: string): Mod | undefined {
@@ -136,6 +119,24 @@ export class ModStore {
     if (list.length > 1) console.log(`Multiple matches of mod "${modRegexp}"`, list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`))
     return list[0]
   }
+}
+
+function flatTree(tree: Branch): [string, string][] {
+  const result: [string, string][] = []
+  Object.entries(tree).forEach(([trunk, branches]) => {
+    for (const branch of [branches].flat()) {
+      if (typeof branch === 'object') {
+        for (const b of Object.keys(branch)) {
+          result.push([trunk, b])
+        }
+        const depMods = flatTree(branch)
+        result.push(...depMods)
+      } else {
+        result.push([trunk, branch])
+      }
+    }
+  })
+  return result
 }
 
 export function getFetchInModsDir(mods: string) {

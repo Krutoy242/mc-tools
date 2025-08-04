@@ -1,20 +1,27 @@
 # Mandatory dependencies
 # Could exact mod name or regexp test (of the file or mod name)
+# Could be single string, array of strings or a tree
 dependencies:
-  OpenComputers-: Scala
-  Thaumic Computers: [Thaumcraft-, OpenComputers-]
-  AE2 Wireless Fluid Terminal: ["p455w0rd's Library", AE2 Wireless Terminal Library]
-  Wireless Pattern Terminal: ["p455w0rd's Library", AE2 Wireless Terminal Library]
-  ContentTweaker Registry Orderer: ContentTweaker-
-  ContentTweaker-: base-
+  Thaumic Computers:
+    - Thaumcraft-
+    - OpenComputers-: Scala
+  AE2 Wireless Fluid Terminal: 
+   - "p455w0rd's Library"
+   - AE2 Wireless Terminal Library
+  Wireless Pattern Terminal: 
+   - "p455w0rd's Library"
+   - AE2 Wireless Terminal Library
+  ContentTweaker Registry Orderer:
+    ContentTweaker-: base-
   FindMeAnyDurability: Had Enough Items
   ModTweaker: MTLib
   JEIExporter-: Had Enough Items
   thaumicenergistics-: Thaumcraft-
-  ModDirector: thaumicenergistics-
   Loot Capacitor Tooltips: ^Ender IO$
   Compact Solars: Industrial Craft
-  Deep Blood Evolution: [Deep Mob Evolution, Blood Magic]
+  Deep Blood Evolution: 
+   - Deep Mob Evolution
+   - Blood Magic
   Ender Storage continuation: 'CodeChicken Lib 1.8.+'
   valkyrielib: RoughlyEnoughIDs
   Mekanism.+Generators: ^Mekanism Community Edition$

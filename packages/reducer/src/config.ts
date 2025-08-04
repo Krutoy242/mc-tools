@@ -2,13 +2,13 @@ import { loadConfig } from 'c12'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export interface ModRgxMap {
-  [mod: string]: string | string[]
+export interface Branch {
+  [mod: string]: string | Branch | (string | Branch)[]
 }
 
 export interface ReducerConfig {
-  dependencies: ModRgxMap
-  dependents: ModRgxMap
+  dependencies: Branch
+  dependents: Branch
   forks: { [id: number]: number[] }
 }
 
@@ -24,6 +24,6 @@ export async function getConfig(cwd: string) {
     name: 'reducer',
     defaultConfig,
   })
-  
+
   return config
 }
