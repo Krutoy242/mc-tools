@@ -43,7 +43,6 @@ const argv = yargs(process.argv.slice(2))
     default  : './',
     describe : 'Minecraft directory',
     coerce   : (f: string) => {
-      assertPath(f)
       const twcPath = resolve(f, 'config/tweakersconstruct.cfg')
       assertPath(twcPath)
       return f
@@ -86,7 +85,7 @@ function parseTweaks(tweaksPath: string) {
     const csvResult: string[][] = csvParseSync(readFileSync(filePath, 'utf8'))
     const materialTweaks = csvResult.reduce(
       // Make 2d table with row names
-      (a, v) => ((a[v[0]] = v.slice(1)), a), // eslint-disable-line no-sequences
+      (a, v) => (a[v[0]] = v.slice(1), a), // eslint-disable-line no-sequences
       {} as TweakObj
     )
     return [parse(filePath).name as TweakName, materialTweaks] as const
