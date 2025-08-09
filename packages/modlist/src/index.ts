@@ -115,6 +115,7 @@ export async function generateModsList(
     else diff[key]?.sort(sort)
   }
 
+  Handlebars.registerHelper('sanitize', (str: string) => String(str).replace(/\n/g, ' ').replace(/([|`*_])/g, '\\$1').trim())
   Handlebars.registerHelper('replace', (str: string, from, to) => String(str).replace(from, to))
   Handlebars.registerHelper('padEnd', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padEnd(pad))
   Handlebars.registerHelper('padStart', (str: string, pad, options) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padStart(pad))
