@@ -3,17 +3,18 @@
 import type { ArgsDef, Resolvable} from 'citty'
 
 import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
 
 import { defineCommand, runMain } from 'citty'
+import { resolve } from 'pathe'
 
 import { description, name, version } from '../package.json'
 import { binary } from './binary'
 import { interactive } from './interactive'
 
 function assertPath(f: string, errorText?: string) {
-  if (existsSync(f)) return f
-  throw new Error(`${resolve(f)} ${errorText ?? 'doesnt exist. Provide correct path.'}`)
+  const file = resolve(f)
+  if (existsSync(file)) return file
+  throw new Error(`${resolve(file)} ${errorText ?? 'doesnt exist. Provide correct path.'}`)
 }
 
 const cwdArg = {
@@ -55,4 +56,4 @@ const main = defineCommand({
   },
 })
 
-runMain(main)
+void runMain(main)

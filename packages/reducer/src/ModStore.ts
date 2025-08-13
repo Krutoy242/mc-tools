@@ -1,16 +1,16 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { resolve } from 'node:path/posix'
 
+import chalk from 'chalk'
 import { consola } from 'consola'
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
+import { join, resolve  } from 'pathe'
 
 import type { Branch, ReducerConfig } from './config'
-import type { InstalledAddon, MCInstance } from './minecraftinstance'
+import type { MCInstance } from './minecraftinstance'
+import type { ModdedAddon} from './Mod'
 
-import { DependencyLevel, Mod, ModdedAddon, purify } from './Mod'
-import chalk from 'chalk'
+import { DependencyLevel, Mod, purify } from './Mod'
 
 function naturalSort(a: string, b: string) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
@@ -43,12 +43,13 @@ export class ModStore {
     })
     if (noAddonList.length) {
       consola.box({
-        title: 'No addon',
+        title  : 'No addon',
         message: chalk.gray(
           `This mods exist in mods/ folder, but their respective`
-          + `\nentries can't be found in the file `
-          + chalk.underline(`minecraftinstance.json`) + `\n\n`)
-          + noAddonList.join('\n'),
+          + `\nentries can't be found in the file ${
+            chalk.underline(`minecraftinstance.json`)}\n\n`
+        )
+        + noAddonList.join('\n'),
       })
     }
 
@@ -70,14 +71,14 @@ export class ModStore {
     }
     if (noDependencies.size) {
       consola.box({
-        title: 'No dependencies',
+        title  : 'No dependencies',
         message: chalk.gray(`This mods must have dependencies, `
           + `but they are cannot be found.\n\n`)
-          + [...noDependencies].sort().join('\n'),
+        + [...noDependencies].sort().join('\n'),
         style: {
-          padding: 0,
-          borderColor: "yellow",
-          marginBottom: 0
+          padding     : 0,
+          borderColor : 'yellow',
+          marginBottom: 0,
         },
       })
     }
@@ -131,7 +132,8 @@ function flatTree(tree: Branch): [string, string][] {
         }
         const depMods = flatTree(branch)
         result.push(...depMods)
-      } else {
+      }
+      else {
         result.push([trunk, branch])
       }
     }
@@ -161,7 +163,7 @@ function findAddonByFilename(addons: ModdedAddon[], fileName: string) {
 
   const levArr = addons
     .map(a => ({
-      lev: levenshtein.get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
+      lev  : levenshtein.get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
       addon: a,
     }))
     .sort(({ lev: a }, { lev: b }) => a - b)

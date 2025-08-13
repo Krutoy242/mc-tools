@@ -15,12 +15,12 @@ export async function interactive(mcPath: string) {
   const store = new ModStore(mcPath, config)
 
   const prefixes = {
-    '-': (m: Mod) => m.disable(),
-    '+': (m: Mod) => m.enable(),
+    '-': async (m: Mod) => m.disable(),
+    '+': async (m: Mod) => m.enable(),
   }
 
-  const autoCompleter: Terminal.InputFieldOptions['autoComplete'] = (inputString) => {
-    let prefix = inputString.charAt(0)
+  const autoCompleter: Terminal.InputFieldOptions['autoComplete'] = (inputString: string) => {
+    let prefix: string | undefined = inputString.charAt(0)
     if (!prefixes[prefix]) prefix = undefined
     const pure = (prefixes[prefix] ? inputString.substring(1) : inputString).toLocaleLowerCase()
 
@@ -31,7 +31,7 @@ export async function interactive(mcPath: string) {
       )
       .map(m => (prefix ?? '') + (m.addon?.name ?? m.fileName))
 
-    return (result && result.length) ? result : ''
+    return result && result.length ? result : ''
   }
 
   while (true) {
@@ -46,7 +46,7 @@ export async function interactive(mcPath: string) {
       autoCompleteMenu: true,
     }).promise
 
-    if (!res) return await enableAndExit(store.mods)
+    if (!res) return enableAndExit(store.mods)
 
     if (res === '*') {
       for (const m of store.mods) await m.disable()
