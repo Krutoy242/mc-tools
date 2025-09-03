@@ -49,7 +49,7 @@ const main = defineCommand({
       dot   : true,
       ignore: args.ignore ? [args.ignore] : [],
     })
-    if (!fileList.length) throw new Error(`Files ${args._} doesnt exist. Provide correct path.`)
+    if (!fileList.length) throw new Error(`Files ${String(args._)} doesnt exist. Provide correct path.`)
 
     const convertResult = convertToTs(fileList).filter(Boolean) as string[]
 
@@ -70,7 +70,8 @@ const main = defineCommand({
       }
     }
     catch (error: any) {
-      const errStr = (error.stdout ?? error).toString()
+      // eslint-disable-next-line ts/no-unsafe-member-access
+      const errStr = String(error.stdout ?? error)
       const isFatal = !!errStr.match(/\d+\s+error/i)
 
       if (isFatal) {
@@ -92,7 +93,7 @@ const main = defineCommand({
   },
 })
 
-runMain(main)
+await runMain(main)
 
 /* ============================================
 =                                             =
