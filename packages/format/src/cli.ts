@@ -30,17 +30,10 @@ const main = defineCommand({
       alias      : 'i',
       description: 'Same as --ignore-pattern for ESLint',
     },
-    ts: {
+    pause: {
       type       : 'boolean',
-      alias      : 't',
-      description: 'Create linted .ts file without converting it back',
-      conflicts  : ['nolint'],
-    },
-    nolint: {
-      type       : 'boolean',
-      alias      : 'l',
-      description: 'Do not lint file',
-      conflicts  : ['ts'],
+      alias      : 'p',
+      description: 'Pause before linting',
     },
   },
   async run({ args }) {
@@ -59,30 +52,28 @@ const main = defineCommand({
     // process.stdout.write(`refactoring with ${chalk.green('jscodeshift')}...\n`)
     // refactor(convertResult)
 
-    if (args.nolint) return
-
+    if (!args.pause || !await consola.prompt('Skip linting?', { type: 'confirm'})) {
     // Lint & fix
-    try {
-      const tsFileList = normalizedFileList.map(f => f.replace(/\.zs/g, '.ts'))
-      for (const file of tsFileList) {
-        const lintResult = lintFile(file, args.ignore)
-        consola.info(lintResult)
+      try {
+        const tsFileList = normalizedFileList.map(f => f.replace(/\.zs/g, '.ts'))
+        for (const file of tsFileList) {
+          const lintResult = lintFile(file, args.ignore)
+          consola.info(lintResult)
+        }
       }
-    }
-    catch (error: any) {
+      catch (error: any) {
       // eslint-disable-next-line ts/no-unsafe-member-access
-      const errStr = String(error.stdout ?? error)
-      const isFatal = !!errStr.match(/\d+\s+error/i)
+        const errStr = String(error.stdout ?? error)
+        const isFatal = !!errStr.match(/\d+\s+error/i)
 
-      if (isFatal) {
-        consola.error(`Fatal error during linting.: `, error)
-        return
+        if (isFatal) {
+          consola.error(`Fatal error during linting.: `, error)
+          return
+        }
+
+        consola.warn('Have some managable errors during linting.')
       }
-
-      consola.warn('Have some managable errors during linting.')
     }
-
-    if (args.ts) return
 
     // Revert TS -> ZS
     convertResult.forEach((newFilePath, i) => {
@@ -93,7 +84,7 @@ const main = defineCommand({
   },
 })
 
-await runMain(main)
+void runMain(main)
 
 /* ============================================
 =                                             =

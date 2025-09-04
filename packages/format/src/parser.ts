@@ -81,7 +81,7 @@ const conversions: { [name: string]: ReplTuple } = {
   HAS          : [/\/\*\s*has\s*\*\/s*in/g, 'has'],
   ORDERLY      : [/\/\*\s*(\$\w+)\s*\*\//g, '$1'],
   CAST_REVERT  : [/(\s:|:\s)\/\* as \*\/(\s*)/g, ' as$2'],
-  RESRVED      : [/_\$_(default|class)/g, '$1'],
+  RESRVED      : [/_\$_(default|class|case)/g, '$1'],
   CONST        : [`\\/\\* \\$ \\*\\/const`, 'val'],
   LET          : [`\\/\\* \\$ \\*\\/let`, 'var'],
   LIST         : [/Array<(?<a>.+?)>/gi, ({ a }) => `[${a}]`],

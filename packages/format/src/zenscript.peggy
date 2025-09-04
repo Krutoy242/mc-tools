@@ -26,6 +26,8 @@ Start
 /* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
+/* eslint-disable ts/no-unsafe-call */
+/* eslint-disable ts/no-unsafe-member-access */
 /* eslint-disable ts/no-use-before-define */
 /* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable vars-on-top */
@@ -162,7 +164,7 @@ __
 // -----------------------------------------------
 Identifier "Identifier"
   = name:IdentifierName {
-    const reserved = ('default class').split(' ')
+    const reserved = ('default class case').split(' ')
     return reserved.includes(flat(name))
       ? ['_$_',name]
       : name
