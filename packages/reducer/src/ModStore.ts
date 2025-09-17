@@ -4,11 +4,11 @@ import chalk from 'chalk'
 import { consola } from 'consola'
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
-import { join, resolve  } from 'pathe'
+import { join, resolve } from 'pathe'
 
 import type { Branch, ReducerConfig } from './config'
 import type { MCInstance } from './minecraftinstance'
-import type { ModdedAddon} from './Mod'
+import type { ModdedAddon } from './Mod'
 
 import { DependencyLevel, Mod, purify } from './Mod'
 
@@ -17,6 +17,10 @@ function naturalSort(a: string, b: string) {
 }
 
 export class ModStore {
+  static loggedNoAddon = new Set<string>()
+  static loggedNoDependencies = new Set<string>()
+  static loggedMissingDependency = new Set<string>()
+  static loggedMultipleMatches = new Set<string>()
   readonly mods: Mod[]
 
   constructor(
@@ -36,21 +40,20 @@ export class ModStore {
       ...fetchInModsDir('*.jar'),
     ])].map((m) => {
       const addon = findAddonByFilename(mcInstance.installedAddons, m)
-      if (!addon) noAddonList.push(m)
       const mod = new Mod(m, addon)
       if (addon) addon.mod = mod
+      else noAddonList.push(mod.display)
       return mod
     })
     if (noAddonList.length) {
-      consola.box({
-        title  : 'No addon',
-        message: chalk.gray(
-          `This mods exist in mods/ folder, but their respective`
-          + `\nentries can't be found in the file ${
-            chalk.underline(`minecraftinstance.json`)}\n\n`
-        )
-        + noAddonList.join('\n'),
-      })
+      const newEntries = noAddonList.filter(entry => !ModStore.loggedNoAddon.has(entry))
+      if (newEntries.length > 0) {
+        consola.warn({
+          message   : `Found mods that don't have addon entry in ${chalk.underline('minecraftinstance.json')}`,
+          additional: newEntries.join('\n'),
+        })
+        newEntries.forEach(entry => ModStore.loggedNoAddon.add(entry))
+      }
     }
 
     // Init CF-defined dependencies
@@ -67,20 +70,19 @@ export class ModStore {
         return r?.mod
       })
         .filter((m): m is Mod => !!m)
+
+      m.addDependency(deps)
       deps.forEach(d => d.dependents.add(m))
     }
     if (noDependencies.size) {
-      consola.box({
-        title  : 'No dependencies',
-        message: chalk.gray(`This mods must have dependencies, `
-          + `but they are cannot be found.\n\n`)
-        + [...noDependencies].sort().join('\n'),
-        style: {
-          padding     : 0,
-          borderColor : 'yellow',
-          marginBottom: 0,
-        },
-      })
+      const newEntries = [...noDependencies].filter(entry => !ModStore.loggedNoDependencies.has(entry))
+      if (newEntries.length > 0) {
+        consola.warn({
+          message   : 'Mods that have missing dependencies',
+          additional: newEntries.sort().join('\n'),
+        })
+        newEntries.forEach(entry => ModStore.loggedNoDependencies.add(entry))
+      }
     }
 
     // Init dependencies
@@ -89,7 +91,11 @@ export class ModStore {
       if (!m) continue
       const d = this.findMod(dep)
       if (!d) {
-        consola.warn(`Mod "${m.fileName}" must have dependencies [${dep}] but none found!`)
+        const key = `${m.fileName}-${dep}`
+        if (!ModStore.loggedMissingDependency.has(key)) {
+          consola.warn(`Mod "${m.fileName}" must have dependencies [${dep}] but none found!`)
+          ModStore.loggedMissingDependency.add(key)
+        }
         continue
       }
       m.addDependency(d)
@@ -117,7 +123,13 @@ export class ModStore {
       || rgx.test(m.fileName)
     )
     list.sort((a, b) => (a.addon?.name.length ?? 0) - (b.addon?.name.length ?? 0))
-    if (list.length > 1) console.log(`Multiple matches of mod "${modRegexp}"`, list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`))
+    if (list.length > 1) {
+      const key = `${modRegexp}-${list.map(m => m.fileName).join(',')}`
+      if (!ModStore.loggedMultipleMatches.has(key)) {
+        consola.warn(`Multiple matches of mod "${modRegexp}" ${list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`).join('\n')}`)
+        ModStore.loggedMultipleMatches.add(key)
+      }
+    }
     return list[0]
   }
 }

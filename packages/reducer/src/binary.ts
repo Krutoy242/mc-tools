@@ -1,94 +1,158 @@
 import chalk from 'chalk'
 import { consola } from 'consola'
-import _ from 'lodash'
+import inquirer from 'inquirer'
 
-import type { Mod } from './Mod'
+import { splitTwo } from '.'
+import { Mod } from './Mod'
+import { selectMods } from './toggle'
 
-import { getConfig } from './config'
-import { getStatusText } from './Mod'
-import { ModStore } from './ModStore'
+type Status = 'ignored' | 'suspective' | 'trusted'
 
 export const style = {
-  suspective: chalk.rgb(150, 120, 0),
-  trusted   : chalk.rgb(0, 120, 30),
+  suspective         : chalk.rgb(197, 131, 56)('▗▖'), // '🟠',
+  suspective_disabled: chalk.rgb(83, 67, 30)('▗▖'), // '🟤',
+  trusted            : chalk.rgb(48, 146, 18)('▗▖'), // '🔵',
+  trusted_disabled   : chalk.rgb(12, 53, 18)('▗▖'), // '🟣',
+  ignored            : chalk.rgb(72, 112, 124)('▗▖'), // '⚫',
+  ignored_disabled   : chalk.rgb(30, 40, 43)('▗▖'), // '⚫',
+} as const
+
+const modStatus = new Map<Mod, Status>()
+
+function getStatus(mod: Mod) {
+  return modStatus.get(mod) ?? 'suspective'
 }
 
-export async function binary(mcPath: string) {
-  const config = await getConfig(mcPath)
-  const store = new ModStore(mcPath, config)
+function setStatus(mod: Mod, value: Status) {
+  return modStatus.set(mod, value)
+}
+
+function statusText(mod: Mod): string {
+  const statusKey = getStatus(mod) + (mod.isDisabled ? '_disabled' : '') as keyof typeof style
+  return style[statusKey]
+}
+
+export async function binary(mods: Mod[]) {
+  consola.start('Binary Reducer')
+
+  let manuallyTrusted = new Set<Mod>()
+  let iteration = 1
 
   while (true) {
-    consola.info(`There is ${chalk.green(store.mods.length)} mods:\n${drawMods(store.mods)}\n`)
-    if (!await disableSecondHalf(store.mods)) return
+    consola.log(drawMods(mods))
 
-    consola.info(`Now, does ${chalk.red('error')} still persist?\n${drawMods(store.mods)}\n`)
-    if (!await askErrorPersist(store.mods)) return
+    const {choice} = await inquirer.prompt<{choice: string}>([
+      {
+        type   : 'list',
+        message: `Binary search, iteration #${iteration++}`,
+        name   : 'choice',
+        choices: [
+          { name: `${style.trusted} Pick trusted mods (keep them ${chalk.red('disabled')})`, value: 'trust' },
+          { name: `${style.ignored} Pick ignored mods (keep them ${chalk.green('enabled')})`, value: 'ignore' },
+          { name: `${chalk.yellow('»')}  Disable half`, value: 'half' },
+          { name: `${chalk.gray('✘')} Back`, value: 'exit' },
+        ],
+      },
+    ])
+
+    if (choice === 'exit') return
+
+    if (choice === 'trust') {
+      manuallyTrusted = new Set(await selectMods(mods, [...manuallyTrusted]))
+      for (const m of manuallyTrusted) setStatus(m, 'trusted')
+      await Mod.disable(manuallyTrusted)
+      consola.success(`${manuallyTrusted.size} mods will be kept disabled.`)
+      continue
+    }
+
+    if (choice === 'ignore') {
+      const ignored = new Set(await selectMods(mods, mods.filter(m => getStatus(m) === 'ignored')))
+
+      for (const m of ignored) setStatus(m, 'ignored')
+      await Mod.enable(ignored)
+      consola.success(`${ignored.size} mods will be kept enabled.`)
+      continue
+    }
+
+    const changedCount = await disableSecondHalf(mods)
+    if (changedCount <= 0) {
+      consola.warn(`Cant enable/disable any mod`)
+      continue
+    }
+
+    await askErrorPersist(mods)
   }
 }
 
-async function disableSecondHalf(mods: Mod[]) {
-  const confirmed = await consola.prompt('', {
-    type   : 'select',
-    options: [
-      {label: 'Disable Second half', value: 'disable', hint: 'Mods sorted by file size'},
-      {label: 'Enable everything and exit', value: '', hint: 'Turn on all the mods'},
-    ],
-    cancel: 'undefined',
-  })
-
-  if (confirmed === undefined) return false
-
-  if (!confirmed) {
-    for (const m of mods) await m.enable()
-    consola.success(`Enabled ${chalk.green(mods.length)} mods`)
-    return false
-  }
-  const isSus = (m: Mod) => m.status !== 'trusted'
+async function disableSecondHalf(mods: Mod[]): Promise<number> {
+  const isSus = (m: Mod) => getStatus(m) === 'suspective'
   const susMods = mods.filter(isSus)
   const enabledSusCount = () => susMods.filter(m => m.enabled).length
-  for (const m of mods) {
-    m.status === 'trusted' || enabledSusCount() > susMods.length / 2
-      ? await m.disable()
-      : await m.enable()
-  }
-  return true
+
+  const [toDisable, toEnable] = splitTwo(mods, m => getStatus(m) === 'trusted' || enabledSusCount() > susMods.length / 2)
+  return await Mod.disable(toDisable) + await Mod.enable(toEnable)
 }
 
 async function askErrorPersist(mods: Mod[]) {
-  const askResult = await consola.prompt('', {
-    type   : 'select',
-    options: [
-      {label: 'No error', value: 'true', hint: ''},
-      {label: 'Has error', value: '', hint: ''},
-    ],
-    cancel: 'undefined',
-  })
-  if (askResult === undefined) return false
-
-  const noError = askResult === 'true'
+  const { noError } = await inquirer.prompt<{ noError: boolean }>([
+    {
+      type   : 'list',
+      name   : 'noError',
+      message: 'After disabling half the mods, does the error still persist?',
+      choices: [
+        { name: `${chalk.green('✔')} No, the error is gone`, value: true },
+        { name: `${chalk.red('✘')} Yes, the error is still there`, value: false },
+      ],
+    },
+  ])
 
   for (const m of mods) {
+    if (getStatus(m) === 'ignored') continue
+
     if (noError) {
-      if (m.enabled) m.status = 'trusted'
-      if (m.status !== 'trusted') m.status = 'suspective'
+      if (m.enabled) setStatus(m, 'trusted')
     }
     else {
-      if (m.enabled && m.status !== 'trusted') m.status = 'suspective'
-      else m.status = 'trusted'
+      if (!m.enabled) setStatus(m, 'trusted')
     }
   }
-  return true
+}
+
+function chunk<T>(array: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size))
+  }
+  return result
 }
 
 function drawMods(mods: Mod[]) {
   const w = Math.min(process.stdout.columns ?? 80, 80)
-  const chunks = _.chunk(mods, w)
-    .map(chunk => chunk.map(m => m.statusText).join(''))
+  const chunks = chunk(mods.map(statusText), w)
+    .map(chunk => chunk.join(''))
     .join('\n')
 
-  const keys = Object.keys(style) as (keyof (typeof style))[]
+  const enabledCount = mods.filter(m => m.enabled).length
+  const disabledCount = mods.length - enabledCount
+  const trustedCount = mods.filter(m => getStatus(m) === 'trusted').length
+  const suspectCount = mods.length - trustedCount
+  const ignoredCount = mods.filter(m => getStatus(m) === 'ignored').length
 
-  return `${keys.map(k => `Enabled ${chalk.gray(k)} ${getStatusText(k, false)}`).join('\n')
-  }\n${keys.map(k => `Disabled ${chalk.gray(k)} ${getStatusText(k, true)}`).join('\n')}
-${chunks}`
+  const legend = `Legend: ${['suspective', 'trusted', 'ignored']
+    .map(k => `${chalk.gray(k)} ${style[k]}/${style[`${k}_disabled`]} (en/dis)`)
+    .join(', ')}`
+
+  const stats = `Stats: Total: ${chalk.bold(mods.length)}`
+    + ` | Enabled: ${chalk.green(enabledCount)}`
+    + ` | Disabled: ${chalk.red(disabledCount)}`
+    + ` | Trusted: ${chalk.green(trustedCount)}`
+    + ` | Suspect: ${chalk.yellow(suspectCount)}`
+    + ` | Ignored: ${chalk.blue(ignoredCount)}`
+
+  return `
+${stats}
+${chalk.dim(legend)}
+
+${chunks}
+`
 }
