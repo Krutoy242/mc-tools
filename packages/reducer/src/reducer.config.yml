@@ -17,6 +17,9 @@ dependencies:
   ModTweaker: MTLib
   JEIExporter-: Had Enough Items
   thaumicenergistics-: Thaumcraft-
+  Tinkers' Evolution:
+    - LibNine
+    - Tinkers' Antique
   Loot Capacitor Tooltips: ^Ender IO$
   Compact Solars: Industrial Craft
   Deep Blood Evolution: 
@@ -87,6 +90,7 @@ dependents:
     - Xaero Plus
     - ^XNet
     - ZeroCore
+    - Tinkers' Evolution
 
 # This section maps a base mod's CurseForge project ID to an array of project IDs for its forks or variants.
 # It helps the tool recognize that different versions of a mod (e.g., Tinker's Construct and its forks)
