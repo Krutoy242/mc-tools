@@ -52,14 +52,11 @@ const main = defineCommand({
     // process.stdout.write(`refactoring with ${chalk.green('jscodeshift')}...\n`)
     // refactor(convertResult)
 
-    if (!args.pause || !await consola.prompt('Skip linting?', { type: 'confirm'})) {
-    // Lint & fix
+    if (!args.pause || !await consola.prompt('Skip linting?', { type: 'confirm' })) {
+      // Lint & fix
       try {
-        const tsFileList = normalizedFileList.map(f => f.replace(/\.zs/g, '.ts'))
-        for (const file of tsFileList) {
-          const lintResult = lintFile(file, args.ignore)
-          consola.info(lintResult)
-        }
+        const lintResult = lintFiles(convertResult, args.ignore)
+        consola.info(lintResult)
       }
       catch (error: any) {
       // eslint-disable-next-line ts/no-unsafe-member-access
@@ -89,10 +86,11 @@ void runMain(main)
 /* ============================================
 =                                             =
 ============================================= */
-function lintFile(glob: string, ignore: string | undefined) {
+function lintFiles(files: string[], ignore: string | undefined) {
+  const filesToLint = files.map(f => `"${f.replace(/\\/g, '/')}"`).join(' ')
   const command = `npx eslint --fix --quiet`
     + `${ignore ? ` --ignore-pattern ${ignore}` : ''}`
-    + ` "${glob.replace(/\\/g, '/')}"`
+    + ` ${filesToLint}`
   consola.start('>', command)
   return execSync(command, { stdio: 'inherit' })?.toString().trim() ?? ''
 }
