@@ -22,6 +22,7 @@ Start
 /* eslint-disable no-var */
 /* eslint-disable object-shorthand */
 /* eslint-disable prefer-arrow-callback */
+/* eslint-disable prefer-template */
 /* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
