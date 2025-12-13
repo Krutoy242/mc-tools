@@ -32,8 +32,18 @@ export function convertToTs(fileList: string[]) {
       process.stdout.write(` ${colors.green(colors.inverse('convert to ts'))}`)
       converted = peggyParse(fileContent)
     }
-    catch (error) {
-      consola.error(`cant parse file ${colors.blueBright(filePath)}`, error)
+    catch (error: any) {
+      const line: number = error.location.start.line
+      const column: number = error.location.start.column
+      const lineText = fileContent.split('\n')[line - 1]
+
+      let errorLine = ''
+      if (lineText) {
+        errorLine = `\n\n  ${line} | ${lineText}\n`
+          + `   ${' '.repeat(String(line).length)}| ${' '.repeat(column - 1)}^`
+      }
+
+      consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${error.message}${errorLine}`)
       return undefined
     }
 
