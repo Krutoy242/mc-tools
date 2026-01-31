@@ -76,7 +76,13 @@ export interface FluidQuestTask {
   type : 'fluid'
 }
 
-export type QuestTask = (FluidQuestTask | ItemQuestTask) & {
+export interface StatQuestTask {
+  icon: Item | string
+  stat: string
+  type: 'stat'
+}
+
+export type QuestTask = (FluidQuestTask | ItemQuestTask | StatQuestTask) & {
   title?: string
   uid   : string
 }
@@ -261,8 +267,10 @@ export function getQuestTaskItem(q: QuestUid) {
  * OR on the title of quest itself
  */
 export function getTaskName(q: QuestUid) {
+  const task = q?.tasks?.[0]
   return getItemName(getQuestTaskItem(q))
-    ?? q?.tasks?.[0]?.title
-    ?? (q?.tasks?.[0] as FluidQuestTask)?.fluid
+    ?? (task?.type === 'stat' ? getItemName(getItem((task as StatQuestTask).icon)) : undefined)
+    ?? task?.title
+    ?? (task as FluidQuestTask)?.fluid
     ?? (q.icon ? getItemName(getItem(q.icon)) : undefined)
 }
