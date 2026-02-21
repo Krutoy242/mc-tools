@@ -60,19 +60,17 @@ function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
 }
 
-(async () => {
-  const unresolvedErrors = await findErrors(argv.log, argv.config as Config)
+const unresolvedErrors = await findErrors(argv.log, argv.config as Config)
 
-  if (unresolvedErrors.length)
-    process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)
+if (unresolvedErrors.length)
+  process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)
 
-  const text = unresolvedErrors.join('\n')
+const text = unresolvedErrors.join('\n')
 
-  if (argv.output) {
-    mkdirSync(dirname(argv.output), { recursive: true })
-    writeFileSync(argv.output, text)
-  }
-  else {
-    process.stdout.write(`${text}\n`)
-  }
-})()
+if (argv.output) {
+  mkdirSync(dirname(argv.output), { recursive: true })
+  writeFileSync(argv.output, text)
+}
+else {
+  process.stdout.write(`${text}\n`)
+}
