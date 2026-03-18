@@ -31,11 +31,10 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
 
   if (!allErrors.length) throw new Error('No error found, probably wrong Log file')
 
-  const ignoreRegexps = (
-    Array.isArray(config.ignore)
-      ? config.ignore
-      : [config.ignore]
-  ).map(l => new RegExp(l, 'm'))
+  const ignoreList = Array.isArray(config.ignore)
+    ? config.ignore
+    : [config.ignore]
+  const ignoreRegexps = ignoreList.map(l => new RegExp(l, 'm'))
 
   const replaces = config.replace.map(r => ({
     ...r,
@@ -43,7 +42,20 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
   }))
 
   for (let [res] of allErrors) {
-    if (ignoreRegexps.some(r => r.test(res))) continue
+    const matchingIndices = ignoreRegexps
+      .map((r, i) => r.test(res) ? i : -1)
+      .filter(i => i !== -1)
+
+    if (matchingIndices.length > 1) {
+      console.warn('Warning: Multiple ignore patterns match the same error:\n')
+      console.warn(res)
+      console.warn('\nMatching patterns:\n')
+      for (const i of matchingIndices)
+        console.warn(`- ${ignoreList[i]}`)
+    }
+
+    if (matchingIndices.length > 0) continue
+
     replaces.forEach(r => res = res.replace(r.from, r.to))
     result.push(res)
   }
