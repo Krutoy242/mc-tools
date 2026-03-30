@@ -101,11 +101,21 @@ export function cleanupLangEntries() {
         return
       }
 
-      if (
-        +langify(q, 'title', `q.${chapName}.${questName}.name`, questWeight)
+      const isQuestChanged = +langify(q, 'title', `q.${chapName}.${questName}.name`, questWeight)
         + +langify(q, 'description', `q.${chapName}.${questName}.subtitle`, questWeight + 0.000001)
         + +langify(q, 'text', `q.${chapName}.${questName}.desc`, questWeight + 0.000002)
-      ) {
+
+      let isSubChanged = false
+      q.tasks?.forEach((task, taskIndex) => {
+        if (langify(task, 'title', `q.${chapName}.${questName}.task.${taskIndex}`, questWeight + (taskIndex + 1) * 0.00001))
+          isSubChanged = true
+      })
+      q.rewards?.forEach((reward, rewardIndex) => {
+        if (langify(reward, 'title', `q.${chapName}.${questName}.reward.${rewardIndex}`, questWeight + (rewardIndex + 1) * 0.00001 + 0.000005))
+          isSubChanged = true
+      })
+
+      if (isQuestChanged || isSubChanged) {
         saveQuest(ch.uid, q)
       }
     })

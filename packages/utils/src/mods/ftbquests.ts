@@ -68,6 +68,7 @@ export interface QuestReward {
   auto?   : string
   command?: string
   item    : Item | string
+  title?  : string
   type    : string
   uid     : string
 }
