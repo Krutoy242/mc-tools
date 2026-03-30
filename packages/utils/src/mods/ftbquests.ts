@@ -1,4 +1,4 @@
-import type { Byte, TagMap } from 'ftbq-nbt'
+import type { Byte, Tag, TagMap } from 'ftbq-nbt'
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -7,6 +7,13 @@ import fast_glob from 'fast-glob'
 import { Int, parse, stringify } from 'ftbq-nbt'
 
 import { getItemNames } from './tellme'
+
+const LIST_TYPE_REGEX = /\[[BIL];(?:\s*-?\d+(?:\.\d+)?[BIL]\b,?)+\s*\]/gi
+const LIST_ITEM_REGEX = /\d+[BIL]\b/gi
+const SNBT_EXT_REGEX = /\.snbt$/
+const PATH_SEP_REGEX = /[/\\]/
+const SECTION_SIGN_REGEX = /§./g
+const LIST_TYPE_POSTFIX_REGEX = /[BIL]$/i
 
 /*
 ████████╗██╗   ██╗██████╗ ███████╗███████╗
@@ -104,19 +111,19 @@ export type Chapter = ChapterConfigUid & { quests: QuestUid[] }
 
 export function parseFtbqSNbt(sNbt: string) {
   const replaced = sNbt
-    .replace(/(\[[BIL];(\s*-?\d+(\.\d+)?[BIL]\b,?)+\s*\])/gi, (m, r) => {
-      return r.replace(/(\d+)[BIL]\b/gi, '$1')
-    }) // Remove list types
+    .replace(LIST_TYPE_REGEX, (m) => {
+      return m.replace(LIST_ITEM_REGEX, m2 => m2.replace(LIST_TYPE_POSTFIX_REGEX, ''))
+    })
   try {
     return parse(replaced, { useBoolean: true })
   }
   catch (error) {
-    console.log('error parsing this :>> ', replaced, error)
+    console.error('error parsing this :>> ', replaced, error)
   }
 }
 
 export function stringifyFTBQSNbt(tag: object) {
-  return `${stringify(tag as any, {
+  return `${stringify(tag as Tag, {
     pretty      : true,
     breakLength : 0,
     useBoolean  : true,
@@ -138,14 +145,14 @@ export function getRewardFile(questHash: string, mc = './'): Reward {
 
 export function getChapter(chapterHash: string, mc = './'): ChapterConfigUid {
   return {
-    ...getFile(`chapters/${chapterHash}/chapter`, mc) as ChapterConfig,
+    ...getFile(`chapters/${chapterHash}/chapter`, mc),
     uid: chapterHash,
   }
 }
 
 export function getQuest(chapUid: string, questUid: string, mc = './'): QuestUid {
   return {
-    ...getFile(`chapters/${chapUid}/${questUid}`, mc) as Quest,
+    ...getFile(`chapters/${chapUid}/${questUid}`, mc),
     uid: questUid,
   }
 }
@@ -187,7 +194,7 @@ export function getItem(item: Item | string): Item {
 export function tagItemToCT(item: Item | string, count = 1): string {
   const it = getItem(item)
 
-  return `<${it.id}${it.Damage ? `:${it.Damage}` : ''}>${
+  return `<${it.id}${it.Damage ? `:${it.Damage.value}` : ''}>${
     !it.tag ? '' : `.withTag(sNBT('${stringify(it.tag)}'))`
   }${
   // eslint-disable-next-line eqeqeq
@@ -207,14 +214,14 @@ export function uidGenerator(maxLen = 80, ch = '…') {
 
 export function getChapters(): Chapter[] {
   const chapCwd = 'config/ftbquests/normal/chapters'
-  const chaptersUids = getFile<any>('chapters/index').index as string[]
+  const chaptersUids = (getFile<{ index: string[] }>('chapters/index')).index
   const chapters = chaptersUids.map(uid => getChapter(uid)) as Chapter[]
 
   // Add quests to chapters
   chapters.forEach(ch =>
     ch.quests
       = fast_glob.sync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
-        .map(f => f.split(/[/\\]/)[1].replace(/\.snbt$/, ''))
+        .map(f => f.split(PATH_SEP_REGEX)[1].replace(SNBT_EXT_REGEX, ''))
         .filter(f => f !== 'chapter')
         .map(uid => getQuest(ch.uid, uid))
   )
@@ -232,7 +239,7 @@ export function getChapters(): Chapter[] {
 */
 
 export function isLangKeyInParenth(title?: string): boolean {
-  return title !== undefined && title[0] === '{' && title[title.length - 1] === '}'
+  return title !== undefined && title[0] === '{' && title.at(-1) === '}'
 }
 
 export function langKeyWithoutParenth(title: string): string {
@@ -248,7 +255,7 @@ let names: ReturnType<typeof getItemNames>
 export function getItemName(i?: Item) {
   if (i === undefined) return undefined
   names ??= getItemNames()
-  return (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0])?.replace(/§./g, '')
+  return (names[i.id]?.[String(i.Damage?.value ?? 0)] ?? names[i.id]?.[0])?.replace(SECTION_SIGN_REGEX, '')
 }
 
 /**
@@ -257,9 +264,11 @@ export function getItemName(i?: Item) {
 export function getQuestTaskItem(q: QuestUid) {
   const firstTask = (q?.tasks?.[0] as ItemQuestTask)?.items?.[0]
   if (!firstTask) return undefined
-  const taskItem = getItem((firstTask as any)?.item ?? firstTask)
+  const rawItem = 'item' in firstTask ? (firstTask as { item: string }).item : firstTask
+  const taskItem = getItem(rawItem)
   if (taskItem) return taskItem
-  throw new Error(`Cant define quest task item: ${firstTask}`)
+  const displayName = typeof rawItem === 'string' ? rawItem : rawItem.id
+  throw new Error(`Cant define quest task item: ${displayName}`)
 }
 
 /**

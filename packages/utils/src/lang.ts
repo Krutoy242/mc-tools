@@ -3,6 +3,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import fast_glob from 'fast-glob'
 import { Memoize } from 'typescript-memoize'
 
+const SECTION_SIGN_REGEX = /§./g
+const LANG_EXT_REGEX = /\.lang$/
+
 export class Lang {
   static defaultLangCode = 'en_us'
   private deleteSet = new Set<string>()
@@ -18,7 +21,7 @@ export class Lang {
   @Memoize()
   private getLangFile(langCode = Lang.defaultLangCode): { [key: string]: string } {
     const text = readFileSync(this.langPath(langCode), 'utf8')
-    const tuples = text
+    const tuples: [string, string][] = text
       .split('\n')
       .filter(l => l && l.trim() && !l.trim().startsWith('#'))
       .map(l => [
@@ -48,7 +51,7 @@ export class Lang {
    * Get value for lang key entry without formatting symbols `§`
    */
   public getClear(langEntry: string, langCode = Lang.defaultLangCode) {
-    return this.get(langEntry, langCode).replace(/§./g, '')
+    return this.get(langEntry, langCode).replace(SECTION_SIGN_REGEX, '')
   }
 
   @Memoize()
@@ -56,7 +59,7 @@ export class Lang {
     return fast_glob.sync(
       '*.lang',
       { cwd: `resources/${this.langOwner}/lang/` }
-    ).map(s => s.replace(/.lang$/, ''))
+    ).map(s => s.replace(LANG_EXT_REGEX, ''))
   }
 
   public filter(keepSet: Set<string>) {
@@ -87,7 +90,7 @@ export class Lang {
     for (const langCode of this.getCodes()) {
       const lang = this.getLangFile(langCode)
       if (lang[old] === undefined) {
-        console.log('Lang code doesnt exist: ', langCode, old)
+        console.error('Lang code doesnt exist: ', langCode, old)
         continue
       }
       lang[fresh] = lang[old]

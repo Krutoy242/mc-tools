@@ -1,6 +1,6 @@
-import chalk from 'chalk'
-
 import type { QuestUid } from '../packages/utils/src/mods/ftbquests'
+
+import chalk from 'chalk'
 
 import { Lang } from '../packages/utils/src/lang'
 import { getChapters, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, uidGenerator } from '../packages/utils/src/mods/ftbquests'
@@ -10,6 +10,8 @@ interface TextSource {
   text       ?: string | string[]
   title      ?: string | string[]
 }
+
+const nonWordRegex = /\W+/g
 
 /**
  * Change every text entry in quest book to lang code
@@ -45,7 +47,7 @@ export function cleanupLangEntries() {
   function langify(obj: TextSource, key: keyof TextSource, newLangKey: string, sortWeight: number) {
     const text = obj[key]
     if (text === undefined || !text.length) return false // Skip if no desc or already lang key
-    const oldKey = Array.isArray(text) ? text[0] : text as string
+    const oldKey = Array.isArray(text) ? text[0] : text
     if (isLangKeyInParenth(oldKey)) {
       keepLang(langKeyWithoutParenth(oldKey), sortWeight)
       return false
@@ -53,7 +55,7 @@ export function cleanupLangEntries() {
     keepLang(newLangKey, sortWeight)
     lang.set(newLangKey, text)
     const t = `{${newLangKey}}`
-    ;(obj as any)[key] = Array.isArray(obj[key]) ? [t] : t
+    ;(obj as Record<keyof TextSource, string | string[]>)[key] = Array.isArray(obj[key]) ? [t] : t
     console.log(`${`${chalk.green('+')} ${chalk.gray(newLangKey)}`} = ${chalk.rgb(10, 10, 10)(JSON.stringify(text).substring(0, 100))}`)
     return true
   }
@@ -61,7 +63,7 @@ export function cleanupLangEntries() {
   const uidChap = uidGenerator(20, '')
 
   /** Make string lang-key compatible */
-  const trim = (s: string) => s.toLocaleLowerCase().replace(/\W+/g, '_')
+  const trim = (s: string) => s.toLocaleLowerCase().replace(nonWordRegex, '_')
   const toKey = (s: string) => trim(lang.getClear(langKeyWithoutParenth(s)))
 
   /** Get key that would be used in lang key */
