@@ -1,17 +1,20 @@
 import type { Byte, Short } from 'ftbq-nbt'
 
-import { readFileSync, renameSync, writeFileSync } from 'node:fs'
+import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
 
+import { readFileSync, renameSync } from 'node:fs'
+import process from 'node:process'
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
 import { Int, parse } from 'ftbq-nbt'
-import sanitize from 'sanitize-filename'
 
-import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
+import sanitize from 'sanitize-filename'
 
 import { naturalSort } from '../packages/utils/src'
 import { Lang } from '../packages/utils/src/lang'
-import { getChapter, getChapters, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, parseFtbqSNbt, saveChapter, saveQuest, saveReward, stringifyFTBQSNbt, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
+import { getChapter, getChapters, getIndex, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveIndex, saveQuest, saveReward, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
+
+const TRIM_REGEX = /\W+/g
 
 /**
  * Converts FTBQuests reward tables to chests with saved content
@@ -28,30 +31,20 @@ export function printRewardTable(tblHash: string) {
   }\n  ]);\n`
 }
 
-// writeFileSync('~rewardTables.zs', [
-//   '30509f47',
-//   '15309327',
-//   '4178342e',
-//   '86454b68',
-//   '37ab1338',
-// ].map(printRewardTable).join('\n\n'))
-
 export function renameChapters() {
   const lang = new Lang('ftbquests')
   const chapPath = 'config/ftbquests/normal/chapters'
 
-  const indexPath = `${chapPath}/index.snbt`
-  const text = readFileSync(indexPath, 'utf8')
-  const index = parseFtbqSNbt(text) as any
+  const index = getIndex()
   const uid = uidGenerator()
 
-  ;(index.index as string[]).forEach((hash, i) => {
+  index.index.forEach((hash, i) => {
     let chap: ChapterConfig
     try {
       chap = getChapter(hash)
     }
-    catch (e: any) {
-      return console.error(`cant get chapter ${hash}: ${e.message}`)
+    catch (e: unknown) {
+      return console.error(`cant get chapter ${hash}: ${e instanceof Error ? e.message : String(e)}`)
     }
     const localized = lang.getClear(langKeyWithoutParenth(chap.title))
     const newName = uid(sanitize(`${String(i + 1).padStart(2, '0')} ${localized}`))
@@ -62,14 +55,14 @@ export function renameChapters() {
     try {
       renameSync(oldPath, newPath)
     }
-    catch (error) {
-      console.error(`cant rename!\n${error}`)
+    catch (error: unknown) {
+      console.error(`cant rename!\n${error instanceof Error ? error.message : String(error)}`)
     }
 
     index.index[i] = newName
   })
 
-  writeFileSync(indexPath, stringifyFTBQSNbt(index))
+  saveIndex(index)
 }
 
 export function removeNameOfQuests() {
@@ -86,11 +79,15 @@ export function removeNameOfQuests() {
         const questLangKey = langKeyWithoutParenth(q.title)
         const nameOfTask = getItemName(taskItem)?.toLocaleLowerCase()
         const nameOfQuest = lang.get(questLangKey)?.toLocaleLowerCase()
-        if (!nameOfTask) console.error(`Cant find name: ${taskItem.id}:${taskItem.Damage?.value}`)
-        if (!nameOfQuest) console.error(`Cant find name: ${questLangKey}`)
-        if (nameOfTask === nameOfQuest || levenshtein.get(nameOfTask, nameOfQuest) <= 5) {
-          delete q.title
-          dirty = true
+        if (!nameOfTask) {
+          console.error(`Cant find name: ${taskItem.id}:${taskItem.Damage?.value}`)
+        }
+        else {
+          if (!nameOfQuest) console.error(`Cant find name: ${questLangKey}`)
+          if (nameOfTask === nameOfQuest || levenshtein.get(nameOfTask, nameOfQuest) <= 5) {
+            delete q.title
+            dirty = true
+          }
         }
       }
       if (q.icon && q.tasks[0].items.length === 1) {
@@ -117,17 +114,18 @@ export function renameQuestsLangs() {
   const usedLangs = new Set<string>()
 
   const rename = (obj: { title?: string } | string[] | undefined, key: 'title' | 0, fresh: string) => {
-    const old = obj?.[key]
+    if (!obj) return false
+    const old = (obj as Record<string | number, string | undefined>)[key]
     if (!old || !isLangKeyInParenth(old)) return false
     lang.rename(langKeyWithoutParenth(old), fresh)
     usedLangs.add(fresh)
-    obj[key] = `{${fresh}}`
+    ;(obj as Record<string | number, string>)[key] = `{${fresh}}`
     return true
   }
 
   // Rename Entries
   const uidChap = uidGenerator(20, '')
-  const trim = (s: string) => s.toLocaleLowerCase().replace(/\W+/g, '_')
+  const trim = (s: string) => s.toLocaleLowerCase().replace(TRIM_REGEX, '_')
   const toKey = (s: string) => trim(lang.getClear(langKeyWithoutParenth(s)))
 
   chaps.forEach((ch) => {

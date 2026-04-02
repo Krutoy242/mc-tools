@@ -33,6 +33,7 @@ export interface Item {
 
 export interface RewardItem {
   count? : Int
+  icon?  : Item | string
   item   : Item | string
   weight?: Int
 }
@@ -177,6 +178,51 @@ export function saveReward(uid: string, obj: Reward, mc = './') {
   return saveFile(obj, `reward_tables/${uid}`, mc)
 }
 
+export function saveIndex(index: ChapterIndex, mc = './') {
+  return saveFile(index, 'chapters/index', mc)
+}
+
+export interface StringItem {
+  count: number
+  id   : string
+  meta?: number
+}
+
+export function parseStringItem(str: string): StringItem {
+  const parts = str.split(' ')
+  return {
+    count: parts.length > 1 ? Number(parts[1]) : 1,
+    id   : parts[0],
+    meta : parts.length > 2 ? Number(parts[2]) : undefined,
+  }
+}
+
+export function buildStringItem(id: string, count: number, meta?: number): string {
+  return meta !== undefined ? `${id} ${count} ${meta}` : `${id} ${count}`
+}
+
+export function getCountValue(count: RewardItem['count']): number {
+  if (count == null) return 1
+  if (typeof count === 'number') return count
+  return (count as { value: number }).value
+}
+
+export function getIconCount(icon: RewardItem['icon']): number | undefined {
+  if (typeof icon === 'string') return parseStringItem(icon).count
+  if (icon && typeof icon === 'object' && 'Count' in icon && icon.Count) {
+    return (icon.Count as { value: number }).value
+  }
+  return undefined
+}
+
+export function buildIcon(item: RewardItem['item'], count: number): RewardItem['icon'] {
+  if (typeof item === 'string') {
+    const parsed = parseStringItem(item)
+    return buildStringItem(parsed.id, count, parsed.meta)
+  }
+  return { ...item, Count: { value: count } } as RewardItem['icon']
+}
+
 export function getItem(item: Item | string): Item {
   if (typeof item !== 'string') return item
 
@@ -213,9 +259,17 @@ export function uidGenerator(maxLen = 80, ch = '…') {
   }
 }
 
-export function getChapters(): Chapter[] {
+export interface ChapterIndex {
+  index: string[]
+}
+
+export function getIndex(mc = './'): ChapterIndex {
+  return getFile<ChapterIndex>('chapters/index', mc)
+}
+
+export function getChapters(mc = './'): Chapter[] {
   const chapCwd = 'config/ftbquests/normal/chapters'
-  const chaptersUids = (getFile<{ index: string[] }>('chapters/index')).index
+  const chaptersUids = getIndex(mc).index
   const chapters = chaptersUids.map(uid => getChapter(uid)) as Chapter[]
 
   // Add quests to chapters

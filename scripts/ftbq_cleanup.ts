@@ -1,9 +1,10 @@
 import type { QuestUid } from '../packages/utils/src/mods/ftbquests'
 
 import chalk from 'chalk'
+import fast_glob from 'fast-glob'
 
 import { Lang } from '../packages/utils/src/lang'
-import { getChapters, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, uidGenerator } from '../packages/utils/src/mods/ftbquests'
+import { buildIcon, getChapters, getCountValue, getIconCount, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 interface TextSource {
   description?: string | string[]
@@ -125,4 +126,43 @@ export function cleanupLangEntries() {
   lang.save(k => usedLangs.get(k) ?? 0)
 }
 
+/**
+ * Add icons to rewards with >1 amount.
+ *
+ * The problem is when FTBQuest reward table have many item in one slot, it
+ * wont show the amount of those items, only icon of a single.
+ *
+ * This will explicitely add icons with correct amounts.
+ */
+function matchCountOfRewards() {
+  const folder = 'config/ftbquests/normal/reward_tables'
+  const fileUids = fast_glob.sync('*.snbt', { cwd: folder })
+    .map(f => f.replace('.snbt', ''))
+  const fileRewards = fileUids
+    .map(f => [f, getRewardFile(f)] as const)
+
+  fileRewards.forEach(([f, table]) => {
+    let hasChanges = false
+    if (!table?.rewards) return
+    for (const reward of table.rewards) {
+      const item = reward.item
+      if (!item) continue
+
+      const countVal = getCountValue(reward.count)
+      if (countVal <= 1) continue
+
+      const iconCount = getIconCount(reward.icon)
+      if (iconCount === countVal) continue
+
+      reward.icon = buildIcon(item, countVal)
+      hasChanges = true
+    }
+
+    if (hasChanges) {
+      saveReward(f, table)
+    }
+  })
+}
+
 cleanupLangEntries()
+matchCountOfRewards()
