@@ -249,13 +249,36 @@ export function tagItemToCT(item: Item | string, count = 1): string {
   }`
 }
 
+/**
+ * Build a function that turns arbitrary strings into short unique UIDs.
+ *
+ * Keys longer than `maxLen` are truncated and suffixed with `ch` (default `…`).
+ * When two keys collapse to the same UID, a numeric suffix (`_N`) is appended
+ * and the result is re-truncated to `maxLen` — so output is *always* ≤ `maxLen`,
+ * regardless of how many collisions occur.
+ */
 export function uidGenerator(maxLen = 80, ch = '…') {
-  const takenUids = {} as Record<string, number>
+  const takenUids = new Map<string, number>()
+
+  function truncate(s: string): string {
+    if (s.length <= maxLen) return s
+    return s.substring(0, Math.max(0, maxLen - ch.length)) + ch
+  }
+
   return function get(key: string): string {
-    const uid = key.length <= maxLen ? key : `${key.substring(0, maxLen - ch.length - 2)}${ch}`
-    if (takenUids[uid]) return get(`${uid}_${takenUids[uid]++}`)
-    takenUids[uid] = 1
-    return uid
+    const base = truncate(key)
+    const count = takenUids.get(base)
+    if (count === undefined) {
+      takenUids.set(base, 1)
+      return base
+    }
+
+    // On collision, reserve space for the `_N` suffix inside maxLen and retry.
+    const suffix = `_${count}`
+    const headroom = Math.max(1, maxLen - suffix.length - ch.length)
+    const candidate = truncate(key.substring(0, headroom)) + suffix
+    takenUids.set(base, count + 1)
+    return takenUids.has(candidate) ? get(key) : (takenUids.set(candidate, 1), candidate)
   }
 }
 
@@ -268,9 +291,9 @@ export function getIndex(mc = './'): ChapterIndex {
 }
 
 export function getChapters(mc = './'): Chapter[] {
-  const chapCwd = 'config/ftbquests/normal/chapters'
+  const chapCwd = resolve(mc, 'config/ftbquests/normal/chapters')
   const chaptersUids = getIndex(mc).index
-  const chapters = chaptersUids.map(uid => getChapter(uid)) as Chapter[]
+  const chapters = chaptersUids.map(uid => getChapter(uid, mc)) as Chapter[]
 
   // Add quests to chapters
   chapters.forEach(ch =>
@@ -278,7 +301,7 @@ export function getChapters(mc = './'): Chapter[] {
       = fast_glob.sync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
         .map(f => f.split(PATH_SEP_REGEX)[1].replace(SNBT_EXT_REGEX, ''))
         .filter(f => f !== 'chapter')
-        .map(uid => getQuest(ch.uid, uid))
+        .map(uid => getQuest(ch.uid, uid, mc))
   )
 
   return chapters

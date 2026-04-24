@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import process from 'node:process'
 
+import { fileURLToPath } from 'node:url'
 import fse from 'fs-extra'
 import { parse } from 'yaml'
 import yargs from 'yargs'
 
-import type { Config } from '.'
-
-import { findErrors } from '.'
+import { findErrors, parseConfig } from '.'
 
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
 
@@ -48,7 +47,7 @@ const argv = yargs(process.argv.slice(2))
   })
   .coerce('config', (f: string) => {
     if (!existsSync(f)) throw new Error(`${resolve(f)} doesnt exist. Provide correct path for with blacklist`)
-    return parse(readFileSync(f, 'utf8')) as Config
+    return parseConfig(parse(readFileSync(f, 'utf8')))
   })
   .parseSync()
 
@@ -60,7 +59,8 @@ function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
 }
 
-const unresolvedErrors = await findErrors(argv.log, argv.config as Config)
+// argv.config is always defined — yargs applies the default and coerce above.
+const unresolvedErrors = await findErrors(argv.log, argv.config!)
 
 if (unresolvedErrors.length)
   process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)

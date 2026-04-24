@@ -22,6 +22,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./minecraftinstance": {
+      "types": "./dist/minecraftinstance.d.ts",
+      "import": "./dist/minecraftinstance.mjs",
+      "require": "./dist/minecraftinstance.cjs"
     }
   },
   "main": "./dist/index.mjs",

@@ -1,3 +1,4 @@
+import process from 'node:process'
 import chalk from 'chalk'
 import { consola } from 'consola'
 import inquirer from 'inquirer'
@@ -7,15 +8,16 @@ import { Mod } from './Mod'
 import { selectMods } from './toggle'
 
 type Status = 'ignored' | 'suspective' | 'trusted'
+type StyleKey = Status | `${Status}_disabled`
 
 export const style = {
-  suspective         : chalk.rgb(197, 131, 56)('▗▖'), // '🟠',
-  suspective_disabled: chalk.rgb(83, 67, 30)('▗▖'), // '🟤',
-  trusted            : chalk.rgb(48, 146, 18)('▗▖'), // '🔵',
-  trusted_disabled   : chalk.rgb(12, 53, 18)('▗▖'), // '🟣',
-  ignored            : chalk.rgb(72, 112, 124)('▗▖'), // '⚫',
-  ignored_disabled   : chalk.rgb(30, 40, 43)('▗▖'), // '⚫',
-} as const
+  suspective         : chalk.rgb(197, 131, 56)('▗▖'),
+  suspective_disabled: chalk.rgb(83, 67, 30)('▗▖'),
+  trusted            : chalk.rgb(48, 146, 18)('▗▖'),
+  trusted_disabled   : chalk.rgb(12, 53, 18)('▗▖'),
+  ignored            : chalk.rgb(72, 112, 124)('▗▖'),
+  ignored_disabled   : chalk.rgb(30, 40, 43)('▗▖'),
+} as const satisfies Record<StyleKey, string>
 
 const modStatus = new Map<Mod, Status>()
 
@@ -41,7 +43,7 @@ export async function binary(mods: Mod[]) {
   while (true) {
     consola.log(drawMods(mods))
 
-    const {choice} = await inquirer.prompt<{choice: string}>([
+    const { choice } = await inquirer.prompt<{ choice: string }>([
       {
         type   : 'list',
         message: `Binary search, iteration #${iteration++}`,

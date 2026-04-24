@@ -1,10 +1,31 @@
+/**
+ * Branded numeric ID of a CurseForge addon (project).
+ * Use `asAddonID(n)` to construct from a plain number when you own the value.
+ */
+export type AddonID = number & { readonly __brand: 'AddonID' }
+
+/**
+ * Branded numeric ID of a specific file (release) of an addon.
+ */
+export type FileID = number & { readonly __brand: 'FileID' }
+
+/** Assert-cast a plain number into a branded AddonID. */
+export function asAddonID(n: number): AddonID {
+  return n as AddonID
+}
+
+/** Assert-cast a plain number into a branded FileID. */
+export function asFileID(n: number): FileID {
+  return n as FileID
+}
+
 export interface Minecraftinstance {
   allocatedMemory               : number
   baseModLoader                 : BaseModLoader
   cachedScans                   : any[]
   customAuthor                  : string
   fileDate                      : string
-  fileID                        : number
+  fileID                        : FileID
   gameTypeID                    : number
   gameVersion                   : string
   gameVersionFlavor?            : any
@@ -41,7 +62,7 @@ export interface Minecraftinstance {
 }
 
 export interface InstalledAddon {
-  addonID                      : number
+  addonID                      : AddonID
   authors                      : Author[]
   dateInstalled                : string
   dateLastUpdateAttempted      : string
@@ -86,14 +107,14 @@ export interface LatestFile {
   gameVersion              : string[]
   Hashes                   : Hash[]
   hasInstallScript         : boolean
-  id                       : number
+  id                       : FileID
   isAlternate              : boolean
   isAvailable              : boolean
   isCompatibleWithClient   : boolean
   isEarlyAccessContent     : boolean
   modules                  : Module[]
   packageFingerprint       : number
-  projectId                : number
+  projectId                : AddonID
   projectStatus            : number
   releaseType              : number
   restrictProjectFileAccess: number
@@ -112,14 +133,14 @@ export interface InstalledFile {
   gameVersion              : string[]
   Hashes                   : Hash[]
   hasInstallScript         : boolean
-  id                       : number
+  id                       : FileID
   isAlternate              : boolean
   isAvailable              : boolean
   isCompatibleWithClient   : boolean
   isEarlyAccessContent     : boolean
   modules                  : Module[]
   packageFingerprint       : number
-  projectId                : number
+  projectId                : AddonID
   projectStatus            : number
   releaseType              : number
   restrictProjectFileAccess: number
@@ -143,7 +164,7 @@ export interface Module {
 }
 
 export interface Dependency {
-  addonId: number
+  addonId: AddonID
   type   : number
 }
 

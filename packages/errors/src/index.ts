@@ -1,25 +1,39 @@
-export interface Config {
-  boundries?: {
-    from?: string
-    to?  : string
-  }
-  groupBy?: string[]
-  ignore  : string | string[]
-  match   : string
-  replace : { from: string, to: string }[]
-}
+import { naturalSort } from '@mctools/utils/natural-sort'
+import { z } from 'zod'
 
-function naturalSort(a: string, b: string) {
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+export const ConfigSchema = z.object({
+  boundries: z.object({
+    from: z.string().optional(),
+    to  : z.string().optional(),
+  }).optional(),
+  groupBy: z.array(z.string()).optional(),
+  ignore : z.union([z.string(), z.array(z.string())]),
+  match  : z.string(),
+  replace: z.array(z.object({
+    from: z.string(),
+    to  : z.string(),
+  })),
+})
+
+export type Config = z.infer<typeof ConfigSchema>
+
+/**
+ * Parse an unvalidated object (e.g. from YAML) into a Config. Throws a
+ * human-readable aggregate error on schema mismatch.
+ */
+export function parseConfig(raw: unknown): Config {
+  const res = ConfigSchema.safeParse(raw)
+  if (res.success) return res.data
+  const issues = res.error.issues
+    .map(i => `  - ${i.path.join('.') || '<root>'}: ${i.message}`)
+    .join('\n')
+  throw new Error(`Invalid errors config:\n${issues}`)
 }
 
 export async function findErrors(debugLogText: string, config: Config): Promise<string[]> {
-  // Remove all errors start when client load world
   if (config.boundries) {
     const from = config.boundries.from ? debugLogText.indexOf(config.boundries.from) : 0
     const to = config.boundries.to ? debugLogText.indexOf(config.boundries.to) : debugLogText.length
-    // if (from === -1) throw new Error('Starting text provided but can\'t be found')
-    // if (to === -1) throw new Error('Ending text provided but can\'t be found')
     debugLogText = debugLogText.substring(from !== -1 ? from : 0, to !== -1 ? to : undefined)
     if (debugLogText.length <= 0) throw new Error('After applying boundries, no log text left')
   }
@@ -62,25 +76,16 @@ export async function findErrors(debugLogText: string, config: Config): Promise<
 
   if (config.groupBy?.length) {
     const rgxs = config.groupBy.map(s => new RegExp(s, 'm'))
-    const groupFirstIndexes: number[] = Array.from({ length: rgxs.length })
-    const newResult: string[][] = result.map(() => [])
-    result
-      .forEach((s, i) => {
-        rgxs.some((rgx, j) => {
-          if (rgx.test(s)) {
-            if (groupFirstIndexes[j] !== undefined) {
-              newResult[groupFirstIndexes[j]].push(s)
-              return true
-            }
-            else {
-              groupFirstIndexes[j] = i
-              return false
-            }
-          }
-          return false
-        }) || newResult[i].push(s)
-      })
-    result = newResult.map(r => r.sort(naturalSort)).flat().filter(Boolean)
+    // Use Object.groupBy (Node 24+). Errors that match no regex are placed in
+    // their own identity buckets so their original order is preserved.
+    const grouped = Object.groupBy(result, (s, idx) => {
+      const matchIdx = rgxs.findIndex(rgx => rgx.test(s))
+      return matchIdx === -1 ? `__unmatched_${idx}` : `__group_${matchIdx}`
+    })
+    result = Object.values(grouped)
+      .map(arr => (arr as string[]).sort(naturalSort))
+      .flat()
+      .filter(Boolean)
   }
 
   return result

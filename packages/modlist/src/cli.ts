@@ -4,12 +4,13 @@ import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 
 import process from 'node:process'
 
+import { assertPath } from '@mctools/utils/args'
 import chalk from 'chalk'
 import fse from 'fs-extra'
+
 import yargs from 'yargs'
 
 import { generateModsList } from '.'
-import { assertPath } from '../../utils/src/args'
 
 const { readFileSync, writeFileSync, readJsonSync } = fse
 
@@ -117,7 +118,7 @@ if (!args.key) {
 }
 
 if (args.verbose) console.log('- Generating Modlist -')
-generateModsList(
+await generateModsList(
   args.mcinstance,
   args.old,
   args

@@ -1,44 +1,62 @@
-import { readFileSync } from 'node:fs'
+import type { Branch, ReducerConfig } from './config'
 
+import type { MCInstance } from './minecraftinstance'
+import type { ModdedAddon } from './Mod'
+import { readFileSync } from 'node:fs'
+import { naturalSort } from '@mctools/utils/natural-sort'
 import chalk from 'chalk'
 import { consola } from 'consola'
+
 import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
 import { join, resolve } from 'pathe'
 
-import type { Branch, ReducerConfig } from './config'
-import type { MCInstance } from './minecraftinstance'
-import type { ModdedAddon } from './Mod'
-
 import { DependencyLevel, Mod, purify } from './Mod'
 
-function naturalSort(a: string, b: string) {
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+/**
+ * Per-session cache used to deduplicate noisy warnings so the user only sees
+ * each unique problem once, even across multiple ModStore rebuilds.
+ * Pass the same cache to every ModStore in a session; create a fresh one in tests.
+ */
+export interface WarningCache {
+  missingDependency: Set<string>
+  multipleMatches  : Set<string>
+  noAddon          : Set<string>
+  noDependencies   : Set<string>
 }
 
+export function createWarningCache(): WarningCache {
+  return {
+    missingDependency: new Set(),
+    multipleMatches  : new Set(),
+    noAddon          : new Set(),
+    noDependencies   : new Set(),
+  }
+}
+
+/** Levenshtein gap below which a fuzzy filename match is considered ambiguous. */
+const FUZZY_AMBIGUITY_THRESHOLD = 5
+
 export class ModStore {
-  static loggedNoAddon = new Set<string>()
-  static loggedNoDependencies = new Set<string>()
-  static loggedMissingDependency = new Set<string>()
-  static loggedMultipleMatches = new Set<string>()
   readonly mods: Mod[]
 
   constructor(
     mcPath: string,
-    config: ReducerConfig
+    config: ReducerConfig,
+    private readonly warnings: WarningCache = createWarningCache()
   ) {
-    const mcInstance: MCInstance = JSON.parse(
+    const mcInstance = JSON.parse(
       readFileSync(join(mcPath, 'minecraftinstance.json'), 'utf8')
-    )
+    ) as MCInstance
 
     // Init mods
     const noAddonList: string[] = []
     Mod.modsPath = join(mcPath, 'mods')
     const fetchInModsDir = getFetchInModsDir(Mod.modsPath)
-    this.mods = [...new Set([
+    this.mods = Array.from(new Set([
       ...fetchInModsDir('*.jar?(.disabled)?(.disabled)?(.disabled)?(.disabled)'),
       ...fetchInModsDir('*.jar'),
-    ])].map((m) => {
+    ]), (m) => {
       const addon = findAddonByFilename(mcInstance.installedAddons, m)
       const mod = new Mod(m, addon)
       if (addon) addon.mod = mod
@@ -46,13 +64,13 @@ export class ModStore {
       return mod
     })
     if (noAddonList.length) {
-      const newEntries = noAddonList.filter(entry => !ModStore.loggedNoAddon.has(entry))
+      const newEntries = noAddonList.filter(entry => !this.warnings.noAddon.has(entry))
       if (newEntries.length > 0) {
         consola.warn({
           message   : `Found mods that don't have addon entry in ${chalk.underline('minecraftinstance.json')}`,
           additional: newEntries.join('\n'),
         })
-        newEntries.forEach(entry => ModStore.loggedNoAddon.add(entry))
+        newEntries.forEach(entry => this.warnings.noAddon.add(entry))
       }
     }
 
@@ -75,13 +93,13 @@ export class ModStore {
       deps.forEach(d => d.dependents.add(m))
     }
     if (noDependencies.size) {
-      const newEntries = [...noDependencies].filter(entry => !ModStore.loggedNoDependencies.has(entry))
+      const newEntries = [...noDependencies].filter(entry => !this.warnings.noDependencies.has(entry))
       if (newEntries.length > 0) {
         consola.warn({
           message   : 'Mods that have missing dependencies',
           additional: newEntries.sort().join('\n'),
         })
-        newEntries.forEach(entry => ModStore.loggedNoDependencies.add(entry))
+        newEntries.forEach(entry => this.warnings.noDependencies.add(entry))
       }
     }
 
@@ -92,9 +110,9 @@ export class ModStore {
       const d = this.findMod(dep)
       if (!d) {
         const key = `${m.fileName}-${dep}`
-        if (!ModStore.loggedMissingDependency.has(key)) {
+        if (!this.warnings.missingDependency.has(key)) {
           consola.warn(`Mod "${m.fileName}" must have dependencies [${dep}] but none found!`)
-          ModStore.loggedMissingDependency.add(key)
+          this.warnings.missingDependency.add(key)
         }
         continue
       }
@@ -125,9 +143,9 @@ export class ModStore {
     list.sort((a, b) => (a.addon?.name.length ?? 0) - (b.addon?.name.length ?? 0))
     if (list.length > 1) {
       const key = `${modRegexp}-${list.map(m => m.fileName).join(',')}`
-      if (!ModStore.loggedMultipleMatches.has(key)) {
+      if (!this.warnings.multipleMatches.has(key)) {
         consola.warn(`Multiple matches of mod "${modRegexp}" ${list.map(m => `[${m.addon?.name ?? ''}] ${m.fileName}`).join('\n')}`)
-        ModStore.loggedMultipleMatches.add(key)
+        this.warnings.multipleMatches.add(key)
       }
     }
     return list[0]
@@ -165,26 +183,26 @@ export function getFetchInModsDir(mods: string) {
   return fetchInModsDir
 }
 
-function findAddonByFilename(addons: ModdedAddon[], fileName: string) {
+function findAddonByFilename(addons: ModdedAddon[], fileName: string): ModdedAddon | undefined {
   const pureName = purify(fileName)
 
-  let addon = addons.find(a =>
-    purify(a.installedFile.fileNameOnDisk) === pureName
-  )
-  if (addon) return addon
+  const exact = addons.find(a => purify(a.installedFile.fileNameOnDisk) === pureName)
+  if (exact) return exact
+
+  if (addons.length === 0) return undefined
 
   const levArr = addons
     .map(a => ({
       lev  : levenshtein.get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
       addon: a,
     }))
-    .sort(({ lev: a }, { lev: b }) => a - b)
+    .sort((a, b) => a.lev - b.lev)
 
-  if (levArr[1]?.lev - levArr[0]?.lev < 5) {
-    return
-  }
-  else {
-    addon = levArr[0]?.addon
-  }
-  return addon
+  const [best, second] = levArr
+
+  // If the second-best match is almost as close as the best, the fuzzy match is
+  // ambiguous and we'd rather return nothing than pick an arbitrary candidate.
+  if (second && second.lev - best.lev < FUZZY_AMBIGUITY_THRESHOLD) return undefined
+
+  return best.addon
 }

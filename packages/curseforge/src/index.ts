@@ -7,17 +7,34 @@
 
 import type { Ignore } from 'ignore'
 
-import process from 'node:process'
+import type { AddonID, InstalledAddon, Minecraftinstance } from './minecraftinstance.js'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
+import process from 'node:process'
 import CFV2 from 'curseforge-v2'
 import fse from 'fs-extra'
+
 import ignore from 'ignore'
 
-import type { InstalledAddon, Minecraftinstance } from './minecraftinstance'
+export { asAddonID, asFileID } from './minecraftinstance.js'
+export type { AddonID, FileID } from './minecraftinstance.js'
 
 const { readJsonSync, writeJsonSync } = fse
 const { CFV2Client } = CFV2
 type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
+
+const DEFAULT_CACHE_PATH = join(homedir(), '.cache', 'mctools', 'curseforge-mods.json')
+let cachePathOverride: string | undefined
+
+/** Override the file the CF mod cache reads/writes. Defaults to `~/.cache/mctools/curseforge-mods.json`. */
+export function setCachePath(path: string): void {
+  cachePathOverride = path
+}
+
+function getCachePath(): string {
+  return cachePathOverride ?? process.env.MCTOOLS_CF_CACHE ?? DEFAULT_CACHE_PATH
+}
 
 /**
  * Get mod information from CurseForge, such as name, summary, download count, etc.
@@ -33,14 +50,13 @@ export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96
   const result: CFV2.CF2Addon[] = []
   const fromCFIds: number[] = []
 
-  const cachePath = '~cf_cache.json'
+  const cachePath = getCachePath()
   let cacheObj: Record<number, ModCached>
 
   try {
-    cacheObj = readJsonSync(cachePath)
+    cacheObj = readJsonSync(cachePath) as Record<number, ModCached>
   }
-  // eslint-disable-next-line unused-imports/no-unused-vars
-  catch (error) {
+  catch {
     cacheObj = {}
   }
 
@@ -53,11 +69,13 @@ export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96
 
   const cfLoaded = await loadFromCF(fromCFIds, cfApiKey)
 
-  // Update cached values
   cfLoaded.forEach((mod) => {
     cacheObj[mod.id] = { __lastUpdated: Date.now(), ...mod }
   })
-  if (cfLoaded.length) writeJsonSync(cachePath, cacheObj)
+  if (cfLoaded.length) {
+    fse.mkdirpSync(join(cachePath, '..'))
+    writeJsonSync(cachePath, cacheObj)
+  }
 
   return modIds.map(
     id => result.find(a => a.id === id) ?? cfLoaded.find(a => a.id === id) as CFV2.CF2Addon
@@ -76,18 +94,20 @@ function cachedMod(cached: ModCached, timeout: number): CFV2.CF2Addon | undefine
   return result
 }
 
-let cf: CFV2.CFV2Client
+let cachedClient: { key: string, client: CFV2.CFV2Client } | undefined
 
 async function loadFromCF(modIds: number[], cfApiKey: string): Promise<CFV2.CF2Addon[]> {
   if (!modIds.length) return []
 
-  // Get from Web and update cache
-  const mods = (await (cf ??= new CFV2Client({
-    apiKey: cfApiKey,
-  })).getMods({ modIds })).data?.data
+  // Rebuild client whenever API key changes — otherwise subsequent calls would
+  // silently reuse the first key ever passed in, masking credential swaps.
+  if (!cachedClient || cachedClient.key !== cfApiKey)
+    cachedClient = { key: cfApiKey, client: new CFV2Client({ apiKey: cfApiKey }) }
+
+  const mods = (await cachedClient.client.getMods({ modIds })).data?.data
 
   if (!mods || !mods.length)
-    throw new Error(`Cant fetch mods for IDs: ${modIds}`)
+    throw new Error(`Cant fetch mods for IDs: ${modIds.join(', ')}`)
 
   return mods
 }
@@ -100,7 +120,7 @@ function keyBy<T extends { [key: string]: any }>(arr: T[], key: keyof T) {
 
 type IgnoreArgument = Parameters<Ignore['add']>[0]
 
-function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument) {
+function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument): Set<AddonID> {
   const ignoredByUnavaliable = mci.installedAddons.filter(
     // Unavailable like Optifine or Nutrition
     addon => !addon.installedFile?.isAvailable
@@ -108,9 +128,9 @@ function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument) {
 
   if (!ignoreArg) return new Set(ignoredByUnavaliable.map(addon => addon.addonID))
 
-  const ignoring = ignore().add(ignoreArg)
+  const ignoring = (ignore as unknown as () => Ignore)().add(ignoreArg)
   const ignoredByDevonly = mci.installedAddons.filter(addon =>
-    ignoring.ignores(`mods/${addon?.fileNameOnDisk}`)
+    ignoring.ignores(`mods/${addon?.installedFile?.fileNameOnDisk}`)
   )
 
   return new Set(
@@ -119,29 +139,20 @@ function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument) {
 }
 
 /**
- * Load minecraftinstance.json file from disk, filtering unavailable or ignored mods
- * @param mci Json object of `minecraftinstance.json`
- * @param ignore .gitignore-like file content with mods to ignore.
+ * Load a filtered view of a minecraftinstance.json object.
  *
- * For example, `ignore` contains 3 lines:
- * ```ts
- * const mci = loadMCInstanceFiltered(mciPath, `
- *   scripts/debug
- *   config/FBP/*
- *   mods/tellme-*
- * `)
- * ```
- * Since it have line `mods/tellme-*` in it, mod `tellme-1.12.2-0.7.0.jar` would be removed from result.
- * @returns Same `minecraftinstance` object but without unavailable on CF mods like Optifine or Nutrition.
+ * Returns a shallow-cloned instance with `installedAddons` narrowed to
+ * on-CF, non-ignored mods. The original `mci` is not mutated.
+ *
+ * @param mci Parsed `minecraftinstance.json`.
+ * @param ignore .gitignore-like content — mods matching these patterns (by `mods/<file>`) are excluded.
  */
-export function loadMCInstanceFiltered(mci: Minecraftinstance, ignore?: IgnoreArgument) {
+export function loadMCInstanceFiltered(mci: Minecraftinstance, ignore?: IgnoreArgument): Minecraftinstance {
   const ignoredModIds = getIgnoredModIds(mci, ignore)
-
-  mci.installedAddons = mci.installedAddons.filter(
-    a => !ignoredModIds?.has(a.addonID)
-  )
-
-  return mci
+  return {
+    ...mci,
+    installedAddons: mci.installedAddons.filter(a => !ignoredModIds.has(a.addonID)),
+  }
 }
 
 /**
@@ -173,9 +184,6 @@ export interface ModsComparsion extends ModsUnion {
   /** Intersection, mods that present in both instances */
   both?: InstalledAddon[]
 
-  // /** Array of mods with same file ID but different file sizes */
-  // changed?: AddonDifference[]
-
   /** Mods that exist in old, but absent in new */
   removed?: InstalledAddon[]
 
@@ -184,58 +192,44 @@ export interface ModsComparsion extends ModsUnion {
 }
 
 /**
- * Compare two minecraftinstance.json files and output differences between them
- * @param fresh Json object from `minecraftinstance.json` of current version
- * @param old   Json object from `minecraftinstance.json` of previous version.
- * @param ignore .gitignore-like file content with mods to ignore.
- * Useful for dev-only mods that should not be included in result.
- * @returns Result of comparsion.
- * if `old` is omited, returns only `union` field.
+ * Collect the full set of addons from a single minecraftinstance, after
+ * applying the same `.gitignore`-style filter as {@link modListDiff}.
+ *
+ * Use this when you don't have a previous instance to compare against.
  */
-// export function modList<T extends Minecraftinstance | undefined = undefined>(
-//   fresh: Minecraftinstance,
-//   old?: T,
-//   ignore?: IgnoreArgument
-// ): T extends undefined ? { union: InstalledAddon[] } : ModsComparsion {
-export function modList(fresh: Minecraftinstance, old?: undefined, ignore?: IgnoreArgument): ModsUnion
-export function modList(fresh: Minecraftinstance, old?: Minecraftinstance, ignore?: IgnoreArgument): ModsComparsion
-export function modList(fresh: Minecraftinstance, old?: Minecraftinstance | undefined, ignore?: IgnoreArgument): ModsComparsion | ModsUnion {
-  const B = loadMCInstanceFiltered(fresh, ignore).installedAddons
-  if (!old) return { union: B }
+export function modListUnion(fresh: Minecraftinstance, ignore?: IgnoreArgument): ModsUnion {
+  return { union: loadMCInstanceFiltered(fresh, ignore).installedAddons }
+}
 
+/**
+ * Compare two minecraftinstance.json snapshots and return a full breakdown
+ * (`added`, `removed`, `both`, `updated`, plus the total `union`).
+ *
+ * Use this when you have the previous version to diff against, typically for
+ * generating a changelog.
+ */
+export function modListDiff(
+  fresh: Minecraftinstance,
+  old: Minecraftinstance,
+  ignore?: IgnoreArgument
+): ModsComparsion {
+  const B = loadMCInstanceFiltered(fresh, ignore).installedAddons
   const A = loadMCInstanceFiltered(old, ignore).installedAddons
 
   const map_A = keyBy(A, 'addonID')
   const map_B = keyBy(B, 'addonID')
   const map_union = { ...map_A, ...map_B }
 
-  const result: ModsComparsion = {
-    union  : Object.values(map_union),
-    both   : B.filter(o => map_A[o.addonID]),
-    added  : B.filter(o => !map_A[o.addonID]),
-    removed: A.filter(o => !map_B[o.addonID]),
-  }
-
-  result.updated = result.both
-    ?.filter(o => map_A[o.addonID].installedFile?.id !== o.installedFile?.id)
+  const both = B.filter(o => map_A[o.addonID])
+  const updated = both
+    .filter(o => map_A[o.addonID]?.installedFile?.id !== o.installedFile?.id)
     .map(o => ({ now: o, was: map_A[o.addonID] }))
 
-  // result.changed = result.both
-  //   ?.filter((old) => {
-  //     const fresh = map_A[old.addonID]
-  //     return fresh.installedFile?.id === old.installedFile?.id
-  //       && (
-  //         fresh.installedFile?.fileLength !== old.installedFile?.fileLength
-  //         || fresh.installedFile?.fileNameOnDisk !== old.installedFile?.fileNameOnDisk
-  //       )
-  //   })
-  //   .map(o => ({ now: o, was: map_A[o.addonID] }))
-
-  return result
+  return {
+    union  : Object.values(map_union),
+    both,
+    added  : B.filter(o => !map_A[o.addonID]),
+    removed: A.filter(o => !map_B[o.addonID]),
+    updated,
+  }
 }
-
-/*
-const a = modList({} as any)
-const b = modList({} as any, {} as Minecraftinstance)
-const c = modList({} as any, undefined)
- */

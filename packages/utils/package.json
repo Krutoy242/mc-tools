@@ -23,6 +23,31 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./natural-sort": {
+      "types": "./dist/natural-sort.d.ts",
+      "import": "./dist/natural-sort.mjs",
+      "require": "./dist/natural-sort.js"
+    },
+    "./args": {
+      "types": "./dist/args.d.ts",
+      "import": "./dist/args.mjs",
+      "require": "./dist/args.js"
+    },
+    "./lang": {
+      "types": "./dist/lang.d.ts",
+      "import": "./dist/lang.mjs",
+      "require": "./dist/lang.js"
+    },
+    "./ftbquests": {
+      "types": "./dist/mods/ftbquests.d.ts",
+      "import": "./dist/mods/ftbquests.mjs",
+      "require": "./dist/mods/ftbquests.js"
+    },
+    "./tellme": {
+      "types": "./dist/mods/tellme.d.ts",
+      "import": "./dist/mods/tellme.mjs",
+      "require": "./dist/mods/tellme.js"
     }
   },
   "main": "./dist/index.mjs",
@@ -39,13 +64,36 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "consola": "^3.1.0",
+  "peerDependencies": {
+    "csv-parse": "^5.0.0",
     "ftbq-nbt": "^1.4.1",
-    "typescript-memoize": "^1.1.1",
+    "tinyglobby": "^0.2.0",
     "yargs": "^17.7.1"
   },
+  "peerDependenciesMeta": {
+    "csv-parse": {
+      "optional": true
+    },
+    "ftbq-nbt": {
+      "optional": true
+    },
+    "tinyglobby": {
+      "optional": true
+    },
+    "yargs": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "consola": "^3.1.0",
+    "fast-glob": "^3.2.12",
+    "typescript-memoize": "^1.1.1"
+  },
   "devDependencies": {
-    "@types/yargs": "^17.0.24"
+    "@types/yargs": "^17.0.24",
+    "csv-parse": "^5.3.8",
+    "ftbq-nbt": "^1.4.1",
+    "tinyglobby": "^0.2.14",
+    "yargs": "^17.7.1"
   }
 }

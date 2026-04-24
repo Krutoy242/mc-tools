@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, parse, resolve } from 'node:path'
-
-import { parse as csvParseSync } from 'csv-parse/sync'
-import fast_glob from 'fast-glob'
-import yargs from 'yargs'
-
 import type { TweakName, TweakObj } from '.'
 import type { MatTraits } from './traits'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+
+import { dirname, join, parse, resolve } from 'node:path'
+import process from 'node:process'
+import { assertPath } from '@mctools/utils/args'
+import { parse as csvParseSync } from 'csv-parse/sync'
+
+import fast_glob from 'fast-glob'
+import yargs from 'yargs'
 
 import { genStatsTable, getLookup, parseStats } from '.'
 import { parseTraits } from './traits'
@@ -16,10 +18,6 @@ import { parseTraits } from './traits'
 /* =============================================
 =                Arguments                    =
 ============================================= */
-function assertPath(f: string, errorText?: string) {
-  if (existsSync(f)) return f
-  throw new Error(`${resolve(f)} ${errorText ?? 'doesnt exist. Provide correct path.'}`)
-}
 
 const argv = yargs(process.argv.slice(2))
   .alias('h', 'help')
@@ -92,7 +90,7 @@ function parseTweaks(tweaksPath: string) {
   })
 }
 
-(async () => {
+void (async () => {
   console.log('[1/3] Loading configs')
   const tweakerconstruct_cfg_path = resolve(argv.mc, 'config/tweakersconstruct.cfg')
   let newConfig = readFileSync(tweakerconstruct_cfg_path, 'utf8')
@@ -113,8 +111,7 @@ function parseTweaks(tweaksPath: string) {
     for (const [mat, parts] of Object.entries(traits)) {
       for (const [part, traitIds] of Object.entries(parts)) {
         (traitPower[mat] ??= {})[part] ??= 0
-        traitPower[mat][part] += [...traitIds]
-          .map(id => traitMap[id])
+        traitPower[mat][part] += Array.from(traitIds, id => traitMap[id])
           .reduce((a, b) => (a || 0) + (b || 0), 0)
       }
     }

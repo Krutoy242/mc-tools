@@ -32,30 +32,38 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build": "pnpm run build:readme && pnpm -r run build",
     "build:readme": "tsx scripts/build/readme.ts",
     "test": "pnpm -r run test",
-    "release:all": "pnpm -r --workspace-concurrency=1 exec -- npx --no-install semantic-release -e semantic-release-monorepo"
+    "release:all": "pnpm -r --workspace-concurrency=1 exec -- npx --no-install semantic-release -e semantic-release-monorepo",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "consola": "^3.4.2",
+    "ftbq-nbt": "^1.4.1",
+    "handlebars": "^4.7.9",
+    "lint-staged": "^15.5.2",
+    "sanitize-filename": "^1.6.4",
+    "semantic-release": "^24.2.9",
+    "semantic-release-monorepo": "^8.0.2",
+    "ts-deepmerge": "^7.0.3",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^6.0.3",
+    "unbuild": "^3.6.1",
+    "vitest": "^3.2.4",
+    "yargs": "^18.0.0"
+  },
+  "lint-staged": {
+    "packages/*/package.json": "node merge_jsons.js",
+    "*.{ts,tsx,js,mjs,cjs}": "eslint --fix --no-warn-ignored"
   },
   "workspaces": [
     "packages/*"
-  ],
-  "devDependencies": {
-    "@types/lodash": "^4.17.20",
-    "@types/node": "^18.19.117",
-    "consola": "^3.4.2",
-    "ftbq-nbt": "^1.4.1",
-    "handlebars": "^4.7.8",
-    "sanitize-filename": "^1.6.3",
-    "semantic-release": "^24.2.6",
-    "semantic-release-monorepo": "^8.0.2",
-    "ts-deepmerge": "^7.0.3",
-    "typedoc": "^0.28.7",
-    "typedoc-plugin-markdown": "^4.7.0",
-    "typescript": "^5.8.3",
-    "unbuild": "^3.5.0",
-    "vitest": "^3.2.4",
-    "yargs": "^18.0.0"
-  }
+  ]
 }

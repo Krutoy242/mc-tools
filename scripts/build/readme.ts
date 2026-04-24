@@ -35,7 +35,7 @@ const  mainReadmeUpdated = mainReadmeContent.replace(
   // eslint-disable-next-line regexp/no-super-linear-backtracking
   /(?<pre><!--\s*eval:start\s*(?<code>[\s\S]*?)-->[\r\n]*)[\s\S]*?(?<post>[\r\n]*<!--\s*eval:end\s*-->)/g,
   (...match) => {
-    const {pre, post, code} = match.pop()
+    const { pre, post, code } = match.pop()
     let output = ''
     try {
       // eslint-disable-next-line no-new-func
@@ -61,7 +61,7 @@ writeFileSync(mainReadmePath,  mainReadmeUpdated)
 const packages = fast_glob
   .sync('packages/*/package.json')
   .map(f => ({
-    name   : parse(f).dir.split(/\/|\\/g).pop(),
+    name   : parse(f).dir.split(/\/|\\/).pop(),
     package: readJSONSync(f),
   }))
 

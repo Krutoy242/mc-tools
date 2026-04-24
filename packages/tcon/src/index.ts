@@ -1,15 +1,15 @@
-import { getBorderCharacters, table } from 'table'
-
 import type { MatTraits } from './traits'
 
+import { getBorderCharacters, table } from 'table'
+
 /** Names of config entries from `tweakerconstruct.cfg` */
-export type TweakName =
-  'Armory Stat Tweaks'
-  | 'Arrow Shaft Stat Tweaks'
-  | 'Bowstring Stat Tweaks'
-  | 'Fletching Stat Tweaks'
-  | 'Stat Tweaks'
-  | 'Trait tweaks'
+export type TweakName
+  = 'Armory Stat Tweaks'
+    | 'Arrow Shaft Stat Tweaks'
+    | 'Bowstring Stat Tweaks'
+    | 'Fletching Stat Tweaks'
+    | 'Stat Tweaks'
+    | 'Trait tweaks'
 
 const partGroups = {
   'Armory Stat Tweaks'     : ['core', 'plates', 'trim'],
@@ -17,7 +17,7 @@ const partGroups = {
   'Bowstring Stat Tweaks'  : ['bowstring'],
   'Fletching Stat Tweaks'  : ['fletching'],
   'Stat Tweaks'            : ['head', 'projectile', 'handle', 'extra', 'bow'],
-}
+} as const satisfies Partial<Record<TweakName, readonly string[]>>
 
 /** Structure of custom tweaking files */
 export interface TweakObj {

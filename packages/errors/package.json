@@ -21,8 +21,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs"
     }
   },
   "main": "./dist/index.mjs",
@@ -39,9 +38,11 @@
     "build:demo": "mkdir -p \"$(bat --config-dir)/syntaxes\" && cp scripts/debug.log.sublime-syntax \"$(bat --config-dir)/syntaxes/\" && bat cache --build && echo -e '--theme=\"TwoDark\"\n--wrap=never\n--map-syntax=\"*debug.log:Minecraft Log\"' > \"$(bat --config-file)\" && expect scripts/demo.sh"
   },
   "dependencies": {
+    "@mctools/utils": "workspace:*",
     "fs-extra": "^11.1.1",
     "yaml": "^2.2.2",
-    "yargs": "^17.7.1"
+    "yargs": "^17.7.1",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/yargs": "^17.0.24"

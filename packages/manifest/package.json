@@ -14,10 +14,10 @@
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
-    "ci",
-    "cli",
     "minecraft",
-    "tools"
+    "tools",
+    "ci",
+    "cli"
   ],
   "exports": {
     ".": {
@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@mctools/curseforge": "workspace:*",
+    "@mctools/utils": "workspace:*",
     "fs-extra": "^11.1.1",
     "yargs": "^17.7.1"
   },

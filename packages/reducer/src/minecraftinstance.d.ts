@@ -1,10 +1,14 @@
+import type { AddonID, FileID } from '@mctools/curseforge/minecraftinstance'
+
+export type { AddonID, FileID }
+
 export interface MCInstance {
   allocatedMemory               : number
   baseModLoader                 : BaseModLoader
   cachedScans                   : any[]
   customAuthor                  : string
   fileDate                      : string
-  fileID                        : number
+  fileID                        : FileID
   gameTypeID                    : number
   gameVersion                   : string
   gameVersionFlavor?            : any
@@ -37,13 +41,13 @@ export interface MCInstance {
   preferenceShowAddOnInfo       : boolean
   preferenceUploadProfile       : boolean
   profileImagePath              : string
-  projectID                     : number
+  projectID                     : AddonID
   syncProfile                   : SyncProfile
   wasNameManuallyChanged        : boolean
 }
 
 export interface InstalledAddon {
-  addonID                      : number
+  addonID                      : AddonID
   dateInstalled                : string
   dateLastUpdateAttempted      : string
   dateUpdated                  : string
@@ -80,7 +84,7 @@ export interface InstalledFile {
   gameVersionId?            : number
   gameVersionMappingId?     : number
   hasInstallScript          : boolean
-  id                        : number
+  id                        : FileID
   isAlternate               : boolean
   isAvailable               : boolean
   isCompatibleWithClient    : boolean
@@ -88,7 +92,7 @@ export interface InstalledFile {
   modules                   : Module[]
   packageFingerprint        : number
   packageFingerprintId?     : number
-  projectId                 : number
+  projectId                 : AddonID
   projectStatus             : number
   releaseType               : number
   renderCacheId?            : number
@@ -112,8 +116,8 @@ export interface Module {
 }
 
 export interface Dependency {
-  addonId: number
-  fileId?: number
+  addonId: AddonID
+  fileId?: FileID
   id?    : number
   type   : 0 | 1 | 2 | 3 | 4
 }

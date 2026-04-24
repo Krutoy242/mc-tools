@@ -1,0 +1,5 @@
+#!/bin/sh
+# Repo-local git hook. Activated via `core.hooksPath=.githooks`
+# (set by the `prepare` npm script). Works in submodules and worktrees,
+# unlike .git/hooks which may not be a writable directory in those layouts.
+exec pnpm exec lint-staged

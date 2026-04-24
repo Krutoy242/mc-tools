@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 
+import process from 'node:process'
+import { assertPath } from '@mctools/utils/args'
 import fse from 'fs-extra'
 import yargs from 'yargs'
 
 import { generateManifest } from '.'
-import { assertPath } from '../../utils/src/args'
 
 const { readFileSync } = fse
 
 const args = yargs(process.argv.slice(2))
-  .scriptName('@mctools/curseforge')
+  .scriptName('@mctools/manifest')
   .alias('h', 'help')
   .detectLocale(false)
   .strict()
@@ -36,7 +37,39 @@ const args = yargs(process.argv.slice(2))
     describe: 'Path to minecraftinstance.json',
     default : 'minecraftinstance.json',
   })
+  .option('name', {
+    type    : 'string',
+    describe: 'Override pack name (default: autodetect from cwd)',
+  })
+  .option('mc-version', {
+    type    : 'string',
+    describe: 'Override Minecraft version (default: autodetect from minecraftinstance.json/debug.log)',
+  })
+  .option('project-id', {
+    type    : 'number',
+    describe: 'Override CurseForge project ID (default: read from existing manifest.json)',
+  })
+  .option('pack-version', {
+    type    : 'string',
+    describe: 'Pack version to write into manifest',
+  })
+  .option('postfix', {
+    type    : 'string',
+    describe: 'Suffix for output file: manifest<postfix>.json',
+  })
   .parseSync()
 
 if (args.verbose) console.log('- Generating manifest -')
-generateManifest(args.mcinstance, args)
+generateManifest(args.mcinstance, {
+  ignore     : args.ignore,
+  key        : args.key,
+  name       : args.name,
+  mcVersion  : args['mc-version'],
+  projectID  : args['project-id'],
+  packVersion: args['pack-version'],
+  postfix    : args.postfix,
+  verbose    : args.verbose,
+}).catch((err: Error) => {
+  process.stderr.write(`${err.message}\n`)
+  process.exit(1)
+})

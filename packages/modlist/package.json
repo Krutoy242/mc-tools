@@ -13,11 +13,11 @@
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
+    "minecraft",
+    "tools",
     "ci",
     "cli",
-    "lib",
-    "minecraft",
-    "tools"
+    "lib"
   ],
   "exports": {
     ".": {
@@ -31,8 +31,8 @@
   "types": "./dist/index.d.ts",
   "bin": "./dist/cli.mjs",
   "files": [
-    "*.hbs",
-    "dist"
+    "dist",
+    "*.hbs"
   ],
   "scripts": {
     "build": "unbuild",
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@mctools/curseforge": "workspace:*",
+    "@mctools/utils": "workspace:*",
     "chalk": "^5.3.0",
     "fs-extra": "^11.1.1",
     "handlebars": "^4.7.7",

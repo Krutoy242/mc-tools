@@ -1,31 +1,31 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2023",
     "jsx": "preserve",
-    "lib": ["esnext"],
-    "noLib": false,
-    "emitDecoratorMetadata": true,
+    "lib": ["ES2023"],
     "experimentalDecorators": true,
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "paths": {
-      "@mctools/utils/*": ["./packages/utils/src/*"],
-      "@mctools/curseforge/*": ["./packages/curseforge/src/*"]
+      "@mctools/utils": ["./packages/utils/src/index.ts"],
+      "@mctools/utils/natural-sort": ["./packages/utils/src/natural-sort.ts"],
+      "@mctools/utils/args": ["./packages/utils/src/args.ts"],
+      "@mctools/utils/lang": ["./packages/utils/src/lang.ts"],
+      "@mctools/utils/ftbquests": ["./packages/utils/src/mods/ftbquests.ts"],
+      "@mctools/utils/tellme": ["./packages/utils/src/mods/tellme.ts"],
+      "@mctools/curseforge": ["./packages/curseforge/src/index.ts"],
+      "@mctools/curseforge/minecraftinstance": ["./packages/curseforge/src/minecraftinstance.ts"]
     },
     "resolveJsonModule": true,
     "strict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": false,
-    "declaration": true,
-    "outDir": "dist",
-    "removeComments": true,
-    "sourceMap": true,
-    "allowSyntheticDefaultImports": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "skipDefaultLibCheck": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "exclude": ["**/node_modules", "**/*/dist"]
+  "include": ["packages/*/src/**/*", "packages/*/*.ts"],
+  "exclude": ["**/node_modules", "**/dist"]
 }
