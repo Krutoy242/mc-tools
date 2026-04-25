@@ -10,9 +10,9 @@
 # ##############################
 
 # We can cut only partial of log if we dont want to list all the errors
-boundries:
+boundaries:
   from:
-  to: '[Server thread' # Server thread started when player joining world
+  to: '\[Server thread' # Server thread started when player joining world
 
 # RegEx to match log.
 # Default confir matches all Warnings and Errors in debug.log

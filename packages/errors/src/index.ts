@@ -1,10 +1,13 @@
 import { naturalSort } from '@mctools/utils/natural-sort'
 import { z } from 'zod'
 
+// YAML's empty scalar parses to `null`, so accept it and normalize to undefined.
+const optStr = z.string().nullish().transform(v => v ?? undefined)
+
 export const ConfigSchema = z.object({
-  boundries: z.object({
-    from: z.string().optional(),
-    to  : z.string().optional(),
+  boundaries: z.object({
+    from: optStr,
+    to  : optStr,
   }).optional(),
   groupBy: z.array(z.string()).optional(),
   ignore : z.union([z.string(), z.array(z.string())]),
@@ -17,10 +20,19 @@ export const ConfigSchema = z.object({
 
 export type Config = z.infer<typeof ConfigSchema>
 
-/**
- * Parse an unvalidated object (e.g. from YAML) into a Config. Throws a
- * human-readable aggregate error on schema mismatch.
- */
+export interface CompiledConfig {
+  boundaries?: { from?: RegExp, to?: RegExp }
+  groupBy    : RegExp[]
+  ignoreFast : RegExp | null
+  match      : RegExp
+  replace    : { from: RegExp, to: string }[]
+}
+
+export interface FoundError {
+  text: string
+  line: number
+}
+
 export function parseConfig(raw: unknown): Config {
   const res = ConfigSchema.safeParse(raw)
   if (res.success) return res.data
@@ -30,63 +42,98 @@ export function parseConfig(raw: unknown): Config {
   throw new Error(`Invalid errors config:\n${issues}`)
 }
 
-export async function findErrors(debugLogText: string, config: Config): Promise<string[]> {
-  if (config.boundries) {
-    const from = config.boundries.from ? debugLogText.indexOf(config.boundries.from) : 0
-    const to = config.boundries.to ? debugLogText.indexOf(config.boundries.to) : debugLogText.length
-    debugLogText = debugLogText.substring(from !== -1 ? from : 0, to !== -1 ? to : undefined)
-    if (debugLogText.length <= 0) throw new Error('After applying boundries, no log text left')
+export function compileConfig(config: Config): CompiledConfig {
+  const ignoreList = Array.isArray(config.ignore) ? config.ignore : [config.ignore]
+  const nonEmpty = ignoreList.filter(p => p.length > 0)
+
+  return {
+    boundaries: config.boundaries && {
+      from: config.boundaries.from ? new RegExp(config.boundaries.from, 'm') : undefined,
+      to  : config.boundaries.to ? new RegExp(config.boundaries.to, 'm') : undefined,
+    },
+    groupBy   : (config.groupBy ?? []).map(s => new RegExp(s, 'm')),
+    ignoreFast: nonEmpty.length
+      ? new RegExp(nonEmpty.map(p => `(?:${p})`).join('|'), 'm')
+      : null,
+    match  : new RegExp(config.match, 'gm'),
+    replace: config.replace.map(r => ({ from: new RegExp(r.from, 'gm'), to: r.to })),
   }
+}
 
-  let result: string[] = []
+function isCompiled(c: Config | CompiledConfig): c is CompiledConfig {
+  return c.match instanceof RegExp
+}
 
-  const allErrors = [...debugLogText
-    .matchAll(new RegExp(config.match, 'gm'))]
+export function findErrors(debugLogText: string, config: Config | CompiledConfig): FoundError[] {
+  const c = isCompiled(config) ? config : compileConfig(config)
 
-  if (!allErrors.length) throw new Error('No error found, probably wrong Log file')
+  let from = 0
+  let to = debugLogText.length
+  if (c.boundaries?.from) {
+    const m = c.boundaries.from.exec(debugLogText)
+    if (!m) throw new Error(`Boundary 'from' not found: /${c.boundaries.from.source}/`)
+    from = m.index
+  }
+  if (c.boundaries?.to) {
+    c.boundaries.to.lastIndex = 0
+    const m = c.boundaries.to.exec(debugLogText.slice(from))
+    if (!m) throw new Error(`Boundary 'to' not found: /${c.boundaries.to.source}/`)
+    to = from + m.index
+  }
+  if (to <= from) throw new Error('After applying boundaries, no log text left')
 
-  const ignoreList = Array.isArray(config.ignore)
-    ? config.ignore
-    : [config.ignore]
-  const ignoreRegexps = ignoreList.map(l => new RegExp(l, 'm'))
+  const slice = debugLogText.slice(from, to)
+  const lineForOffset = makeLineLookup(debugLogText)
 
-  const replaces = config.replace.map(r => ({
-    ...r,
-    from: new RegExp(r.from, 'gm'),
-  }))
+  c.match.lastIndex = 0
+  const result: FoundError[] = []
+  for (const m of slice.matchAll(c.match)) {
+    let entry = m[0]
+    if (c.ignoreFast?.test(entry)) continue
 
-  for (let [res] of allErrors) {
-    const matchingIndices = ignoreRegexps
-      .map((r, i) => r.test(res) ? i : -1)
-      .filter(i => i !== -1)
-
-    if (matchingIndices.length > 1) {
-      console.warn('Warning: Multiple ignore patterns match the same error:\n')
-      console.warn(res)
-      console.warn('\nMatching patterns:\n')
-      for (const i of matchingIndices)
-        console.warn(`- ${ignoreList[i]}`)
+    const absOffset = m.index + from
+    for (const r of c.replace) {
+      r.from.lastIndex = 0
+      entry = entry.replace(r.from, r.to)
     }
-
-    if (matchingIndices.length > 0) continue
-
-    replaces.forEach(r => res = res.replace(r.from, r.to))
-    result.push(res)
+    result.push({ text: entry, line: lineForOffset(absOffset) })
   }
 
-  if (config.groupBy?.length) {
-    const rgxs = config.groupBy.map(s => new RegExp(s, 'm'))
-    // Use Object.groupBy (Node 24+). Errors that match no regex are placed in
-    // their own identity buckets so their original order is preserved.
-    const grouped = Object.groupBy(result, (s, idx) => {
-      const matchIdx = rgxs.findIndex(rgx => rgx.test(s))
-      return matchIdx === -1 ? `__unmatched_${idx}` : `__group_${matchIdx}`
-    })
-    result = Object.values(grouped)
-      .map(arr => (arr as string[]).sort(naturalSort))
-      .flat()
-      .filter(Boolean)
+  if (!c.groupBy.length) return result
+
+  const groups = new Map<number | string, FoundError[]>()
+  let unmatched = 0
+  for (const e of result) {
+    const idx = c.groupBy.findIndex(rgx => rgx.test(e.text))
+    const key = idx === -1 ? `u${unmatched++}` : idx
+    let bucket = groups.get(key)
+    if (!bucket) groups.set(key, bucket = [])
+    bucket.push(e)
   }
 
-  return result
+  const out: FoundError[] = []
+  for (const bucket of groups.values()) {
+    bucket.sort((a, b) => naturalSort(a.text, b.text))
+    for (const e of bucket) {
+      if (e.text) out.push(e)
+    }
+  }
+  return out
+}
+
+function makeLineLookup(text: string): (offset: number) => number {
+  const newlines: number[] = []
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) newlines.push(i)
+  }
+  return (offset) => {
+    let lo = 0
+    let hi = newlines.length
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1
+      if (newlines[mid] < offset) lo = mid + 1
+      else hi = mid
+    }
+    return lo + 1
+  }
 }

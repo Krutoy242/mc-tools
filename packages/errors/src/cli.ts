@@ -1,76 +1,51 @@
 #!/usr/bin/env node
 
-import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 
-import { fileURLToPath } from 'node:url'
-import fse from 'fs-extra'
-import { parse } from 'yaml'
-import yargs from 'yargs'
+import { defineCommand, runMain } from 'citty'
 
-import { findErrors, parseConfig } from './index.js'
+import { DEFAULT_CONFIG, run } from './runner.js'
 
-const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
-
-/* =============================================
-=                Arguments                    =
-============================================= */
-const argv = yargs(process.argv.slice(2))
-  .scriptName('@mctools/errors')
-  .alias('h', 'help')
-  .detectLocale(false)
-  .strict()
-  .version()
-  .wrap(null)
-  .option('output', {
-    alias    : 'o',
-    normalize: true,
-    describe : 'Path for output with errors. If not specified output into stdout.',
-  })
-  .option('log', {
-    alias    : 'l',
-    default  : 'logs/debug.log',
-    describe : 'debug.log file path (may need to be enabled by launcher)',
-    normalize: true,
-    coerce   : (f: string) => {
-      if (!existsSync(f)) throw new Error(`${resolve(f)} doesnt exist. Provide correct path for debug.log`)
-      const log = readFileSync(f, 'utf8')
-      if (log.length < 100) throw new Error(`${resolve(f)} exist but too short. Probably wrong file.`)
-      return log
+const main = defineCommand({
+  meta: {
+    name       : '@mctools/errors',
+    description: 'Scan debug.log file to find unknown errors',
+  },
+  args: {
+    output: {
+      type       : 'string',
+      alias      : 'o',
+      description: 'Path for output with errors. If not specified output into stdout.',
     },
-  })
-  .option('config', {
-    alias    : 'c',
-    describe : 'Path to .yml file with configs',
-    normalize: true,
-    default  : relative('config.yml'),
-  })
-  .coerce('config', (f: string) => {
-    if (!existsSync(f)) throw new Error(`${resolve(f)} doesnt exist. Provide correct path for with blacklist`)
-    return parseConfig(parse(readFileSync(f, 'utf8')))
-  })
-  .parseSync()
+    log: {
+      type       : 'string',
+      alias      : 'l',
+      default    : 'logs/debug.log',
+      description: 'debug.log file path (may need to be enabled by launcher)',
+    },
+    config: {
+      type       : 'string',
+      alias      : 'c',
+      default    : DEFAULT_CONFIG,
+      description: 'Path to .yml file with configs',
+    },
+  },
+  async run({ args }) {
+    try {
+      process.exitCode = await run({
+        log   : args.log,
+        config: args.config,
+        output: args.output,
+      })
+    }
+    catch (err) {
+      process.stderr.write(`${(err as Error).message}\n`)
+      process.exitCode = 2
+    }
+  },
+})
 
-/* =============================================
-=                                             =
-============================================= */
-
-function relative(relPath: string) {
-  return fileURLToPath(new URL(relPath, import.meta.url))
-}
-
-// argv.config is always defined — yargs applies the default and coerce above.
-const unresolvedErrors = await findErrors(argv.log, argv.config!)
-
-if (unresolvedErrors.length)
-  process.stdout.write(`Found ${unresolvedErrors.length} errors\n`)
-
-const text = unresolvedErrors.join('\n')
-
-if (argv.output) {
-  mkdirSync(dirname(argv.output), { recursive: true })
-  writeFileSync(argv.output, text)
-}
-else {
-  process.stdout.write(`${text}\n`)
-}
+runMain(main).catch((err: unknown) => {
+  process.stderr.write(`${(err as Error).message}\n`)
+  process.exitCode = 2
+})

@@ -21,7 +21,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     }
   },
   "main": "./dist/index.mjs",
@@ -35,17 +36,18 @@
     "build": "unbuild && cp -r src/*.yml dist",
     "coverage": "vitest run --coverage",
     "test": "vitest run",
+    "build:binary": "node scripts/build-sea.mjs",
     "build:demo": "mkdir -p \"$(bat --config-dir)/syntaxes\" && cp scripts/debug.log.sublime-syntax \"$(bat --config-dir)/syntaxes/\" && bat cache --build && echo -e '--theme=\"TwoDark\"\n--wrap=never\n--map-syntax=\"*debug.log:Minecraft Log\"' > \"$(bat --config-file)\" && expect scripts/demo.sh"
   },
   "dependencies": {
     "@mctools/utils": "workspace:*",
-    "fs-extra": "^11.1.1",
+    "citty": "^0.1.6",
     "yaml": "^2.2.2",
-    "yargs": "^17.7.1",
-    "zod": "^3.23.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.24"
+    "esbuild": "^0.25.0",
+    "postject": "^1.0.0-alpha.6"
   },
   "publishConfig": {
     "access": "public"
