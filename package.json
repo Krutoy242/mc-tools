@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
+    "@vitest/coverage-v8": "^3.2.4",
     "consola": "^3.4.2",
     "ftbq-nbt": "^1.4.1",
     "handlebars": "^4.7.9",

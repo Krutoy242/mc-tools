@@ -26,6 +26,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["packages/*/src/**/*", "packages/*/*.ts"],
+  "include": ["packages/*/src/**/*", "packages/*/*.ts", "packages/*/test/**/*"],
   "exclude": ["**/node_modules", "**/dist"]
 }
