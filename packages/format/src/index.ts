@@ -5,8 +5,8 @@ import process from 'node:process'
 import { consola } from 'consola'
 import { colors } from 'consola/utils'
 
-import { revertTS_to_ZS } from './parser'
-import { peggyParse } from './peggy'
+import { revertTS_to_ZS } from './parser.js'
+import { peggyParse } from './peggy.js'
 
 export function convertToTs(fileList: string[]) {
   return fileList.map((filePath) => {
@@ -26,13 +26,14 @@ export function convertToTs(fileList: string[]) {
     }
 
     // Convert
-    let converted
+    let converted: string
 
     try {
       process.stdout.write(` ${colors.green(colors.inverse('convert to ts'))}`)
       converted = peggyParse(fileContent)
     }
-    catch (error: any) {
+    catch (e: unknown) {
+      const error = e as { location: { start: { line: number, column: number } }, message: string }
       const line: number = error.location.start.line
       const column: number = error.location.start.column
       const lineText = fileContent.split('\n')[line - 1]
@@ -61,5 +62,5 @@ export function revert(source: string): string {
     // Remove debris
     .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S]+?\/\/ CONVERSION_DEBRIS\n*/g, '')
     // Remove escaped strings
-    .replace(/'(.*(\\'.*))'/g, (m, r) => `"${r.replace(/\\'/g, '\'')}"`)
+    .replace(/'(.*\\'.*)'/g, (m: string, r: string) => `"${r.replace(/\\'/g, '\'')}"`)
 }

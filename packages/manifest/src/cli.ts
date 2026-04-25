@@ -5,7 +5,7 @@ import { assertPath } from '@mctools/utils/args'
 import fse from 'fs-extra'
 import yargs from 'yargs'
 
-import { generateManifest } from '.'
+import { generateManifest } from './index.js'
 
 const { readFileSync } = fse
 

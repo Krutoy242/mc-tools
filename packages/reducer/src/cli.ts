@@ -3,8 +3,10 @@
 import { assertPath } from '@mctools/utils/args'
 import { defineCommand, runMain } from 'citty'
 
-import { main } from '.'
-import { description, name, version } from '../package.json'
+import pkg from '../package.json' with { type: 'json' }
+import { main } from './index.js'
+
+const { description, name, version } = pkg
 
 const mainCli = defineCommand({
   meta: {

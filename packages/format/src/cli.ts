@@ -7,8 +7,10 @@ import { defineCommand, runMain } from 'citty'
 import { consola } from 'consola'
 import { glob } from 'tinyglobby'
 
-import { convertToTs, revert } from '.'
-import { description, name, version } from '../package.json'
+import pkg from '../package.json' with { type: 'json' }
+import { convertToTs, revert } from './index.js'
+
+const { description, name, version } = pkg
 
 /* =============================================
 =                Arguments                    =

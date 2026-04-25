@@ -2,15 +2,16 @@
 
 import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 
-import process from 'node:process'
+import type { Argv } from 'yargs'
 
+import process from 'node:process'
 import { assertPath } from '@mctools/utils/args'
 import chalk from 'chalk'
-import fse from 'fs-extra'
 
+import fse from 'fs-extra'
 import yargs from 'yargs'
 
-import { generateModsList } from '.'
+import { generateModsList } from './index.js'
 
 const { readFileSync, writeFileSync, readJsonSync } = fse
 
@@ -29,7 +30,7 @@ const args = (yargs(process.argv.slice(2))
 Get one at https://console.curseforge.com/?#/api-keys.
 If omitted, environment variable \`CURSE_FORGE_API_KEY\` would be used instead.`),
     coerce: (f: string) => readFileSync(assertPath(f), 'utf8').trim(),
-  }) as yargs.Argv<{ key: string }>)
+  }) as Argv<{ key: string }>)
 
   .option('ignore', {
     alias   : 'i',
@@ -122,4 +123,4 @@ await generateModsList(
   args.mcinstance,
   args.old,
   args
-).then(content => writeFileSync(args.output, content))
+).then((content: string) => writeFileSync(args.output, content))

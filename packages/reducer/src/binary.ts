@@ -3,9 +3,9 @@ import chalk from 'chalk'
 import { consola } from 'consola'
 import inquirer from 'inquirer'
 
-import { splitTwo } from '.'
-import { Mod } from './Mod'
-import { selectMods } from './toggle'
+import { splitTwo } from './index.js'
+import { Mod } from './Mod.js'
+import { selectMods } from './toggle.js'
 
 type Status = 'ignored' | 'suspective' | 'trusted'
 type StyleKey = Status | `${Status}_disabled`
@@ -91,7 +91,7 @@ async function disableSecondHalf(mods: Mod[]): Promise<number> {
   const susMods = mods.filter(isSus)
   const enabledSusCount = () => susMods.filter(m => m.enabled).length
 
-  const [toDisable, toEnable] = splitTwo(mods, m => getStatus(m) === 'trusted' || enabledSusCount() > susMods.length / 2)
+  const [toDisable, toEnable] = splitTwo(mods, (m: Mod) => getStatus(m) === 'trusted' || enabledSusCount() > susMods.length / 2)
   return await Mod.disable(toDisable) + await Mod.enable(toEnable)
 }
 
@@ -140,7 +140,7 @@ function drawMods(mods: Mod[]) {
   const suspectCount = mods.length - trustedCount
   const ignoredCount = mods.filter(m => getStatus(m) === 'ignored').length
 
-  const legend = `Legend: ${['suspective', 'trusted', 'ignored']
+  const legend = `Legend: ${(['suspective', 'trusted', 'ignored'] as const)
     .map(k => `${chalk.gray(k)} ${style[k]}/${style[`${k}_disabled`]} (en/dis)`)
     .join(', ')}`
 

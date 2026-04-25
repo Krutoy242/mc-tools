@@ -48,7 +48,7 @@ function rgx(rgxString: RegExp | string, fn: GroupReplace | string): readonly [R
   // console.log('rgx :>> ', new RegExp(rgxString, 'gm'))
   return [
     typeof rgxString === 'string' ? new RegExp(rgxString, 'gm') : rgxString,
-    typeof fn === 'function' ? (_: string, ...args: any[]) => fn(args.pop()) : fn,
+    typeof fn === 'function' ? (_: string, ...args: unknown[]) => fn(args.pop() as Record<string, string>) : fn,
   ] as const
 }
 
@@ -70,9 +70,9 @@ const conversions: { [name: string]: ReplTuple } = {
   IMPORTS      : ['import(?: type)? (?<name>[^ ]+) from \'(?<from>[^\']+)\';', ({ from, name }) => `import ${from.replace(/^\.+\//gm, '')}${name !== from.split('.').pop() ? ` as ${name}` : ''};`],
   CAPTURES     : [/\$`(?<cap>[^`]+)`/g, ({ cap }) => `<${cap}>`],
   NUMBERPOSTFIX: [`(?<p>${Object.values(postfixTypes).join('|')})\\((?<num>${$.number})\\)`, ({ p, num }) => num + postfixNames[p]],
-  FOR_TO       : [/for \(let (?<v>.+?)\s*=\s*(?<from>.+?);\s*\k<v>\s*<\s*(?<to>.+?);\s*\k<v>\+\+\)\s*\{/g, ({ v, from, to }) => `for ${v} in ${from.match(/[^.\w()[\]?]/) ? `(${from})` : from} .. ${to} {`],
-  FOR_IN_ENTRS : [/for \(const \[(?<v>.+?)\] of (?<from>[\s\S]+?)\.entries\(\)\/\*\*\/\)\s*\{/g, ({ v, from }) => `for ${v} in ${from.trim()} {`],
-  FOR_IN       : [/for \(const (?<v>.+?) of (?<from>[\s\S]+?)\)\s*\{/g, ({ v, from }) => `for ${v} in ${from.trim()} {`],
+  FOR_TO       : [/for \(let (?<v>[^=\s]+)\s*=\s*(?<from>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\s*<\s*(?<to>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\+\+\)\s*\{/g, ({ v, from, to }) => `for ${v} in ${/[^.\w()[\]?]/.test(from) ? `(${from})` : from} .. ${to} {`],
+  FOR_IN_ENTRS : [/for \(const \[(?<v>[^\]]+)\] of (?<from>[\s\S]+?)\.entries\(\)\/\*\*\/\)\s*\{/g, ({ v, from }) => `for ${v} in ${(from).trim()} {`],
+  FOR_IN       : [/for \(const (?<v>\S+) of (?<from>[\s\S]+?)\)\s*\{/g, ({ v, from }) => `for ${v} in ${(from).trim()} {`],
   STATICS      : [/\/\* (static|global) \*\/\s*const/g, `$1`],
   REMOVE_DEBRIS: [/\/\* _ \*\/\s*./g, ''],
   WHILE_LOOP   : [/while \((.+)\) \{/g, 'while $1 {'],
@@ -85,8 +85,8 @@ const conversions: { [name: string]: ReplTuple } = {
   CONST        : [`\\/\\* \\$ \\*\\/const`, 'val'],
   LET          : [`\\/\\* \\$ \\*\\/let`, 'var'],
   LIST         : [/Array<(?<a>.+?)>/gi, ({ a }) => `[${a}]`],
-  DECORATOR    : [/@(?<a>\w+(\.\w+)*)\(\s*\)/g, ({ a }) => `#${a.split('.').join(' ')}`],
-  DECORATOR_OBJ: [/(?<s>[ \t]*)@(?<a>\w+(\.\w+)*)\((?<b>[\s\S]*?)\)\s*\/\* MIXIN_END \*\//g, ({ s, a, b }) => `${s}#${a.split('.').join(' ')} ${b.includes('\n') ? `\n${s}#` : ''}${b.replace(/\n(\s*)/g, (_, m) => `\n${s}#${m.substring(s.length)}`)}`],
+  DECORATOR    : [/@(?<a>\w+(\.\w+)*)\(\s*\)/g, ({ a }) => `#${(a).split('.').join(' ')}`],
+  DECORATOR_OBJ: [/(?<s>[ \t]*)@(?<a>\w+(\.\w+)*)\((?<b>[\s\S]*?)\)\s*\/\* MIXIN_END \*\//g, ({ s, a, b }) => `${s}#${(a).split('.').join(' ')} ${(b).includes('\n') ? `\n${s}#` : ''}${(b).replace(/\n(\s*)/g, (_, m: string) => `\n${s}#${m.substring((s).length)}`)}`],
   // LOADEDMODS      : [/loadedMods(?<a>[\s\n\r]*)\.(?<b>[\s\n\r]*)(?<name>[a-zA-Z]+)/gm, ({ name, a, b }) => `loadedMods${a}.${b}['${name}']`],
 }
 
@@ -95,7 +95,12 @@ export function revertTS_to_ZS(source: string) {
   const values = Object.values(conversions)
   values.forEach((c) => {
     const [from, to] = rgx(...c)
-    result = result.replace(from, to as any)
+    if (typeof to === 'string') {
+      result = result.replace(from, to)
+    }
+    else {
+      result = result.replace(from, to as (substring: string, ...args: unknown[]) => string)
+    }
   })
   return result
 }

@@ -7,6 +7,7 @@ Generate README.md files for main repo and packages
 import { exec, execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parse } from 'node:path'
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
@@ -34,19 +35,20 @@ const mainReadmeContent = readFileSync(mainReadmePath, 'utf8')
 const  mainReadmeUpdated = mainReadmeContent.replace(
   // eslint-disable-next-line regexp/no-super-linear-backtracking
   /(?<pre><!--\s*eval:start\s*(?<code>[\s\S]*?)-->[\r\n]*)[\s\S]*?(?<post>[\r\n]*<!--\s*eval:end\s*-->)/g,
-  (...match) => {
-    const { pre, post, code } = match.pop()
+  (...match: any[]) => {
+    const { pre, post, code } = match.pop() as { pre: string, post: string, code: string }
     let output = ''
     try {
-      // eslint-disable-next-line no-new-func
-      output = new Function(
+      const _Func: any = Function
+      // eslint-disable-next-line ts/no-unsafe-call, ts/no-unsafe-assignment
+      output = (new _Func(
         'fast_glob',
         'fse',
-        code.trim()
-      )(fast_glob, fse)
+        String(code).trim()
+      ))(fast_glob, fse)
     }
     catch (e) {
-      log(`Error in block\n${code}\n\n${e}`)
+      log(`Error in block\n${code}\n\n${String(e)}`)
     }
     return `${pre}${output}${post}`
   }
@@ -62,7 +64,7 @@ const packages = fast_glob
   .sync('packages/*/package.json')
   .map(f => ({
     name   : parse(f).dir.split(/\/|\\/).pop(),
-    package: readJSONSync(f),
+    package: readJSONSync(f) as { name: string, keywords: string[] },
   }))
 
 log(`Found ${chalk.green(packages.length)} packages`)

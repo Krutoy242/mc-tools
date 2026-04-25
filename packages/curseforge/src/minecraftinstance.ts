@@ -93,6 +93,7 @@ export interface InstalledAddon {
   tags                         : any[]
   thumbnailUrl                 : string
   webSiteURL                   : string
+  cf2Addon?                    : any
 }
 
 export interface LatestFile {

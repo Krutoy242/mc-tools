@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2023",
+    "target": "es2025",
     "jsx": "preserve",
-    "lib": ["ES2023"],
+    "lib": ["es2025"],
     "experimentalDecorators": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -26,6 +26,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["packages/*/src/**/*", "packages/*/*.ts", "packages/*/test/**/*"],
+  "include": ["packages/*/src/**/*", "packages/*/*.ts", "packages/*/test/**/*", "scripts/**/*"],
   "exclude": ["**/node_modules", "**/dist"]
 }

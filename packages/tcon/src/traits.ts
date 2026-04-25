@@ -1,4 +1,4 @@
-import { getLookup } from '.'
+import { getLookup } from './index.js'
 
 export interface MatTraits<T> { [matName: string]: { [toolPart: string]: T } }
 
@@ -20,22 +20,19 @@ export function parseTraits(
 
     const added = new Set<string>()
 
-    chunk.trim().split('\n')
-      .map(l => l.trim().match(
-        /^(?<mat>[^:\n]+):(?<part>[^:\n]+):(?<traits>.+)$/
-      )?.groups as { mat: string, part: string, traits: string }
-      )
-      .filter(Boolean)
-      .forEach((o) => {
-        o.traits.split(',').forEach((trait) => {
-          // Tweakerconstruct fully rewrite all materials traits
-          if (rewrite && !added.has(o.mat)) {
-            added.add(o.mat)
-            traits[o.mat] = {}
-          }
-          ((traits[o.mat] ??= {})[o.part] ??= new Set()).add(trait)
-        })
+    chunk.trim().split('\n').map(l => l.trim().match(
+      /^(?<mat>[^:\n]+):(?<part>[^:\n]+):(?<traits>.+)$/
+    )?.groups as { mat: string, part: string, traits: string }
+    ).filter(Boolean).forEach((o) => {
+      o.traits.split(',').forEach((trait) => {
+        // Tweakerconstruct fully rewrite all materials traits
+        if (rewrite && !added.has(o.mat)) {
+          added.add(o.mat)
+          traits[o.mat] = {}
+        }
+        ((traits[o.mat] ??= {})[o.part] ??= new Set()).add(trait)
       })
+    })
   }
 
   return traits

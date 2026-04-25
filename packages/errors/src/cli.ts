@@ -8,7 +8,7 @@ import fse from 'fs-extra'
 import { parse } from 'yaml'
 import yargs from 'yargs'
 
-import { findErrors, parseConfig } from '.'
+import { findErrors, parseConfig } from './index.js'
 
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = fse
 

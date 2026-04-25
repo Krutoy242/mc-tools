@@ -1,4 +1,5 @@
-import type { MatTraits } from './traits'
+/* eslint-disable ts/no-unsafe-assignment */
+import type { MatTraits } from './traits.js'
 
 import { getBorderCharacters, table } from 'table'
 
@@ -63,15 +64,15 @@ export interface TweakedMaterial {
 
 function evalMathContext(code: string, context = {}) {
   const lContext: Record<string, any> = { ...context }
-  for (const k of Object.getOwnPropertyNames(Math)) lContext[k] = Math[k]
+  for (const k of Object.getOwnPropertyNames(Math)) lContext[k] = (Math as Record<string, unknown>)[k]
 
   try {
-    return (
-      // eslint-disable-next-line no-new-func
-      new Function(...Object.keys(lContext), `return ${code}`)
-    )(...Object.values(lContext))
+    const _Func: any = Function
+    // eslint-disable-next-line ts/no-unsafe-call
+    return (new _Func(...Object.keys(lContext), `return ${code}`))(...Object.values(lContext)) as number
   }
-  catch (error: any) {
+  catch (err: unknown) {
+    const error = err as Error
     console.error(`Error in evaluating code: ${code}`)
     throw error
   }
@@ -215,7 +216,9 @@ export function parseStats(
   tweakObj: TweakObj,
   traitPowers?: MatTraits<number>
 ) {
-  const rgx = new RegExp(getLookup(tweakGroup))
+  const lookupStr: string = getLookup(tweakGroup)
+
+  const rgx = new RegExp(lookupStr)
   const cfgListChunk = default_tweakers_cfg.match(rgx)?.[0]
   if (!cfgListChunk) throw new Error('Can\'t parse tweakerconstruct.cfg')
 

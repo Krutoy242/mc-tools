@@ -53,8 +53,8 @@ export function refactor(filePaths: string[]) {
   filePaths.forEach((f) => {
     const source = readFileSync(f, 'utf8')
     const output = transform(
-      { source, path: f } as FileInfo,
-      { jscodeshift } as any
+      { source, path: f },
+      { jscodeshift } as unknown as API
     )
     if (output !== undefined) writeFileSync(f, output)
   })

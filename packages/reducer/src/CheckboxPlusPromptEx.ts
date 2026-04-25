@@ -1,3 +1,6 @@
+/* eslint-disable ts/no-misused-promises */
+/* eslint-disable ts/no-unsafe-member-access */
+/* eslint-disable ts/no-unsafe-assignment */
 /* eslint-disable ts/no-unsafe-return */
 /* eslint-disable ts/no-unsafe-argument */
 /* eslint-disable ts/no-unsafe-call */
@@ -5,9 +8,10 @@
 import chalk from 'chalk'
 import cliCursor from 'cli-cursor'
 import inquirer from 'inquirer'
+// @ts-expect-error missing types
 import CheckboxPlusPrompt from 'inquirer-checkbox-plus-prompt'
-import Choices from 'inquirer/lib/objects/choices'
-import observe from 'inquirer/lib/utils/events'
+import Choices from 'inquirer/lib/objects/choices.js'
+import observe from 'inquirer/lib/utils/events.js'
 import { filter, map, takeUntil } from 'rxjs/operators'
 
 interface CheckboxPlusPromptOptions {
@@ -139,7 +143,7 @@ class CheckboxPlusPromptEx extends CheckboxPlusPrompt {
         .forEach((this as any).onKeypress.bind(this))
       void events.spaceKey
         .pipe(takeUntil(validation.success))
-        .forEach(this.onSpaceKey.bind(this) as any)
+        .forEach(this.onSpaceKey.bind(this))
 
       const ctrlAKey = events.keypress.pipe(filter((e: any) => e.key.name === 'a' && e.key.ctrl && !e.key.shift && !e.key.meta))
       const ctrlRKey = events.keypress.pipe(filter((e: any) => e.key.name === 'r' && e.key.ctrl && !e.key.shift && !e.key.meta))

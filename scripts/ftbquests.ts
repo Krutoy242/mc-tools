@@ -1,18 +1,18 @@
-import type { Byte, Short } from 'ftbq-nbt'
+import type { ChapterConfig } from '@mctools/utils/ftbquests'
 
-import type { ChapterConfig } from '../packages/utils/src/mods/ftbquests'
+import type { Byte, Short } from 'ftbq-nbt'
 
 import { readFileSync, renameSync } from 'node:fs'
 import process from 'node:process'
+import { getChapter, getChapters, getIndex, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveIndex, saveQuest, saveReward, tagItemToCT, uidGenerator } from '@mctools/utils/ftbquests'
+import { Lang } from '@mctools/utils/lang'
+import { naturalSort } from '@mctools/utils/natural-sort'
+
 import fast_glob from 'fast-glob'
+
 import levenshtein from 'fast-levenshtein'
 import { Int, parse } from 'ftbq-nbt'
-
 import sanitize from 'sanitize-filename'
-
-import { naturalSort } from '../packages/utils/src'
-import { Lang } from '../packages/utils/src/lang'
-import { getChapter, getChapters, getIndex, getItem, getItemName, getQuestTaskItem, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveIndex, saveQuest, saveReward, tagItemToCT, uidGenerator } from '../packages/utils/src/mods/ftbquests'
 
 const TRIM_REGEX = /\W+/g
 
@@ -84,7 +84,7 @@ export function removeNameOfQuests() {
         }
         else {
           if (!nameOfQuest) console.error(`Cant find name: ${questLangKey}`)
-          if (nameOfTask === nameOfQuest || levenshtein.get(nameOfTask, nameOfQuest) <= 5) {
+          if (nameOfTask === nameOfQuest || (levenshtein as { get: (a: string, b: string) => number }).get(nameOfTask, nameOfQuest) <= 5) {
             delete q.title
             dirty = true
           }

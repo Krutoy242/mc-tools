@@ -31,8 +31,8 @@
   "types": "./dist/index.d.ts",
   "bin": "./dist/cli.mjs",
   "files": [
-    "dist",
-    "*.hbs"
+    "*.hbs",
+    "dist"
   ],
   "scripts": {
     "build": "unbuild",

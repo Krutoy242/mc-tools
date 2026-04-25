@@ -11,7 +11,7 @@ let parser: peggy.Parser
 
 export function peggyParse(text: string) {
   parser ??= initParser()
-  return parser.parse(text)
+  return parser.parse(text) as string
 }
 
 function initParser() {

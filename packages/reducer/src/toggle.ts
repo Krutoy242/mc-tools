@@ -1,16 +1,11 @@
 /* eslint-disable style/key-spacing */
-import './CheckboxPlusPromptEx'
-
 import chalk from 'chalk'
+
 import fuzzy from 'fuzzy'
 import inquirer from 'inquirer'
+import { Mod } from './Mod.js'
 
-import { Mod } from './Mod'
-
-interface FuzzResult {
-  match: string
-  mod : Mod
-}
+import './CheckboxPlusPromptEx.js'
 
 interface ModChoice {
   disabled?: boolean | string
@@ -75,7 +70,7 @@ export function filterMods(mods: Mod[], searchStr: string) {
     pre,
     post,
   })
-  const uniq = fuzzyResult.map(o => ({ mod: o.original, match: o.string } as FuzzResult))
+  const uniq = fuzzyResult.map(o => ({ mod: o.original, match: o.string }))
     .sort(({ mod: a }, { mod: b }) =>
       +b.enabled - +a.enabled
       || b.getDependentsCount() - a.getDependentsCount())

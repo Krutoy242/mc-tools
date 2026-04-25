@@ -1,17 +1,18 @@
-import type { Branch, ReducerConfig } from './config'
+import type { Branch, ReducerConfig } from './config.js'
 
-import type { MCInstance } from './minecraftinstance'
-import type { ModdedAddon } from './Mod'
+import type { MCInstance } from './minecraftinstance.js'
+import type { ModdedAddon } from './Mod.js'
 import { readFileSync } from 'node:fs'
 import { naturalSort } from '@mctools/utils/natural-sort'
 import chalk from 'chalk'
 import { consola } from 'consola'
 
 import fast_glob from 'fast-glob'
+// @ts-expect-error missing types
 import levenshtein from 'fast-levenshtein'
 import { join, resolve } from 'pathe'
 
-import { DependencyLevel, Mod, purify } from './Mod'
+import { DependencyLevel, Mod, purify } from './Mod.js'
 
 /**
  * Per-session cache used to deduplicate noisy warnings so the user only sees
@@ -156,7 +157,7 @@ function flatTree(tree: Branch): [string, string][] {
   const result: [string, string][] = []
   Object.entries(tree).forEach(([trunk, branches]) => {
     for (const branch of [branches].flat()) {
-      if (typeof branch === 'object') {
+      if (typeof branch === 'object' && branch !== null) {
         for (const b of Object.keys(branch)) {
           result.push([trunk, b])
         }
@@ -171,7 +172,7 @@ function flatTree(tree: Branch): [string, string][] {
   return result
 }
 
-export function getFetchInModsDir(mods: string) {
+export function getFetchInModsDir(mods: string): (globPattern: string) => string[] {
   /**
    * Return relative to mods/ path (only file name with extension)
    */
@@ -193,7 +194,7 @@ function findAddonByFilename(addons: ModdedAddon[], fileName: string): ModdedAdd
 
   const levArr = addons
     .map(a => ({
-      lev  : levenshtein.get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
+      lev  : (levenshtein as { get: (a: string, b: string) => number }).get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
       addon: a,
     }))
     .sort((a, b) => a.lev - b.lev)

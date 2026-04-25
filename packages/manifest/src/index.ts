@@ -6,7 +6,7 @@
  */
 
 import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
-import type { ModpackManifest, ModpackManifestFile } from './manifest'
+import type { ModpackManifest, ModpackManifestFile } from './manifest.js'
 
 import { basename, resolve } from 'node:path'
 import process from 'node:process'

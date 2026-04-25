@@ -1,10 +1,11 @@
+import type { InstalledAddon } from './minecraftinstance.js'
 import { rename } from 'node:fs/promises'
+
 import { resolve } from 'node:path'
-
+import process from 'node:process'
 import chalk from 'chalk'
-import { Memoize } from 'typescript-memoize'
 
-import type { InstalledAddon } from './minecraftinstance'
+import { Memoize } from 'typescript-memoize'
 
 export enum DependencyLevel {
   All,
@@ -24,7 +25,6 @@ export function purify(fileName?: string) {
 export class Mod {
   static modsPath: string
 
-  // eslint-disable-next-line style/no-multi-spaces
   public isDisabled  : boolean
   public dependencies: Mod[] = []
   public dependents = new Set<Mod>()
@@ -118,7 +118,8 @@ export class Mod {
       this.fileName = newFileName
       this.isDisabled = toDisable
     }
-    catch (e: any) {
+    catch (err: unknown) {
+      const e = err as { message?: string }
       if (!silent) console.error(` ${' '.repeat(Math.max(1, 49 - this.fileNameNoExt.length))}${chalk.red(e?.message)}`)
       return false
     }

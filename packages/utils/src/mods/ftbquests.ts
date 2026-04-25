@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import fast_glob from 'fast-glob'
 import { Int, parse, stringify } from 'ftbq-nbt'
 
-import { getItemNames } from './tellme'
+import { getItemNames } from './tellme.js'
 
 const LIST_TYPE_REGEX = /\[[BIL];(?:\s*-?\d+(?:\.\d+)?[BIL]\b,?)+\s*\]/gi
 const LIST_ITEM_REGEX = /\d+[BIL]\b/gi
@@ -342,7 +342,7 @@ export function getItemName(i?: Item) {
 export function getQuestTaskItem(q: QuestUid) {
   const firstTask = (q?.tasks?.[0] as ItemQuestTask)?.items?.[0]
   if (!firstTask) return undefined
-  const rawItem = 'item' in firstTask ? (firstTask as { item: string }).item : firstTask
+  const rawItem = 'item' in firstTask ? (firstTask).item : firstTask
   const taskItem = getItem(rawItem)
   if (taskItem) return taskItem
   const displayName = typeof rawItem === 'string' ? rawItem : rawItem.id

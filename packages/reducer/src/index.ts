@@ -1,10 +1,10 @@
 import chalk from 'chalk'
 import inquirer from 'inquirer'
 
-import { binary } from './binary'
-import { getConfig } from './config'
-import { createWarningCache, ModStore } from './ModStore'
-import { toggleMods } from './toggle'
+import { binary } from './binary.js'
+import { getConfig } from './config.js'
+import { createWarningCache, ModStore } from './ModStore.js'
+import { toggleMods } from './toggle.js'
 
 export async function main(mcPath: string) {
   const warnings = createWarningCache()

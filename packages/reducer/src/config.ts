@@ -47,8 +47,8 @@ export async function getConfig(cwd: string): Promise<ReducerConfig> {
 
   const merged = (await loadConfig<AnyConfig>({
     cwd,
-    name         : 'reducer',
-    defaultConfig: defaultConfig as AnyConfig,
+    name: 'reducer',
+    defaultConfig,
   })).config
 
   return validate(merged, cwd)

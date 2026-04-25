@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+/* eslint-disable ts/no-unsafe-assignment */
 
-import type { TweakName, TweakObj } from '.'
-import type { MatTraits } from './traits'
+import type { TweakName, TweakObj } from './index.js'
+import type { MatTraits } from './traits.js'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 import { dirname, join, parse, resolve } from 'node:path'
@@ -12,8 +13,8 @@ import { parse as csvParseSync } from 'csv-parse/sync'
 import fast_glob from 'fast-glob'
 import yargs from 'yargs'
 
-import { genStatsTable, getLookup, parseStats } from '.'
-import { parseTraits } from './traits'
+import { genStatsTable, getLookup, parseStats } from './index.js'
+import { parseTraits } from './traits.js'
 
 /* =============================================
 =                Arguments                    =
@@ -81,11 +82,11 @@ function parseTweaks(tweaksPath: string) {
 
   return tweaksCSVList.map((filePath) => {
     const csvResult: string[][] = csvParseSync(readFileSync(filePath, 'utf8'))
-    const materialTweaks = csvResult.reduce(
-      // Make 2d table with row names
-      (a, v) => (a[v[0]] = v.slice(1), a), // eslint-disable-line no-sequences
-      {} as TweakObj
-    )
+
+    const materialTweaks = {} as unknown as TweakObj
+    for (const v of csvResult) {
+      materialTweaks[v[0]] = v.slice(1)
+    }
     return [parse(filePath).name as TweakName, materialTweaks] as const
   })
 }
@@ -105,7 +106,7 @@ void (async () => {
 
   if (argv.save) {
     const traits = parseTraits(newConfig, argv.default)
-    const traitValues = csvParseSync(readFileSync(resolve(argv.save, 'Traits.csv'), 'utf8'))
+    const traitValues = csvParseSync(readFileSync(resolve(argv.save, 'Traits.csv'), 'utf8')) as string[][]
     const traitMap = Object.fromEntries(traitValues.map(([,id, value]) => [id, Number(value)]))
     traitPower = {}
     for (const [mat, parts] of Object.entries(traits)) {
