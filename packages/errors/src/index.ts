@@ -29,8 +29,9 @@ export interface CompiledConfig {
 }
 
 export interface FoundError {
-  text: string
-  line: number
+  text : string
+  line : number
+  time?: string
 }
 
 export function parseConfig(raw: unknown): Config {
@@ -71,14 +72,12 @@ export function findErrors(debugLogText: string, config: Config | CompiledConfig
   let to = debugLogText.length
   if (c.boundaries?.from) {
     const m = c.boundaries.from.exec(debugLogText)
-    if (!m) throw new Error(`Boundary 'from' not found: /${c.boundaries.from.source}/`)
-    from = m.index
+    if (m) from = m.index
   }
   if (c.boundaries?.to) {
     c.boundaries.to.lastIndex = 0
     const m = c.boundaries.to.exec(debugLogText.slice(from))
-    if (!m) throw new Error(`Boundary 'to' not found: /${c.boundaries.to.source}/`)
-    to = from + m.index
+    if (m) to = from + m.index
   }
   if (to <= from) throw new Error('After applying boundaries, no log text left')
 
@@ -91,12 +90,15 @@ export function findErrors(debugLogText: string, config: Config | CompiledConfig
     let entry = m[0]
     if (c.ignoreFast?.test(entry)) continue
 
+    const timeMatch = entry.match(/^\[(\d+:\d+:\d+)\]/)
+    const time = timeMatch ? timeMatch[1] : undefined
+
     const absOffset = m.index + from
     for (const r of c.replace) {
       r.from.lastIndex = 0
       entry = entry.replace(r.from, r.to)
     }
-    result.push({ text: entry, line: lineForOffset(absOffset) })
+    result.push({ text: entry, line: lineForOffset(absOffset), time })
   }
 
   if (!c.groupBy.length) return result

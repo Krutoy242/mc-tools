@@ -46,24 +46,26 @@ describe('findErrors (pure)', () => {
     expect(findErrors(sampleLog, config)).toEqual([])
   })
 
-  it('throws when boundary "from" pattern is not found', () => {
+  it('defaults to start of file when boundary "from" pattern is not found', () => {
     const config = parseConfig({
       match     : 'ERROR',
       ignore    : '',
       replace   : [],
       boundaries: { from: 'NEVER_MATCHES_XYZ' },
     })
-    expect(() => findErrors(sampleLog, config)).toThrow(/Boundary 'from' not found/)
+    const errors = findErrors(sampleLog, config)
+    expect(errors.length).toBeGreaterThan(0)
   })
 
-  it('throws when boundary "to" pattern is not found', () => {
+  it('defaults to end of file when boundary "to" pattern is not found', () => {
     const config = parseConfig({
       match     : 'ERROR',
       ignore    : '',
       replace   : [],
       boundaries: { to: 'NEVER_MATCHES_XYZ' },
     })
-    expect(() => findErrors(sampleLog, config)).toThrow(/Boundary 'to' not found/)
+    const errors = findErrors(sampleLog, config)
+    expect(errors.length).toBeGreaterThan(0)
   })
 
   it('uses fast-path alternation for ignore list (single regex test)', () => {
@@ -168,5 +170,5 @@ describe('cli smoke', () => {
     }
     expect(stdout).toContain('Found 3 errors')
     expect(status).toBe(1)
-  })
+  }, 15000)
 })

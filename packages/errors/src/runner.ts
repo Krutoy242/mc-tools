@@ -13,6 +13,7 @@ import {
 
   parseConfig,
 } from './index.js'
+import { pickFormat, renderMarkdown, renderPlain, renderTerminal } from './render.js'
 
 // In a SEA build `import.meta.url` is not a real file URL, so guard the
 // default-path construction. The asset fallback in `loadConfig` covers SEA.
@@ -75,10 +76,22 @@ export async function loadLog(path: string): Promise<string> {
   return log
 }
 
-export async function writeOutput(errors: FoundError[], output: string | undefined): Promise<void> {
+export async function writeOutput(
+  errors: FoundError[],
+  output: string | undefined,
+  /* v8 ignore next */
+  isTTY: boolean = !!process.stdout.isTTY
+): Promise<void> {
   if (errors.length)
     process.stdout.write(`Found ${errors.length} errors\n`)
-  const text = errors.map(e => e.text).join('\n')
+
+  const fmt = pickFormat(output, isTTY)
+  const text = fmt === 'plain'
+    ? renderPlain(errors)
+    : fmt === 'terminal'
+      ? renderTerminal(errors)
+      : renderMarkdown(errors)
+
   if (output) {
     await mkdir(dirname(output), { recursive: true })
     await writeFile(output, text)

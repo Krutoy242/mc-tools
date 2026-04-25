@@ -82,7 +82,7 @@ describe('writeOutput', () => {
     await writeOutput([
       { text: 'first', line: 1 },
       { text: 'second', line: 5 },
-    ], out)
+    ], out, false)
     spy.mockRestore()
     expect(await readFile(out, 'utf8')).toBe('first\nsecond')
   })
@@ -93,7 +93,7 @@ describe('writeOutput', () => {
       writes.push(typeof chunk === 'string' ? chunk : chunk.toString())
       return true
     })
-    await writeOutput([{ text: 'hello', line: 1 }], undefined)
+    await writeOutput([{ text: 'hello', line: 1 }], undefined, false)
     spy.mockRestore()
     expect(writes.some(w => w.startsWith('Found 1 errors'))).toBe(true)
     expect(writes.some(w => w.includes('hello'))).toBe(true)
@@ -105,9 +105,40 @@ describe('writeOutput', () => {
       writes.push(typeof chunk === 'string' ? chunk : chunk.toString())
       return true
     })
-    await writeOutput([], undefined)
+    await writeOutput([], undefined, false)
     spy.mockRestore()
     expect(writes.some(w => /Found \d+ errors/.test(w))).toBe(false)
+  })
+
+  it('writes to stdout with ANSI escapes when TTY', async () => {
+    const oldColor = process.env.FORCE_COLOR
+    process.env.FORCE_COLOR = '1'
+    const writes: string[] = []
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      writes.push(typeof chunk === 'string' ? chunk : chunk.toString())
+      return true
+    })
+    await writeOutput([{ text: '[main/ERROR] [FML]: foo', line: 1, time: '15:11:39' }], undefined, true)
+    spy.mockRestore()
+
+    if (oldColor === undefined) delete process.env.FORCE_COLOR
+    else process.env.FORCE_COLOR = oldColor
+
+    const out = writes.join('')
+    expect(out).toContain('\x1B[31mERROR\x1B[39m') // red
+  })
+
+  it('writes mermaid markdown when .md output is given', async () => {
+    const out = join(tmp, 'out.md')
+    const spy = silenceStdout()
+    await writeOutput([
+      { text: '[main/ERROR] [FML]: foo', line: 1, time: '15:11:39' },
+    ], out, false)
+    spy.mockRestore()
+
+    const content = await readFile(out, 'utf8')
+    expect(content).toContain('# Errors report')
+    expect(content).toContain('```mermaid')
   })
 })
 
