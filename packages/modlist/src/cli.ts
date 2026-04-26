@@ -119,8 +119,11 @@ if (!args.key) {
 }
 
 if (args.verbose) console.log('- Generating Modlist -')
-await generateModsList(
+generateModsList(
   args.mcinstance,
   args.old,
   args
-).then((content: string) => writeFileSync(args.output, content))
+).then((content: string) => writeFileSync(args.output, content)).catch((e) => {
+  console.error(e)
+  process.exit(1)
+})
