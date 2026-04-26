@@ -119,7 +119,7 @@ export async function generateModsList(
     diff.updated.sort((a, b) => sort(a.now, b.now))
   }
 
-  for (const key of ['union', 'added', 'removed'] as const) {
+  for (const key of ['union', 'both', 'added', 'removed'] as const) {
     diff[key]?.forEach((o) => {
       o.cf2Addon = cursedMap[o.addonID]
     })
