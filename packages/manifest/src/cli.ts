@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 
 import process from 'node:process'
 import { assertPath } from '@mctools/utils/args'

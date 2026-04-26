@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 
 import { assertPath } from '@mctools/utils/args'
 import { defineCommand, runMain } from 'citty'

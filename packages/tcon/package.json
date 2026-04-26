@@ -29,7 +29,9 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "bin": "./dist/cli.mjs",
+  "bin": {
+    "mctools-tcon": "./src/cli.ts"
+  },
   "files": [
     "dist"
   ],
@@ -49,6 +51,9 @@
     "@types/yargs": "^17.0.24"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "bin": {
+      "mctools-tcon": "./dist/cli.mjs"
+    }
   }
 }

@@ -29,7 +29,9 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "bin": "./dist/cli.mjs",
+  "bin": {
+    "mctools-format": "./src/cli.ts"
+  },
   "files": [
     "dist"
   ],
@@ -50,6 +52,9 @@
     "@types/jscodeshift": "^17.3.0"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "bin": {
+      "mctools-format": "./dist/cli.mjs"
+    }
   }
 }

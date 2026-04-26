@@ -29,7 +29,9 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "bin": "./dist/cli.mjs",
+  "bin": {
+    "mctools-reducer": "./src/cli.ts"
+  },
   "files": [
     "dist"
   ],
@@ -57,6 +59,9 @@
     "zod": "^3.23.0"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "bin": {
+      "mctools-reducer": "./dist/cli.mjs"
+    }
   }
 }

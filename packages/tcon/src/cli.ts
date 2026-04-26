@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 /* eslint-disable ts/no-unsafe-assignment */
 
 import type { TweakName, TweakObj } from './index.js'

@@ -28,7 +28,9 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "bin": "./dist/cli.mjs",
+  "bin": {
+    "mctools-errors": "./src/cli.ts"
+  },
   "files": [
     "dist"
   ],
@@ -50,6 +52,9 @@
     "postject": "^1.0.0-alpha.6"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "bin": {
+      "mctools-errors": "./dist/cli.mjs"
+    }
   }
 }
