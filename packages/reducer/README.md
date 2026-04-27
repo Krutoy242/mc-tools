@@ -21,18 +21,13 @@ Partially disable minecraft mods
 ### Options
 
 ```shell
-@mctools/reducer [command]
+Partially disable minecraft mods (@mctools/reducer v0.0.0)
 
-Commands:
-  @mctools/reducer levels <path>  Select reduce level with prompt
-  @mctools/reducer binary         Reduce mods in half to find error
-  @mctools/reducer interactive    Pick mods and manipulate them one by one
+USAGE @mctools/reducer [OPTIONS] 
 
-Options:
-      --version  Show version number                                   [boolean]
-  -m, --mc       Minecraft dir with mods/ and minecaftinstance.json
-                                                        [string] [default: "./"]
-  -h, --help     Show help                                             [boolean]
+OPTIONS
+
+  -m, --cwd="./"    Minecraft dir with mods/ and minecaftinstance.json
 ```
 
 ## Author

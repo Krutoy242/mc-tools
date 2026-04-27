@@ -22,9 +22,41 @@ Bunch of functions, used for other `@mctools/` packages, such as fetching info f
 
 ## functions
 
+### `asAddonID`
+
+> **asAddonID**(`n`): [`AddonID`](../type-aliases/AddonID.md)
+
+Assert-cast a plain number into a branded AddonID.
+
+### Parameters
+
+#### n
+
+`number`
+
+### Returns
+
+[`AddonID`](../type-aliases/AddonID.md)
+
+### `asFileID`
+
+> **asFileID**(`n`): [`FileID`](../type-aliases/FileID.md)
+
+Assert-cast a plain number into a branded FileID.
+
+### Parameters
+
+#### n
+
+`number`
+
+### Returns
+
+[`FileID`](../type-aliases/FileID.md)
+
 ### `fetchMods`
 
-> **fetchMods**(`modIds`, `cfApiKey`, `timeout`, `doLogging`): `Promise`\<`CF2Addon`[]\>
+> **fetchMods**(`modIds`, `cfApiKey`, `timeout?`, `doLogging?`): `Promise`\<`CF2Addon`[]\>
 
 Get mod information from CurseForge, such as name, summary, download count, etc.
 
@@ -42,13 +74,13 @@ IDs of mods you want to fetch. `[32274, 59751, 59816]`
 
 CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
 
-#### timeout
+#### timeout?
 
 `number` = `96`
 
 If file was already fetched last `timeout` hours, it would be loaded from cache file
 
-#### doLogging
+#### doLogging?
 
 `boolean` = `false`
 
@@ -71,7 +103,10 @@ console.log(cfMods.map(m => m.name)) // ["JourneyMap", "Forestry", "Random Thing
 
 > **loadMCInstanceFiltered**(`mci`, `ignore?`): `Minecraftinstance`
 
-Load minecraftinstance.json file from disk, filtering unavailable or ignored mods
+Load a filtered view of a minecraftinstance.json object.
+
+Returns a shallow-cloned instance with `installedAddons` narrowed to
+on-CF, non-ignored mods. The original `mci` is not mutated.
 
 ### Parameters
 
@@ -79,99 +114,111 @@ Load minecraftinstance.json file from disk, filtering unavailable or ignored mod
 
 `Minecraftinstance`
 
-Json object of `minecraftinstance.json`
+Parsed `minecraftinstance.json`.
 
 #### ignore?
 
-.gitignore-like file content with mods to ignore.
+`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
 
-For example, `ignore` contains 3 lines:
-```ts
-const mci = loadMCInstanceFiltered(mciPath, `
-  scripts/debug
-  config/FBP/*
-  mods/tellme-*
-`)
-```
-Since it have line `mods/tellme-*` in it, mod `tellme-1.12.2-0.7.0.jar` would be removed from result.
-
-`string` | `Ignore` | readonly (`string` \| `Ignore`)[]
+.gitignore-like content — mods matching these patterns (by `mods/<file>`) are excluded.
 
 ### Returns
 
 `Minecraftinstance`
 
-Same `minecraftinstance` object but without unavailable on CF mods like Optifine or Nutrition.
+### `modListDiff`
 
-### `modList`
+> **modListDiff**(`fresh`, `old`, `ignore?`): `ModsComparsion`
 
-### Call Signature
+Compare two minecraftinstance.json snapshots and return a full breakdown
+(`added`, `removed`, `both`, `updated`, plus the total `union`).
 
-> **modList**(`fresh`, `old?`, `ignore?`): `ModsUnion`
+Use this when you have the previous version to diff against, typically for
+generating a changelog.
 
-Compare two minecraftinstance.json files and output differences between them
+### Parameters
 
-#### Parameters
-
-##### fresh
-
-`Minecraftinstance`
-
-Json object from `minecraftinstance.json` of current version
-
-##### old?
-
-`undefined`
-
-Json object from `minecraftinstance.json` of previous version.
-
-##### ignore?
-
-.gitignore-like file content with mods to ignore.
-Useful for dev-only mods that should not be included in result.
-
-`string` | `Ignore` | readonly (`string` \| `Ignore`)[]
-
-#### Returns
-
-`ModsUnion`
-
-Result of comparsion.
-if `old` is omited, returns only `union` field.
-
-### Call Signature
-
-> **modList**(`fresh`, `old?`, `ignore?`): `ModsComparsion`
-
-Compare two minecraftinstance.json files and output differences between them
-
-#### Parameters
-
-##### fresh
+#### fresh
 
 `Minecraftinstance`
 
-Json object from `minecraftinstance.json` of current version
-
-##### old?
+#### old
 
 `Minecraftinstance`
 
-Json object from `minecraftinstance.json` of previous version.
+#### ignore?
 
-##### ignore?
+`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
 
-.gitignore-like file content with mods to ignore.
-Useful for dev-only mods that should not be included in result.
-
-`string` | `Ignore` | readonly (`string` \| `Ignore`)[]
-
-#### Returns
+### Returns
 
 `ModsComparsion`
 
-Result of comparsion.
-if `old` is omited, returns only `union` field.
+### `modListUnion`
+
+> **modListUnion**(`fresh`, `ignore?`): `ModsUnion`
+
+Collect the full set of addons from a single minecraftinstance, after
+applying the same `.gitignore`-style filter as [modListDiff](modListDiff.md).
+
+Use this when you don't have a previous instance to compare against.
+
+### Parameters
+
+#### fresh
+
+`Minecraftinstance`
+
+#### ignore?
+
+`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
+
+### Returns
+
+`ModsUnion`
+
+### `setCachePath`
+
+> **setCachePath**(`path`): `void`
+
+Override the file the CF mod cache reads/writes. Defaults to `~/.cache/mctools/curseforge-mods.json`.
+
+### Parameters
+
+#### path
+
+`string`
+
+### Returns
+
+`void`
+
+## type-aliases
+
+### `AddonID`
+
+> **AddonID** = `number` & `object`
+
+Branded numeric ID of a CurseForge addon (project).
+Use `asAddonID(n)` to construct from a plain number when you own the value.
+
+### Type Declaration
+
+#### \_\_brand
+
+> `readonly` **\_\_brand**: `"AddonID"`
+
+### `FileID`
+
+> **FileID** = `number` & `object`
+
+Branded numeric ID of a specific file (release) of an addon.
+
+### Type Declaration
+
+#### \_\_brand
+
+> `readonly` **\_\_brand**: `"FileID"`
 
 ## Author
 

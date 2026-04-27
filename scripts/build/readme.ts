@@ -4,8 +4,8 @@ Generate README.md files for main repo and packages
 
 */
 
-import { exec, execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { exec } from 'node:child_process'
+import { readFile, writeFile } from 'node:fs/promises'
 import { parse } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -19,7 +19,7 @@ import Handlebars from 'handlebars'
 
 const execP = promisify(exec)
 
-const { readJSONSync, writeFileSync, existsSync, removeSync } = fse
+const { readJSON, existsSync, remove } = fse
 
 function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
@@ -31,8 +31,8 @@ const log = (str: any) => console.log(`${chalk.gray('█')} ${str}`)
 // Main
 // -------------------------------------------------------
 const mainReadmePath = `README.md`
-const mainReadmeContent = readFileSync(mainReadmePath, 'utf8')
-const  mainReadmeUpdated = mainReadmeContent.replace(
+const mainReadmeContent = await readFile(mainReadmePath, 'utf8')
+const mainReadmeUpdated = mainReadmeContent.replace(
   // eslint-disable-next-line regexp/no-super-linear-backtracking
   /(?<pre><!--\s*eval:start\s*(?<code>[\s\S]*?)-->[\r\n]*)[\s\S]*?(?<post>[\r\n]*<!--\s*eval:end\s*-->)/g,
   (...match: any[]) => {
@@ -54,37 +54,41 @@ const  mainReadmeUpdated = mainReadmeContent.replace(
   }
 )
 
-writeFileSync(mainReadmePath,  mainReadmeUpdated)
+await writeFile(mainReadmePath, mainReadmeUpdated)
 
 // -------------------------------------------------------
 // Packages
 // -------------------------------------------------------
 
-const packages = fast_glob
-  .sync('packages/*/package.json')
-  .map(f => ({
-    name   : parse(f).dir.split(/\/|\\/).pop(),
-    package: readJSONSync(f) as { name: string, keywords: string[] },
-  }))
+const packagePaths = await fast_glob('packages/*/package.json')
+const packagesInfo = await Promise.all(packagePaths.map(async f => ({
+  dir    : parse(f).dir,
+  name   : parse(f).dir.split(/\/|\\/).pop(),
+  package: (await readJSON(f)) as { name: string, keywords: string[], private?: boolean, description?: string, homepage?: string },
+})))
 
-log(`Found ${chalk.green(packages.length)} packages`)
+log(`Found ${chalk.green(packagesInfo.length)} packages`)
 
-await Promise.all(fast_glob.sync('packages/*/README.md').map(handleReadme))
+const templateString = await readFile(relative('readme.hbs'), 'utf8')
+const builder = Handlebars.compile(templateString, { noEscape: true })
 
-async function handleReadme(readmePath: string, i: number) {
-  const readmeContent = readFileSync(readmePath, 'utf8')
+await Promise.all(packagesInfo.map(async (pkgInfo) => {
+  const readmePath = `${pkgInfo.dir}/README.md`
+  if (!existsSync(readmePath)) return
+
+  const readmeContent = await readFile(readmePath, 'utf8')
 
   const extended_desc = readmeContent.match(
     /<!-- extended_desc -->([\s\S]*?)<!-- \/extended_desc -->/
   )?.[1] ?? ''
 
-  const pkg = packages[i].package
-  const pkgPath = `packages/${packages[i].name}`
+  const pkg = pkgInfo.package
+  const pkgPath = pkgInfo.dir
   const cliPath = `${pkgPath}/src/cli.ts`
   const exist = existsSync(cliPath)
-  const isCli = pkg.keywords.includes('cli') && exist
+  const isCli = pkg.keywords?.includes('cli') && exist
 
-  log(`${isCli ? 'Executing' : 'Writing'} ${chalk.green(pkg.name)}${isCli ? chalk.green(' --help') : ''}`)
+  log(`${isCli ? 'Executing' : 'Writing'} ${chalk.green(pkgInfo.name)}${isCli ? chalk.green(' --help') : ''}`)
   const helpOutput = isCli
     ? stripAnsi((await execP(`tsx ${cliPath} --help`))
         .stdout
@@ -92,45 +96,49 @@ async function handleReadme(readmePath: string, i: number) {
         .replace(`${process.cwd()}\\`, '') // remove relative paths
     : undefined
 
-  const data = {
-    package : pkg,
-    packages: packages.filter((_, j) => j !== i),
-    extended_desc,
-    helpOutput,
-  }
+  let typedocMarkdown = ''
+  if (pkg.keywords?.includes('lib')) {
+    log(chalk.rgb(20, 90, 10)('docs') + chalk.gray(` for ${pkg.name}`))
+    const typedocCommand = `pnpm exec typedoc ${pkgPath}/src --out docs/${pkgInfo.name} --plugin typedoc-plugin-markdown --hideBreadcrumbs --hidePageTitle --hidePageHeader --disableSources --excludeInternal --readme none`
+    await execP(typedocCommand)
 
-  Handlebars.registerHelper('includes', (obj: Array<any>, element: any) => obj.includes(element))
-
-  const typedocCommand = `npx typedoc ${pkgPath}/src --out docs/${packages[i].name} --plugin typedoc-plugin-markdown --hideBreadcrumbs --hidePageTitle --hidePageHeader --disableSources --excludeInternal --readme none`
-  Handlebars.registerHelper('typedoc', () => {
-    log(chalk.rgb(20, 90, 10)('docs') + chalk.gray(` for ${packages[i].package.name}`))
-    execSync(typedocCommand)
-    const resultedDocs = fast_glob.sync(`docs/${packages[i].name}/*/*.md`).map(file => ({
+    const resultedDocs = await fast_glob(`docs/${pkgInfo.name}/*/*.md`)
+    const docsWithText = await Promise.all(resultedDocs.map(async file => ({
       file,
-      text: readFileSync(file, 'utf8')
-        // .replace(/^# .+\n/gm, '')
+      text: (await readFile(file, 'utf8'))
         .replace(/^(#+) /gm, '#$1 '), // lower title level
-    }))
-    const groupped = {} as Record<string, typeof resultedDocs>
-    resultedDocs.forEach((o) => {
+    })))
+
+    const groupped = {} as Record<string, typeof docsWithText>
+    docsWithText.forEach((o) => {
       const splitted = o.file.split(/\/|\\/)
       ;(groupped[splitted[splitted.length - 2]] ??= []).push(o)
     })
-    return Object.entries(groupped)
+    typedocMarkdown = Object.entries(groupped)
       .map(([group, list]) => `## ${group}\n\n${list
         .map(o => `### \`${o.file.split(/\/|\\/).pop()?.replace(/\..+$/, '')}\`\n\n${o.text}`)
-        // .map(o => o.text)
         .join('\n')
       }`)
       .join('\n')
+  }
+
+  const data = {
+    package : pkg,
+    packages: packagesInfo,
+    extended_desc,
+    helpOutput,
+    typedoc : typedocMarkdown,
+  }
+
+  const result = builder(data, {
+    helpers: {
+      includes: (obj: Array<any> | undefined, element: any) => obj?.includes(element) || false,
+    },
   })
 
-  const builder = Handlebars.compile(readFileSync(relative('readme.hbs'), 'utf8'), { noEscape: true })
-  const result = builder(data)
-
-  writeFileSync(readmePath, result)
-  log(chalk.gray(`done ${packages[i].package.name}`))
-}
+  await writeFile(readmePath, result)
+  log(chalk.gray(`done ${pkg.name}`))
+}))
 
 // Remove whole "docs/" folder
-removeSync('docs')
+await remove('docs')

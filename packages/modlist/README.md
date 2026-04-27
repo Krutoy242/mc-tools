@@ -140,13 +140,13 @@ Options for mod list generator
 
 #### ignore?
 
-> `optional` **ignore**: `string`
+> `optional` **ignore?**: `string`
 
 .gitignore-like file content with mods to ignore.
 
 ##### See
 
-modList
+modListDiff
 
 ***
 
@@ -160,7 +160,7 @@ CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
 
 #### sort?
 
-> `optional` **sort**: `string`
+> `optional` **sort?**: `string`
 
 Sort field of CurseForge addon.
 Accept deep path like `cf2Addon.downloadCount`.
@@ -170,7 +170,7 @@ Accept deep path like `cf2Addon.downloadCount`.
 
 #### template?
 
-> `optional` **template**: `string`
+> `optional` **template?**: `string`
 
 Custom Handlebars template to generate result
 
@@ -178,7 +178,7 @@ Custom Handlebars template to generate result
 
 #### verbose?
 
-> `optional` **verbose**: `boolean`
+> `optional` **verbose?**: `boolean`
 
 Output information about working process in stdout
 
@@ -189,3 +189,4 @@ Output information about working process in stdout
 ## Other tools
 
 * [@mctools/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
+* [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed

@@ -24,6 +24,9 @@ Various utilities for Minecraft-Tools monorepo, intended to be bundled not depen
 
 > **naturalSort**(`a`, `b`): `number`
 
+Natural string comparator — sorts "mod-v2" before "mod-v10".
+Meant for `Array.prototype.sort(naturalSort)`.
+
 ### Parameters
 
 #### a

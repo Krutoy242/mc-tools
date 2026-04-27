@@ -22,12 +22,17 @@
 
 ```shell
 Options:
-      --version     Show version number  [boolean]
-  -v, --verbose     Log working process in stdout  [boolean]
-  -i, --ignore      Path to ignore file similar to .gitignore
-  -k, --key         Path to file with CurseForge API key  [required]
-  -m, --mcinstance  Path to minecraftinstance.json  [default: "minecraftinstance.json"]
-  -h, --help        Show help  [boolean]
+      --version       Show version number  [boolean]
+  -v, --verbose       Log working process in stdout  [boolean]
+  -i, --ignore        Path to ignore file similar to .gitignore
+  -k, --key           Path to file with CurseForge API key  [required]
+  -m, --mcinstance    Path to minecraftinstance.json  [default: "minecraftinstance.json"]
+      --name          Override pack name (default: autodetect from cwd)  [string]
+      --mc-version    Override Minecraft version (default: autodetect from minecraftinstance.json/debug.log)  [string]
+      --project-id    Override CurseForge project ID (default: read from existing manifest.json)  [number]
+      --pack-version  Pack version to write into manifest  [string]
+      --postfix       Suffix for output file: manifest<postfix>.json  [string]
+  -h, --help          Show help  [boolean]
 ```
 
 ## Author

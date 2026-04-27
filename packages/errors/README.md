@@ -46,12 +46,15 @@ In large modpacks, the `debug.log` file can contain hundreds of thousands of lin
 ### Options
 
 ```shell
-Options:
-      --version  Show version number  [boolean]
-  -o, --output   Path for output with errors. If not specified output into stdout.  [string]
-  -l, --log      debug.log file path (may need to be enabled by launcher)  [string] [default: "logs/debug.log"]
-  -c, --config   Path to .yml file with configs  [string] [default: "packages\errors\src\config.yml"]
-  -h, --help     Show help  [boolean]
+Scan debug.log file to find unknown errors (@mctools/errors)
+
+USAGE @mctools/errors [OPTIONS] 
+
+OPTIONS
+
+                                                        -o, --output    Path for output with errors. If not specified output into stdout.
+                                          -l, --log="logs/debug.log"    debug.log file path (may need to be enabled by launcher)         
+  -c, --config="packages\errors\src\config.yml"    Path to .yml file with configs
 ```
 
 ## Author
@@ -60,4 +63,5 @@ Options:
 
 ## Other tools
 
+* [@mctools/errors](https://github.com/Krutoy242/mc-tools/tree/master/packages/errors) - Scan debug.log file to find unknown errors
 * [@mctools/modlist](https://github.com/Krutoy242/mc-tools/tree/master/packages/modlist) - Generate .md file with all mods listed
