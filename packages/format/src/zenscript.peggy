@@ -21,15 +21,20 @@ Start
 /* eslint-disable no-unreachable-loop */
 /* eslint-disable no-var */
 /* eslint-disable object-shorthand */
+/* eslint-disable perfectionist/sort-imports */
 /* eslint-disable prefer-arrow-callback */
 /* eslint-disable prefer-template */
 /* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
+/* eslint-disable ts/no-unsafe-argument */
+/* eslint-disable ts/no-unsafe-assignment */
 /* eslint-disable ts/no-unsafe-call */
 /* eslint-disable ts/no-unsafe-member-access */
+/* eslint-disable ts/no-unsafe-return */
 /* eslint-disable ts/no-use-before-define */
+/* eslint-disable ts/restrict-plus-operands */
 /* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable vars-on-top */
 
