@@ -8,12 +8,15 @@
 
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, parse, relative } from 'node:path'
+import { performance } from 'node:perf_hooks'
 import process from 'node:process'
 
 import { consola } from 'consola'
 import { colors } from 'consola/utils'
 
 import { revert, zsToTs } from './index.js'
+
+const formatMs = (ms: number) => colors.gray(` (${ms.toFixed(2)}ms)`)
 
 export interface ConvertedFile {
   /** Original file passed to the function. */
@@ -39,34 +42,45 @@ export function isFailure(o: ConvertOutcome): o is ConversionFailure {
  * Convert a list of files. For each `.zs` we emit a sibling `.ts`; for
  * pre-existing `.ts` we run the reverse pass and rewrite back to `.zs`.
  */
-export function convertToTs(fileList: string[]): ConvertOutcome[] {
+export function convertToTs(fileList: string[], verbose = false): ConvertOutcome[] {
   return fileList.map((filePath): ConvertOutcome => {
     const pathRelative = relative(process.cwd(), filePath)
     process.stdout.write(colors.blueBright(pathRelative))
 
+    const startRead = performance.now()
     process.stdout.write(` ${colors.inverse(colors.gray('read'))}`)
     const fileContent = readFileSync(filePath, 'utf8')
+    if (verbose) process.stdout.write(formatMs(performance.now() - startRead))
+
     const fileParsed = parse(filePath)
     const isForward = fileParsed.ext === '.zs'
     const dstExt = isForward ? 'ts' : 'zs'
     const newFilePath = join(fileParsed.dir, `${fileParsed.name}.${dstExt}`)
 
     if (!isForward) {
-      process.stdout.write(` ${colors.dim(colors.cyan(colors.inverse('revert')))}\n`)
+      const startRevert = performance.now()
+      process.stdout.write(` ${colors.dim(colors.cyan(colors.inverse('revert')))}`)
       writeFileSync(newFilePath, revert(fileContent))
+      if (verbose) process.stdout.write(formatMs(performance.now() - startRevert))
+      process.stdout.write(`\n`)
       unlinkSync(filePath)
       return { src: filePath, dst: newFilePath, kind: 'reverse' }
     }
 
+    const startConvert = performance.now()
     process.stdout.write(` ${colors.green(colors.inverse('convert to ts'))}`)
     const result = zsToTs(fileContent)
+    if (verbose) process.stdout.write(formatMs(performance.now() - startConvert))
+
     if (!result.ok) {
       printParseError(filePath, fileContent, result.error)
       return { src: filePath, error: result.error }
     }
 
+    const startSave = performance.now()
     process.stdout.write(` ${colors.blue(colors.inverse('save'))}`)
     writeFileSync(newFilePath, result.ts)
+    if (verbose) process.stdout.write(formatMs(performance.now() - startSave))
     process.stdout.write(`\n`)
     return { src: filePath, dst: newFilePath, kind: 'forward' }
   })
