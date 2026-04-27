@@ -1,10 +1,11 @@
 #!/usr/bin/env tsx
 
-import { execSync } from 'node:child_process'
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import process from 'node:process'
 
 import { defineCommand, runMain } from 'citty'
 import { consola } from 'consola'
+import { ESLint } from 'eslint'
 import { glob } from 'tinyglobby'
 
 import pkg from '../package.json' with { type: 'json' }
@@ -57,13 +58,12 @@ const main = defineCommand({
     if (!args.pause || !await consola.prompt('Skip linting?', { type: 'confirm' })) {
       // Lint & fix
       try {
-        const lintResult = lintFiles(convertResult, args.ignore)
-        consola.info(lintResult)
+        await lintFiles(convertResult, args.ignore)
       }
-      catch (error: any) {
-      // eslint-disable-next-line ts/no-unsafe-member-access
-        const errStr = String(error.stdout ?? error)
-        const isFatal = !!errStr.match(/\d+\s+error/i)
+      catch (error) {
+        const err = error as { isFatal?: boolean, message?: string }
+        const isFatal = err?.isFatal === true
+          || !!String(err?.message ?? error).match(/\d+\s+error/i)
 
         if (isFatal) {
           consola.error(`Fatal error during linting.: `, error)
@@ -88,11 +88,30 @@ void runMain(main)
 /* ============================================
 =                                             =
 ============================================= */
-function lintFiles(files: string[], ignore: string | undefined) {
-  const filesToLint = files.map(f => `"${f.replace(/\\/g, '/')}"`).join(' ')
-  const command = `npx eslint --fix --quiet`
-    + `${ignore ? ` --ignore-pattern ${ignore}` : ''}`
-    + ` ${filesToLint}`
-  consola.start('>', command)
-  return execSync(command, { stdio: 'inherit' })?.toString().trim() ?? ''
+async function lintFiles(files: string[], ignore: string | undefined) {
+  const normalized = files.map(f => f.replace(/\\/g, '/'))
+  consola.start('> eslint --fix --quiet', ignore ? `--ignore-pattern ${ignore}` : '', ...normalized)
+
+  const eslint = new ESLint({
+    fix                    : true,
+    ignorePatterns         : ignore ? [ignore] : undefined,
+    errorOnUnmatchedPattern: false,
+  })
+
+  const results = await eslint.lintFiles(normalized)
+  await ESLint.outputFixes(results)
+
+  // Filter out warnings (mimic --quiet)
+  const errorResults = ESLint.getErrorResults(results)
+
+  const formatter = await eslint.loadFormatter('stylish')
+  const output = await formatter.format(errorResults)
+  if (output) process.stdout.write(`${output}\n`)
+
+  const errorCount = errorResults.reduce((sum, r) => sum + r.errorCount, 0)
+  if (errorCount > 0) {
+    const err = new Error(`${errorCount} error${errorCount === 1 ? '' : 's'}`) as Error & { isFatal: boolean }
+    err.isFatal = true
+    throw err
+  }
 }
