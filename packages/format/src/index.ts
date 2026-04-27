@@ -1,66 +1,50 @@
-import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join, parse, relative } from 'node:path'
-import process from 'node:process'
+/**
+ * Public, side-effect-free API of `@mctools/format`.
+ *
+ * Pipeline:
+ *
+ *     ZenScript ──peggyParse──▶ TypeScript (with markers)
+ *                                       │
+ *                                       │ external: ESLint --fix
+ *                                       ▼
+ *                            TypeScript (post-fix)
+ *                                       │
+ *                                       │ tsToZs + stripDebris
+ *                                       ▼
+ *                                  ZenScript
+ *
+ * No function in this module touches the filesystem. See `formatFile.ts` for
+ * the I/O wrapper used by the CLI.
+ */
 
-import { consola } from 'consola'
-import { colors } from 'consola/utils'
-
-import { revertTS_to_ZS } from './parser.js'
 import { peggyParse } from './peggy.js'
+import { stripDebris, tsToZs } from './tsToZs.js'
 
-export function convertToTs(fileList: string[]) {
-  return fileList.map((filePath) => {
-    const pathRelative = relative(process.cwd(), filePath)
-    process.stdout.write(colors.blueBright(pathRelative))
+export type { ZsParseError } from './peggy.js'
 
-    process.stdout.write(` ${colors.inverse(colors.gray('read'))}`)
-    const fileContent = readFileSync(filePath, 'utf8')
-    const fileParsed = parse(filePath)
-    const doConvert = fileParsed.ext === '.zs'
-    const newFilePath = join(fileParsed.dir, `${fileParsed.name}.${doConvert ? 'ts' : 'zs'}`)
-    if (!doConvert) {
-      process.stdout.write(` ${colors.dim(colors.cyan(colors.inverse('revert')))}\n`)
-      writeFileSync(newFilePath, revert(fileContent))
-      unlinkSync(filePath)
-      return undefined
-    }
+/** Result of a single conversion attempt. */
+export type ConvertResult
+  = | { ok: true,  ts: string }
+    | { ok: false, error: Error }
 
-    // Convert
-    let converted: string
-
-    try {
-      process.stdout.write(` ${colors.green(colors.inverse('convert to ts'))}`)
-      converted = peggyParse(fileContent)
-    }
-    catch (e: unknown) {
-      const error = e as { location: { start: { line: number, column: number } }, message: string }
-      const line: number = error.location.start.line
-      const column: number = error.location.start.column
-      const lineText = fileContent.split('\n')[line - 1]
-
-      let errorLine = ''
-      if (lineText) {
-        errorLine = `\n\n  ${line} | ${lineText}\n`
-          + `   ${' '.repeat(String(line).length)}| ${' '.repeat(column - 1)}^`
-      }
-
-      consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${error.message}${errorLine}`)
-      return undefined
-    }
-
-    process.stdout.write(` ${colors.blue(colors.inverse('save'))}`)
-    writeFileSync(newFilePath, converted)
-
-    process.stdout.write(`\n`)
-    return newFilePath
-  })
+/** Forward pass: ZS source → TS source decorated with markers. */
+export function zsToTs(source: string): ConvertResult {
+  try {
+    return { ok: true, ts: peggyParse(source) }
+  }
+  catch (e) {
+    return { ok: false, error: e instanceof Error ? e : new Error(String(e)) }
+  }
 }
 
+/** Reverse pass: TS source (post-ESLint) → ZS source. */
 export function revert(source: string): string {
-  const result = revertTS_to_ZS(source.replace(/\r/g, ''))
-  return result
-    // Remove debris
-    .replace(/\n*\/\/ CONVERSION_DEBRIS[\s\S]+?\/\/ CONVERSION_DEBRIS\n*/g, '')
-    // Remove escaped strings
-    .replace(/'(.*\\'.*)'/g, (m: string, r: string) => `"${r.replace(/\\'/g, '\'')}"`)
+  return stripDebris(tsToZs(source.replace(/\r/g, '')))
 }
+
+export { peggyParse } from './peggy.js'
+// ----------------------------------------------------------------------------
+// Re-exports kept for backwards compatibility (older consumers may still
+// import these names directly).
+// ----------------------------------------------------------------------------
+export { tsToZs } from './tsToZs.js'

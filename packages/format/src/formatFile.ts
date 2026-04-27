@@ -1,0 +1,89 @@
+/**
+ * I/O orchestration: read .zs/.ts files, run conversions, write artefacts.
+ *
+ * Returns rich result objects so the CLI can keep `src ↔ dst` pairs in sync
+ * (the previous implementation lost this correspondence by `.filter(Boolean)`
+ * on the result array).
+ */
+
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join, parse, relative } from 'node:path'
+import process from 'node:process'
+
+import { consola } from 'consola'
+import { colors } from 'consola/utils'
+
+import { revert, zsToTs } from './index.js'
+
+export interface ConvertedFile {
+  /** Original file passed to the function. */
+  src : string
+  /** Path of the produced `.ts` (forward) or `.zs` (reverse). */
+  dst : string
+  /** `'forward'` = ZS → TS, `'reverse'` = TS → ZS (no-op write-through). */
+  kind: 'forward' | 'reverse'
+}
+
+export interface ConversionFailure {
+  src  : string
+  error: Error
+}
+
+export type ConvertOutcome = ConvertedFile | ConversionFailure
+
+export function isFailure(o: ConvertOutcome): o is ConversionFailure {
+  return 'error' in o
+}
+
+/**
+ * Convert a list of files. For each `.zs` we emit a sibling `.ts`; for
+ * pre-existing `.ts` we run the reverse pass and rewrite back to `.zs`.
+ */
+export function convertToTs(fileList: string[]): ConvertOutcome[] {
+  return fileList.map((filePath): ConvertOutcome => {
+    const pathRelative = relative(process.cwd(), filePath)
+    process.stdout.write(colors.blueBright(pathRelative))
+
+    process.stdout.write(` ${colors.inverse(colors.gray('read'))}`)
+    const fileContent = readFileSync(filePath, 'utf8')
+    const fileParsed = parse(filePath)
+    const isForward = fileParsed.ext === '.zs'
+    const dstExt = isForward ? 'ts' : 'zs'
+    const newFilePath = join(fileParsed.dir, `${fileParsed.name}.${dstExt}`)
+
+    if (!isForward) {
+      process.stdout.write(` ${colors.dim(colors.cyan(colors.inverse('revert')))}\n`)
+      writeFileSync(newFilePath, revert(fileContent))
+      unlinkSync(filePath)
+      return { src: filePath, dst: newFilePath, kind: 'reverse' }
+    }
+
+    process.stdout.write(` ${colors.green(colors.inverse('convert to ts'))}`)
+    const result = zsToTs(fileContent)
+    if (!result.ok) {
+      printParseError(filePath, fileContent, result.error)
+      return { src: filePath, error: result.error }
+    }
+
+    process.stdout.write(` ${colors.blue(colors.inverse('save'))}`)
+    writeFileSync(newFilePath, result.ts)
+    process.stdout.write(`\n`)
+    return { src: filePath, dst: newFilePath, kind: 'forward' }
+  })
+}
+
+function printParseError(filePath: string, source: string, e: Error): void {
+  const loc = (e as { location?: { start?: { line?: number, column?: number } } })
+    .location
+    ?.start
+  if (!loc?.line || !loc.column) {
+    consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${e.message}`)
+    return
+  }
+  const line = loc.line
+  const column = loc.column
+  const lineText = source.split('\n')[line - 1] ?? ''
+  const errorLine = `\n\n  ${line} | ${lineText}\n`
+    + `   ${' '.repeat(String(line).length)}| ${' '.repeat(column - 1)}^`
+  consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${e.message}${errorLine}`)
+}

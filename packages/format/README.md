@@ -2,7 +2,32 @@
 
 Format .zs files by using ESLint for typescript
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- extended_desc -->
+The pipeline is:
+
+```
+.zs ──Peggy──▶ .ts (with markers) ──ESLint --fix──▶ .ts ──regex revert──▶ .zs
+```
+
+The Peggy grammar (`src/zenscript.peggy`) lexes ZenScript and emits valid TypeScript sprinkled with block-comment markers. ESLint formats it like any other TS file, then a disciplined set of regexes (see `src/tsToZs.ts`) maps the markers back to ZS.
+
+**Requirements:**
+* `eslint@^9` is a **peer dependency** — install it in the host project alongside whatever ESLint config you want applied to the intermediate `.ts` files (e.g. `@antfu/eslint-config`). The package intentionally provides no config of its own; the whole point is to reuse yours.
+
+**Programmatic API:**
+
+```ts
+import { revert, zsToTs } from '@mctools/format'
+
+const result = zsToTs(zsSource)            // pure: string → { ok, ts } | { ok: false, error }
+if (result.ok) {
+  // result.ts contains marker-laden TypeScript
+  const back = revert(/* TS source after ESLint */)
+}
+```
+
+`zsToTs` / `revert` are pure (string in → string out). For batch file I/O see `convertToTs` from `@mctools/format/dist/formatFile`.
+<!-- /extended_desc -->
 
 ## Usage
 
@@ -31,9 +56,8 @@ ARGUMENTS
 
 OPTIONS
 
-  -i, --ignore    Same as --ignore-pattern for ESLint              
-      -t, --ts    Create linted .ts file without converting it back
-  -l, --nolint    Do not lint file
+  -i, --ignore    Same as --ignore-pattern for ESLint
+   -p, --pause    Pause and ask before linting
 ```
 
 ## Author
