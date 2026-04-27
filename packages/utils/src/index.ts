@@ -1,1 +1,1 @@
-export { naturalSort } from './natural-sort'
+export { naturalSort } from './natural-sort.js'

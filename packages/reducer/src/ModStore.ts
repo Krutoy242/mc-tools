@@ -8,7 +8,6 @@ import chalk from 'chalk'
 import { consola } from 'consola'
 
 import fast_glob from 'fast-glob'
-// @ts-expect-error missing types
 import levenshtein from 'fast-levenshtein'
 import { join, resolve } from 'pathe'
 
@@ -194,7 +193,7 @@ function findAddonByFilename(addons: ModdedAddon[], fileName: string): ModdedAdd
 
   const levArr = addons
     .map(a => ({
-      lev  : (levenshtein as { get: (a: string, b: string) => number }).get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
+      lev  : (levenshtein).get(purify(a.installedFile.fileNameOnDisk) ?? '', pureName ?? ''),
       addon: a,
     }))
     .sort((a, b) => a.lev - b.lev)

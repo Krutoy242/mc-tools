@@ -1,4 +1,3 @@
-/* eslint-disable ts/no-unsafe-assignment */
 import type { MatTraits } from './traits.js'
 
 import { getBorderCharacters, table } from 'table'
@@ -64,7 +63,7 @@ export interface TweakedMaterial {
 
 function evalMathContext(code: string, context = {}) {
   const lContext: Record<string, any> = { ...context }
-  for (const k of Object.getOwnPropertyNames(Math)) lContext[k] = (Math as Record<string, unknown>)[k]
+  for (const k of Object.getOwnPropertyNames(Math)) lContext[k] = (Math as unknown as Record<string, unknown>)[k]
 
   try {
     const _Func: any = Function
@@ -112,7 +111,7 @@ function tweakValue(
   if (n == null || n === '' || n === 'd' || n === defVal) return 'd'
 
   // Convert 'n' when its in form of math '*2'
-  if (!isNumber(String(n))) n = Number.parseFloat(evalMathContext(`${defVal}${n}`, { n }))
+  if (!isNumber(String(n))) n = evalMathContext(`${defVal}${n}`, { n })
   else n = Number(n)
 
   // Calculate output result (usually rounding value or make non-negative)
@@ -229,7 +228,7 @@ export function parseStats(
   const existMats: Set<string> = new Set()
 
   // Trait power
-  const parts: string[] = partGroups[tweakGroup]
+  const parts: readonly string[] = (partGroups as Partial<Record<TweakName, readonly string[]>>)[tweakGroup] ?? []
   const noTraitsMaterials:string[] = []
 
   for (const match of cfgListChunk.matchAll(
