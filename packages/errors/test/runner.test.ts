@@ -53,6 +53,20 @@ describe('loadConfig', () => {
     const cfg = await loadConfig(path, false)
     expect(cfg.ignoreFast).toBeNull()
   })
+
+  it('accepts an array-form `match` and joins fragments with no separator', async () => {
+    const stringPath = join(tmp, 'cfg-string.yml')
+    const arrayPath = join(tmp, 'cfg-array.yml')
+    await writeFile(stringPath, 'match: \'^\\[ERROR\\] \\d+\'\nignore: ""\nreplace: []\n')
+    await writeFile(
+      arrayPath,
+      'match:\n  - \'^\\[ERROR\\] \'\n  - \'\\d+\'\nignore: ""\nreplace: []\n'
+    )
+    const stringCfg = await loadConfig(stringPath, false)
+    const arrayCfg = await loadConfig(arrayPath, false)
+    expect(arrayCfg.match.source).toBe(stringCfg.match.source)
+    expect(arrayCfg.match.flags).toBe(stringCfg.match.flags)
+  })
 })
 
 describe('loadLog', () => {

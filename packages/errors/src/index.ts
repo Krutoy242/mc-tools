@@ -11,7 +11,7 @@ export const ConfigSchema = z.object({
   }).optional(),
   groupBy: z.array(z.string()).optional(),
   ignore : z.union([z.string(), z.array(z.string())]),
-  match  : z.string(),
+  match  : z.union([z.string(), z.array(z.string())]),
   replace: z.array(z.object({
     from: z.string(),
     to  : z.string(),
@@ -56,7 +56,7 @@ export function compileConfig(config: Config): CompiledConfig {
     ignoreFast: nonEmpty.length
       ? new RegExp(nonEmpty.map(p => `(?:${p})`).join('|'), 'm')
       : null,
-    match  : new RegExp(config.match, 'gm'),
+    match  : new RegExp(Array.isArray(config.match) ? config.match.join('') : config.match, 'gm'),
     replace: config.replace.map(r => ({ from: new RegExp(r.from, 'gm'), to: r.to })),
   }
 }
