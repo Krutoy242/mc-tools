@@ -26,10 +26,15 @@ const args = (yargs(process.argv.slice(2))
   .option('key', {
     alias   : 'k',
     type    : 'string',
-    describe: chalk.gray(`Path to file with CurseForge API key.
+    describe: chalk.gray(`CurseForge API key or path to file containing it.
 Get one at https://console.curseforge.com/?#/api-keys.
-If omitted, environment variable \`CURSE_FORGE_API_KEY\` would be used instead.`),
-    coerce: (f: string) => readFileSync(assertPath(f), 'utf8').trim(),
+If omitted, environment variable \`CF_API_KEY\` would be used instead.`),
+    coerce: (f: string) => {
+      try {
+        return readFileSync(assertPath(f), 'utf8').trim()
+      }
+      catch { return f }
+    },
   }) as Argv<{ key: string }>)
 
   .option('ignore', {
@@ -86,7 +91,7 @@ Accept deep path like \`cf2Addon.downloadCount\`.
   })
 
   .example(chalk.green`npx $0`, chalk.gray`If executed from minecraft folder, generate MODS.md file in same folder.
-Environment must have variable CURSE_FORGE_API_KEY.`)
+Environment must have variable CF_API_KEY.`)
   .example(chalk.green`npx $0 --key=~secret_api_key.txt`, chalk.gray`Create mod list,
 but take key from secret_api_key.txt file`)
   .example(chalk.green`npx $0 --ignore=devonly.ignore`, chalk.gray`Use .gitignore-like file to exclude mods,
@@ -111,10 +116,10 @@ instead of by default ID.`)
 
   .parseSync()
 
-args.key ??= process.env.CURSE_FORGE_API_KEY as string
+args.key ??= process.env.CF_API_KEY as string
 
 if (!args.key) {
-  console.error(chalk.red`Provide Curse Forge API key with ` + chalk.yellow`--key` + chalk.red` cli option or with ` + chalk.yellow`CURSE_FORGE_API_KEY` + chalk.red` environment variable`)
+  console.error(chalk.red`Provide Curse Forge API key with ` + chalk.yellow`--key` + chalk.red` cli option or with ` + chalk.yellow`CF_API_KEY` + chalk.red` environment variable`)
   process.exit(1)
 }
 

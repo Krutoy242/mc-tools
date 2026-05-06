@@ -42,9 +42,9 @@ To use as CLI tool:
 ```shell
 Options:
       --version     Show version number  [boolean]
-  -k, --key         Path to file with CurseForge API key.
+  -k, --key         CurseForge API key or path to file containing it.
                     Get one at https://console.curseforge.com/?#/api-keys.
-                    If omitted, environment variable `CURSE_FORGE_API_KEY` would be used instead.  [string]
+                    If omitted, environment variable `CF_API_KEY` would be used instead.  [string]
   -i, --ignore      Path to ignore file similar to .gitignore.
                     Used to exclude mods that used only in dev environment and should not be included in mod list.
                     `ignore` file content example: "mods/tellme-*"  [string]
@@ -64,7 +64,7 @@ Options:
 
 Examples:
   npx @mctools/modlist                                   If executed from minecraft folder, generate MODS.md file in same folder.
-                                                         Environment must have variable CURSE_FORGE_API_KEY.
+                                                         Environment must have variable CF_API_KEY.
   npx @mctools/modlist --key=~secret_api_key.txt         Create mod list,
                                                          but take key from secret_api_key.txt file
   npx @mctools/modlist --ignore=devonly.ignore           Use .gitignore-like file to exclude mods,
