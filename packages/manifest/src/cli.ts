@@ -1,13 +1,12 @@
 #!/usr/bin/env tsx
 
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import process from 'node:process'
 import { assertPath } from '@mctools/utils/args'
-import fse from 'fs-extra'
 import yargs from 'yargs'
 
 import { generateManifest } from './index.js'
-
-const { readFileSync } = fse
 
 const args = yargs(process.argv.slice(2))
   .scriptName('@mctools/manifest')
@@ -27,10 +26,9 @@ const args = yargs(process.argv.slice(2))
     coerce  : (f: string) => readFileSync(assertPath(f), 'utf8'),
   })
   .option('key', {
-    alias       : 'k',
-    describe    : 'Path to file with CurseForge API key',
-    demandOption: true,
-    coerce      : (f: string) => readFileSync(assertPath(f), 'utf8').trim(),
+    alias   : 'k',
+    type    : 'string',
+    describe: 'CurseForge API key or path to file containing it. Get one at https://console.curseforge.com/?#/api-keys. If omitted, environment variable `CF_API_KEY` would be used instead.',
   })
   .option('mcinstance', {
     alias   : 'm',
@@ -58,6 +56,28 @@ const args = yargs(process.argv.slice(2))
     describe: 'Suffix for output file: manifest<postfix>.json',
   })
   .parseSync()
+
+// Resolve API key: --key option (file or direct) or CF_API_KEY env var
+if (args.key) {
+  // Check if it's a file path
+  try {
+    const resolvedPath = resolve(args.key)
+    if (existsSync(resolvedPath)) {
+      args.key = readFileSync(resolvedPath, 'utf8').trim()
+    }
+  }
+  catch {
+    // If not a valid path, use args.key as-is (direct API key)
+  }
+}
+else {
+  args.key = process.env.CF_API_KEY
+}
+
+if (!args.key) {
+  console.error('Provide Curse Forge API key with --key cli option or with CF_API_KEY environment variable')
+  process.exit(1)
+}
 
 if (args.verbose) console.log('- Generating manifest -')
 generateManifest(args.mcinstance, {

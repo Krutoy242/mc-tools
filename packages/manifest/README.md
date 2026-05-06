@@ -25,7 +25,7 @@ Options:
       --version       Show version number  [boolean]
   -v, --verbose       Log working process in stdout  [boolean]
   -i, --ignore        Path to ignore file similar to .gitignore
-  -k, --key           Path to file with CurseForge API key  [required]
+  -k, --key           CurseForge API key or path to file containing it. Get one at https://console.curseforge.com/?#/api-keys. If omitted, environment variable `CF_API_KEY` would be used instead.  [string]
   -m, --mcinstance    Path to minecraftinstance.json  [default: "minecraftinstance.json"]
       --name          Override pack name (default: autodetect from cwd)  [string]
       --mc-version    Override Minecraft version (default: autodetect from minecraftinstance.json/debug.log)  [string]
