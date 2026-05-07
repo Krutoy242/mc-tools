@@ -25,6 +25,7 @@ Start
 /* eslint-disable prefer-arrow-callback */
 /* eslint-disable prefer-template */
 /* eslint-disable style/indent-binary-ops */
+/* eslint-disable style/max-statements-per-line */
 /* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
@@ -439,7 +440,7 @@ PropertyName
   }
 
 Call
-  = (Member _ Arguments) (_ Arguments / _ "[" _ Expression _ "]" / _ "." _ IdentifierName)*
+  = (Member _ Arguments) (_ Arguments / _ "[" _ Expression _ "]" / _ ("." / "?.") _ IdentifierName)*
   / Member
 
 Arguments
@@ -452,7 +453,7 @@ Member
   = Primary
     (
         _ "[" _ Expression _ "]"
-      / _ "." _ IdentifierName
+      / _ ("." / "?.") _ IdentifierName
     )*
 
 Unary

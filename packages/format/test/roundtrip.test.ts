@@ -24,6 +24,18 @@ describe('zsToTs (forward pass)', () => {
     const result = zsToTs('var x = ;')
     expect(result.ok).toBe(false)
   })
+
+  it('parses optional chaining operator (?.)', () => {
+    const source = `
+function foo(str as string) as string {
+  return str?.trim();
+}`
+    const result = zsToTs(source)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.ts).toContain('str?.trim()')
+    }
+  })
 })
 
 describe('revert (reverse pass)', () => {
