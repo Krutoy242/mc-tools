@@ -85,6 +85,30 @@ const m = {
     expect(back).toContain('-1:')
   })
 
+  it('keeps parens around a cast when followed by member access / call', () => {
+    // `(A as B).c()` — ESLint may strip the redundant outer parens around the
+    // CallExpression `__as<B>(A)` (since member access on a call is fine in
+    // TS without parens). Revert must put them back, otherwise ZS would read
+    // `A as B.c()` as `A as (B.c)()` (TypePath allows `.`).
+    const cases = [
+      'val a = (x as int).foo;',
+      'val a = (x as int).foo();',
+      'val a = (x as int)[0];',
+      'val a = (x as int)?.foo;',
+      'val a = (x as int)(y);',
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok).toBe(true)
+      if (!fwd.ok) return
+      // Mimic ESLint's `no-extra-parens` stripping the outer parens around
+      // the `__as<…>(…)` CallExpression.
+      const lintedLike = fwd.ts.replace(/\(__as</g, '__as<')
+        .replace(/\)\)(?=[.[(]|\?\.)/g, ')')
+      expect(revert(lintedLike).trim()).toBe(source)
+    }
+  })
+
   it('round-trips chained casts even after ESLint-style transformations', () => {
     // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
     // (raw `as`) emission: collapse chained assertions. The new wrapper is

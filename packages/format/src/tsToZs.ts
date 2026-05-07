@@ -107,7 +107,20 @@ function revertCasts(source: string): string {
 
     const inner = out.slice(i + 2, j)
     const wrapped = castExprNeedsParens(inner) ? `(${inner})` : inner
-    out = `${out.slice(0, start)}${wrapped} as ${type}${out.slice(j + 1)}`
+    const after = out.slice(j + 1)
+    // `as` binds looser than member access / call in ZS, so a cast result
+    // followed by `.foo`, `?.foo`, `[…]`, or `(…)` must stay parenthesised —
+    // otherwise `(A as B).c` would revert to `A as B.c`, which the ZS parser
+    // would read as `A as (B.c)` (TypePath allows `.`).
+    const trimmed = after.replace(/^\s+/, '')
+    const needsOuter = trimmed.startsWith('.')
+      || trimmed.startsWith('[')
+      || trimmed.startsWith('(')
+      || trimmed.startsWith('?.')
+    const replacement = needsOuter
+      ? `(${wrapped} as ${type})`
+      : `${wrapped} as ${type}`
+    out = `${out.slice(0, start)}${replacement}${after}`
   }
 }
 
