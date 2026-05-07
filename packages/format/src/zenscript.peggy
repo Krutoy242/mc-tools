@@ -163,16 +163,16 @@ TypeSingle
   = "as" !Letter _ TypeMutated
 
 TypeMutated
-  = head:TypeLiteral tail:("$" IdentifierName)? {
-    return [head, tail ? ['/* ', tail, ' */'] : undefined]
+  = head:TypeLiteral tail:("$" name:IdentifierName { return name })? {
+    return tail ? ['__$', tail, '<', head, '>'] : [head]
   }
 
 TypeLiteral
   = FunctionType
-  / (TypeList / TypePath) (_ "[" _ TypeLiteral? _ "]")*
+  / (TypeList / TypePath) (_ "[" _ TypeMutated? _ "]")*
 
 TypeList
-  = "[" body:(_ TypeLiteral? _) "]" {
+  = "[" body:(_ TypeMutated? _) "]" {
   	return ['Array<',...body, ">"]
   }
 

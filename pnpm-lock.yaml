@@ -121,6 +121,9 @@ importers:
 
   packages/format:
     dependencies:
+      balanced-match:
+        specifier: ^3.0.1
+        version: 3.0.1
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -131,6 +134,9 @@ importers:
         specifier: ^0.2.14
         version: 0.2.14
     devDependencies:
+      '@types/balanced-match':
+        specifier: ^3.0.2
+        version: 3.0.2
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.6.1)
@@ -1049,6 +1055,9 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
+  '@types/balanced-match@3.0.2':
+    resolution: {integrity: sha512-It1j6doJHkoGoxfOj3c7sHVHQXYMHo3c0kpcnPhEO4KfitNE5SqiSGKV0Hx5/cwyYKJfEhin0tZYBmqpjEcavw==}
+
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -1239,6 +1248,10 @@ packages:
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
+
+  balanced-match@3.0.1:
+    resolution: {integrity: sha512-vjtV3hiLqYDNRoiAv0zC4QaGAMPomEoq83PRmYIofPswwZurCeWR5LByXm7SyoL0Zh5+2z0+HC7jG8gSZJUh0w==}
+    engines: {node: '>= 16'}
 
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
@@ -4457,6 +4470,8 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
+  '@types/balanced-match@3.0.2': {}
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -4666,6 +4681,8 @@ snapshots:
       - debug
 
   balanced-match@1.0.2: {}
+
+  balanced-match@3.0.1: {}
 
   balanced-match@4.0.4: {}
 

@@ -136,7 +136,6 @@ export const RULES: Rule[] = [
   ['CONCAT',    new RegExp(`(?<a>\\s*)${M_CONCAT}(?<b>\\s*)\\+|\\+(?<c>\\s*)${M_CONCAT}(?<d>\\s*)`, 'g'),    ({ a, b, c, d }) => `${a || b || ''}~${c || d || ''}`],
   ['CONCAT_TEMPLATE', new RegExp(`\\s*${M_CONCAT}\\s*`, 'g'), ''],
   ['HAS',             new RegExp(`${M_HAS}s*in`, 'g'), 'has'],
-  ['ORDERLY',         /\/\*\s*(\$\w+)\s*\*\//g, '$1'],
   ['CAST_REVERT',     new RegExp(`(\\s:|:\\s)${M_AS}(\\s*)`, 'g'), ' as$2'],
   ['RESERVED',    new RegExp(`${esc(RESERVED_PREFIX)}(${RESERVED})`, 'g'),    '$1'],
   ['CONST', new RegExp(`${M_VAR}const`, 'g'), 'val'],

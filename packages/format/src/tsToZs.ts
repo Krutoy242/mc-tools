@@ -14,6 +14,7 @@
  */
 
 import { MARKERS } from './markers.js'
+import { revertBranded } from './revert/branded.js'
 import { revertCasts, revertLists } from './revert/casts.js'
 import { RULES } from './revert/rules.js'
 
@@ -22,8 +23,9 @@ export function tsToZs(source: string): string {
   // Cast wrappers are unwound first (bracket-matched, not regex). After this
   // pass the source contains plain `as Type` again, which the rules below
   // can treat like any other ZS-bound text — type-internal markers such as
-  // `Array<...>` and `/* $tag */` are then reverted by LIST/ORDERLY etc.
-  let out = revertLists(revertCasts(source))
+  // `Array<...>` are then reverted by LIST. `revertBranded` runs before
+  // `revertLists` so an `Array<…>` inside a branded wrapper is still unwound.
+  let out = revertLists(revertBranded(revertCasts(source)))
   for (const [, pattern, replacement] of RULES) {
     if (typeof replacement === 'string') {
       out = out.replace(pattern, replacement)

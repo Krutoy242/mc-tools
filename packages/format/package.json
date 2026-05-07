@@ -47,11 +47,13 @@
     "eslint": "^9.0.0"
   },
   "dependencies": {
+    "balanced-match": "^3.0.1",
     "citty": "^0.1.6",
     "consola": "^3.4.2",
     "tinyglobby": "^0.2.14"
   },
   "devDependencies": {
+    "@types/balanced-match": "^3.0.2",
     "eslint": "^9.39.4",
     "peggy": "^3.0.2"
   },

@@ -155,6 +155,25 @@ const m = {
     }
   })
 
+  it('round-trips `$orderly` and other type-suffix branded wrappers', () => {
+    // ZS lets a type literal carry a `$suffix` modifier (e.g. `string[string]
+    // $orderly` for an OrderlyMap). The forward pass encodes it as a synthetic
+    // `__$suffix<T>` generic so ESLint's `style/type-generic-spacing` cannot
+    // strip the marker.
+    const cases = [
+      'val m as string[string]$orderly = {} as string[string]$orderly;',
+      'val m as string[string[int]$orderly]$orderly = {} as string[string[int]$orderly]$orderly;',
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      // The wrapper appears in the emitted TS as `__$orderly<...>`.
+      expect(fwd.ts).toContain('__$orderly<')
+      expect(revert(fwd.ts).trim()).toBe(source)
+    }
+  })
+
   it('round-trips chained casts even after ESLint-style transformations', () => {
     // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
     // (raw `as`) emission: collapse chained assertions. The new wrapper is

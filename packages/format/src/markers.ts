@@ -48,6 +48,13 @@ export const MARKERS = {
   // from stripping casts that are runtime-meaningful in ZS.
   castFn: '__as',
 
+  // Branded type wrapper. Forward pass emits `__$suffix<T>` for every ZS
+  // `T$suffix` (e.g. `string[string]$orderly`); revert unwinds it via
+  // balanced bracket matching (see `revertBranded` in `revert/branded.ts`).
+  // `$` cannot start a ZS identifier, so this prefix is unambiguous; a
+  // synthetic generic survives ESLint's spacing/comment-stripping passes.
+  brandedTypePrefix: '__$',
+
   // Debris fence
   debrisFence: 'CONVERSION_DEBRIS',
 } as const
