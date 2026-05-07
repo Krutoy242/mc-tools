@@ -85,6 +85,30 @@ const m = {
     expect(back).toContain('-1:')
   })
 
+  it('parses `[A][B]` as a map type (key=B, value=List<A>) — the ZS list-keyed map sugar', () => {
+    // In ZS, `[A][B]` is sugar for "map keyed by B whose values are lists of
+    // A". Syntactically: a list type literal `[A]` followed by a `[B]` index.
+    // The grammar previously only allowed the `[…]` indexing suffix on
+    // TypePath, so `val a as [int][string];` failed to parse.
+    const cases = [
+      'val a as [int][string];',
+      'val b as [string][int];',
+      // Nested list-keyed maps. The LIST revert previously used a non-greedy
+      // `Array<(.+?)>` regex that mis-matched across nested `<>` pairs;
+      // `revertLists` now peels innermost-first until stable.
+      'val c as [[int][string]][[string][int]];',
+      'val d as [[int]][string];',
+      'val e as [[[int]]];',
+      'val f as [[int][string]][[string][int]] = {} as [[int][string]][[string][int]];',
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      expect(revert(fwd.ts).trim()).toBe(source)
+    }
+  })
+
   it('keeps parens around a cast when followed by member access / call', () => {
     // `(A as B).c()` — ESLint may strip the redundant outer parens around the
     // CallExpression `__as<B>(A)` (since member access on a call is fine in

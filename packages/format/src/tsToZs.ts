@@ -59,6 +59,24 @@ function castExprNeedsParens(expr: string): boolean {
 }
 
 /**
+ * Unwind every `Array<...>` wrapper to ZS `[...]`, innermost first. A single
+ * regex pass with `Array<(.+?)>` fails on any nesting — the non-greedy `.+?`
+ * matches across unrelated `<>` pairs (e.g. `Array<Array<int>[string]>` would
+ * partially-match `Array<Array<int>`, leaving the outer `>` stranded). The
+ * `[^<>]+` pattern matches only innermost generics, and the loop peels one
+ * level at a time until the source is stable.
+ */
+function revertLists(source: string): string {
+  let out = source
+  while (out.includes('Array<')) {
+    const next = out.replace(/Array<([^<>]+)>/g, (_m, a: string) => `[${a}]`)
+    if (next === out) break // malformed input (e.g. `Array<` without `>`)
+    out = next
+  }
+  return out
+}
+
+/**
  * Unwind every `__as<Type>(expr)` wrapper to ZS `expr as Type`, innermost
  * first. Uses explicit bracket counting because angle/paren nesting defeats
  * regex (e.g. `__as<Array<int>>(__as<float>(x))`).
@@ -239,9 +257,6 @@ const RULES: Rule[] = [
   ['CONST', new RegExp(`${M_VAR}const`, 'g'), 'val'],
   ['LET',   new RegExp(`${M_VAR}let`, 'g'), 'var'],
 
-  // `Array<X>` → `[X]`
-  ['LIST', /Array<(?<a>.+?)>/g, ({ a }) => `[${a}]`],
-
   // Decorators: `@foo()` → `#foo`, `@foo.bar(body)` → `#foo bar body`
   ['DECORATOR',    /@(?<a>\w+(?:\.\w+)*)\(\s*\)/g,    ({ a }) => `#${a.split('.').join(' ')}`],
   ['DECORATOR_OBJ',    new RegExp(
@@ -266,7 +281,7 @@ export function tsToZs(source: string): string {
   // pass the source contains plain `as Type` again, which the rules below
   // can treat like any other ZS-bound text — type-internal markers such as
   // `Array<...>` and `/* $tag */` are then reverted by LIST/ORDERLY etc.
-  let out = revertCasts(source)
+  let out = revertLists(revertCasts(source))
   for (const [, pattern, replacement] of RULES) {
     if (typeof replacement === 'string') {
       out = out.replace(pattern, replacement)

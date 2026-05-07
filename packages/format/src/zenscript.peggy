@@ -235,8 +235,7 @@ TypeMutated
 
 TypeLiteral
   = FunctionType
-  / TypeList
-  / TypePath (_ "[" _ TypeLiteral? _ "]")*
+  / (TypeList / TypePath) (_ "[" _ TypeLiteral? _ "]")*
 
 TypeList
   = "[" body:(_ TypeLiteral? _) "]" {
