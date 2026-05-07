@@ -36,6 +36,15 @@ function foo(str as string) as string {
       expect(result.ts).toContain('str?.trim()')
     }
   })
+
+  it('preserves explicit type casts', () => {
+    const source = 'val a = 3.14f as int * 2;'
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    const back = revert(fwd.ts)
+    expect(back.trim()).toBe(source)
+  })
 })
 
 describe('revert (reverse pass)', () => {

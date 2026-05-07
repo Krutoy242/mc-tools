@@ -39,11 +39,18 @@ Start
 /* eslint-disable unused-imports/no-unused-vars */
 /* eslint-disable vars-on-top */
 
-declare function __float(n: number): number;
+declare type int = number & { readonly __brand: 'int' };
+declare type byte = number & { readonly __brand: 'byte' };
+declare type float = number & { readonly __brand: 'float' };
+declare type double = number;
+declare type short = number & { readonly __brand: 'short' };
+declare type long = number & { readonly __brand: 'long' };
+declare type bool = boolean;
+declare function __float(n: number): float;
 declare function __double(n: number): number;
-declare function __byte(n: number): number;
-declare function __short(n: number): number;
-declare function __long(n: number): number;
+declare function __byte(n: number): byte;
+declare function __short(n: number): short;
+declare function __long(n: number): long;
 declare function $(s: any): any;
 declare function isNull(o: any): boolean;
 declare const recipes: Record<string, any>;
@@ -58,13 +65,6 @@ declare const crafttweaker: any;
 declare const events: any;
 declare const mixin: any;
 declare const native: any;
-declare type int = number;
-declare type byte = number;
-declare type float = number;
-declare type double = number;
-declare type short = number;
-declare type long = number;
-declare type bool = boolean;
 // =============================================================
 // CONVERSION_DEBRIS
 
