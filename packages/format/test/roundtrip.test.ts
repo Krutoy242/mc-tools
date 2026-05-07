@@ -190,6 +190,22 @@ const m = {
     }
   })
 
+  it('round-trips mixed-quote string literals on the same line', () => {
+    // ZS source mixes a single-quoted `"` and a double-quoted `'` across a
+    // concat. ESLint's `style/quotes` will normalise `"'"` to `'\''` (single
+    // quotes, escape the apostrophe). The reverse pass must rewrite *only*
+    // the literal that actually carries an escaped apostrophe back to its
+    // double-quoted form — without spanning across the earlier `'"'`
+    // literal on the same line. A greedy `.*` body in the unescaper would
+    // glue both literals into one and emit `""' ~ ''";` — broken.
+    const source = `val a = '"' ~ "'";`
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    const linted = fwd.ts.replace(/"'"/g, `'\\''`)
+    expect(revert(linted).trim()).toBe(source)
+  })
+
   it('round-trips chained casts even after ESLint-style transformations', () => {
     // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
     // (raw `as`) emission: collapse chained assertions. The new wrapper is

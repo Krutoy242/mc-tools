@@ -48,12 +48,18 @@ export function tsToZs(source: string): string {
  * Strip the conversion debris fence and unescape single-quoted strings that
  * contain escaped apostrophes (these came from ZS double-quoted strings that
  * peggy normalises to single quotes).
+ *
+ * The body pattern `(?:[^'\\]|\\.)*` is the standard JS single-quoted-string
+ * body (anything that isn't a quote/backslash, OR a backslash followed by any
+ * char). Without it, a greedy `.*` would happily span multiple distinct string
+ * literals on the same line — e.g. `'"' + '\''` would match end-to-end and
+ * collapse into one mangled blob.
  */
 export function stripDebris(zs: string): string {
   const fence = MARKERS.debrisFence
   return zs
     .replace(new RegExp(`\\n*\\/\\/ ${fence}[\\s\\S]+?\\/\\/ ${fence}\\n*`, 'g'), '')
-    .replace(/'(.*\\'.*)'/g, (_m, r: string) => `"${r.replace(/\\'/g, '\'')}"`)
+    .replace(/'((?:[^'\\]|\\.)*\\'(?:[^'\\]|\\.)*)'/g, (_m, r: string) => `"${r.replace(/\\'/g, '\'')}"`)
 }
 
 /** @deprecated use {@link tsToZs}. Kept for backwards compatibility. */
