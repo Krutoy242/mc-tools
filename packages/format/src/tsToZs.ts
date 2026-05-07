@@ -189,6 +189,18 @@ const RULES: Rule[] = [
     name !== from.split('.').pop() ? ` as ${name}` : ''
   };`],
 
+  // --- Object keys: unquote forced-quoted numeric/identifier keys ---------
+  // ESLint's `quote-props: consistent-as-needed` propagates quoting to every
+  // key in an object as soon as one of them needs it (e.g. a negative-numeric
+  // ZS key like `-1`, which TS rejects as a bare property name). Stripping
+  // the quotes back here is uniform per line (always 2 chars), so the
+  // `key-spacing` alignment ESLint computed in TS survives revert intact.
+  // True string keys (containing characters that aren't valid in a numeric
+  // or identifier name, e.g. `'foo bar'`) don't match and stay quoted.
+  // Anchored to `[{,]` lookbehind so we never unquote a string in non-key
+  // position (ternary `: 'foo'`, array `['foo']`, etc.).
+  ['UNQUOTE_KEY',    /(?<pre>[{,])(?<ws>\s*)'(?<key>-?\d+(?:\.\d+)?|[a-z_]\w*)'(?=\s*:)/gi,    ({ pre, ws, key }) => `${pre}${ws}${key}`],
+
   // --- Captures (`<...>`) and number postfixes -----------------------------
   ['CAPTURES', /\$`(?<cap>[^`]+)`/g, ({ cap }) => `<${cap}>`],
   ['NUMBER_POSTFIX',    new RegExp(`(?<p>${POSTFIX_FN_NAMES})\\((?<num>${NUMBER})\\)`, 'g'),    ({ p, num }) => num + FN_TO_POSTFIX[p]],

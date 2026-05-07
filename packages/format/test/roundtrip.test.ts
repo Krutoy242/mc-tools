@@ -56,6 +56,35 @@ function foo(str as string) as string {
     expect(revert(fwd.ts).trim()).toBe('val x = 0.1 as int as double;')
   })
 
+  it('emits negative numeric object keys as quoted strings (no bracket markers)', () => {
+    const fwd = zsToTs('static m as int[int] = { 0: 1, -1: 2 } as int[int];')
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    // Quoted form; no `[-1]` computed-key + marker leftover.
+    expect(fwd.ts).toContain(`'-1'`)
+    expect(fwd.ts).not.toContain('/* _ */[-1')
+  })
+
+  it('preserves colon-alignment of object literals through quoted-key revert', () => {
+    // Simulate what ESLint produces with `quote-props: consistent-as-needed`
+    // + `key-spacing` align: every key quoted, colons in the same column.
+    // `'-1'` is what our forward pass now emits for a negative ZS key.
+    const linted = `
+const m = {
+  '0' : 'a',
+  '-1': 'b',
+};`
+    const back = revert(linted)
+    // After revert: quotes stripped uniformly (-2 chars per line), so the
+    // colons remain in the SAME column relative to each other.
+    const lines = back.split('\n').filter(l => l.includes(':'))
+    const colonCols = lines.map(l => l.indexOf(':'))
+    expect(new Set(colonCols).size).toBe(1)
+    // And the keys came out as bare ZS literals.
+    expect(back).toContain('0 ')
+    expect(back).toContain('-1:')
+  })
+
   it('round-trips chained casts even after ESLint-style transformations', () => {
     // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
     // (raw `as`) emission: collapse chained assertions. The new wrapper is

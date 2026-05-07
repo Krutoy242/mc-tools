@@ -588,9 +588,19 @@ ${flat(body)}`
     return ['/* _ */[',...body,'/* _ */]']
     };
   var peg$f30 = function(minus, body) {
-    return minus
-      ? ['/* _ */[', ...minus, ...body, '/* _ */]']
-      : body
+    if (!minus) return body
+    // Negative numerics are not valid bare TS property keys (must be quoted
+    // string or `[computed]`). Emit as a quoted string: with the preamble's
+    // `quote-props: consistent-as-needed`, every other key in the object
+    // gets quoted too, so `key-spacing` adds the same 2-char skew to every
+    // line — and the `UNQUOTE_KEY` rule in tsToZs.ts strips those same 2
+    // chars uniformly, leaving the colon column unchanged. Postfix-typed
+    // negatives (e.g. `-1L`, effectively unseen as keys) fall back to the
+    // legacy `/* _ */[ ... /* _ */]` bracket marker.
+    const flatBody = Array.isArray(body) ? flat(body) : body
+    return /^[\d.]+$/.test(flatBody)
+      ? ["'", minus, flatBody, "'"]
+      : ['/* _ */[', minus, body, '/* _ */]']
   };
   var peg$f31 = function() { return '/* ~ */ +' };
   var peg$f32 = function() { return '/* has */in' };
