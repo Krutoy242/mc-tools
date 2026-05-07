@@ -18,6 +18,7 @@ import {
   POSTFIX_TO_FN,
   RESERVED_PREFIX,
   RESERVED_WORDS,
+  ZS_KEYWORDS,
 } from './markers.js'
 
 // -----------------------------------------------------------------------------
@@ -149,6 +150,14 @@ function revertCasts(source: string): string {
 const NUMBER = String.raw`-?\d+(?:\.\d+)?`
 const POSTFIX_FN_NAMES = Object.values(POSTFIX_TO_FN).join('|')
 const RESERVED = RESERVED_WORDS.join('|')
+// Bare ZS keywords would re-tokenise after unquoting (e.g. `function` would
+// start a function declaration), so UNQUOTE_KEY must skip them. Sort
+// long-first to keep the alternation prefix-safe (e.g. `zenClass` before
+// `zen…`-shaped substrings); the trailing `\b` is implicit because the
+// surrounding regex already ends the key with a closing quote.
+const ZS_KEYWORDS_ALT = [...ZS_KEYWORDS]
+  .sort((a, b) => b.length - a.length)
+  .join('|')
 
 /** Escape a literal block-comment marker for use in a regex. */
 function esc(s: string): string {
@@ -230,7 +239,11 @@ const RULES: Rule[] = [
   // or identifier name, e.g. `'foo bar'`) don't match and stay quoted.
   // Anchored to `[{,]` lookbehind so we never unquote a string in non-key
   // position (ternary `: 'foo'`, array `['foo']`, etc.).
-  ['UNQUOTE_KEY',    /(?<pre>[{,])(?<ws>\s*)'(?<key>-?\d+(?:\.\d+)?|[a-z_]\w*)'(?=\s*:)/gi,    ({ pre, ws, key }) => `${pre}${ws}${key}`],
+  // The `(?!(?:keyword)')` negative lookahead keeps ZS reserved words quoted —
+  // `'function'` etc. parse fine as ZS PropertyName via the StringLiteral
+  // production but, once unquoted, the upstream ZS runtime re-tokenises them
+  // as the keyword (a bare `function:` reads as a declaration head).
+  ['UNQUOTE_KEY',    new RegExp(`(?<pre>[{,])(?<ws>\\s*)'(?!(?:${ZS_KEYWORDS_ALT})')(?<key>-?\\d+(?:\\.\\d+)?|[a-z_]\\w*)'(?=\\s*:)`, 'gi'),    ({ pre, ws, key }) => `${pre}${ws}${key}`],
 
   // --- Captures (`<...>`) and number postfixes -----------------------------
   ['CAPTURES', /\$`(?<cap>[^`]+)`/g, ({ cap }) => `<${cap}>`],

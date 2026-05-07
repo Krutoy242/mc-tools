@@ -75,3 +75,45 @@ export const RESERVED_WORDS = ['default', 'class', 'case'] as const
 
 /** Anonymous parameter prefix for function-type signatures (e.g. `_arg0`). */
 export const ANON_ARG_PREFIX = '_arg'
+
+/**
+ * ZS reserved words. The Peggy grammar lets `PropertyName → IdentifierName`
+ * accept these as bare object keys, but the upstream ZenScript runtime parses
+ * a bare `function`/`val`/`static`/... in key position as the start of a
+ * declaration, not as a property name. The forward pass therefore quotes them
+ * (`'function': ...`); revert's `UNQUOTE_KEY` rule must NOT strip those quotes.
+ */
+export const ZS_KEYWORDS = [
+  'as',
+  'break',
+  'continue',
+  'do',
+  'else',
+  'extends',
+  'false',
+  'for',
+  'frigginClass',
+  'frigginConstructor',
+  'frigginGetter',
+  'frigginSetter',
+  'function',
+  'global',
+  'has',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'null',
+  'return',
+  'static',
+  'to',
+  'true',
+  'val',
+  'var',
+  'version',
+  'while',
+  'zenClass',
+  'zenConstructor',
+  'zenGetter',
+  'zenSetter',
+] as const

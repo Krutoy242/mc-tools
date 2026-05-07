@@ -109,6 +109,28 @@ const m = {
     }
   })
 
+  it('keeps quotes around ZS-keyword string keys (e.g. `function`)', () => {
+    // `function` is a ZS keyword. As an *object key* the ZS grammar accepts
+    // it via PropertyName→IdentifierName, but in many surrounding contexts
+    // a bare `function` token reads as the start of a function definition.
+    // The forward pass quotes it; revert's UNQUOTE_KEY rule (which strips
+    // quotes from any `[a-z_]\w*` key) currently strips them anyway,
+    // producing invalid ZS. Other ZS keywords (`val`, `var`, `as`, `if`,
+    // `else`, `for`, `while`, `return`, `import`, `static`, `global`,
+    // `zenClass`, etc.) have the same problem.
+    const cases = [
+      `val m as string[string] = { 'function': 'foo' } as string[string];`,
+      `val m as string[string] = { 'val': 'foo' } as string[string];`,
+      `val m as string[string] = { 'static': 'foo' } as string[string];`,
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      expect(revert(fwd.ts).trim()).toBe(source)
+    }
+  })
+
   it('keeps parens around a cast when followed by member access / call', () => {
     // `(A as B).c()` — ESLint may strip the redundant outer parens around the
     // CallExpression `__as<B>(A)` (since member access on a call is fine in
