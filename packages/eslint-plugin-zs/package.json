@@ -1,0 +1,55 @@
+{
+  "name": "@mctools/eslint-plugin-zs",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ESLint plugin: lint and auto-format .zs (ZenScript) via @mctools/format",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+  },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
+  "keywords": [
+    "automation",
+    "minecraft",
+    "tools",
+    "eslint",
+    "eslint-plugin",
+    "zenscript",
+    "crafttweaker"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "coverage": "vitest run --coverage",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@mctools/format": "workspace:*",
+    "eslint": "^9.0.0"
+  },
+  "devDependencies": {
+    "@mctools/format": "workspace:*",
+    "eslint": "^9.39.4",
+    "unbuild": "^3.6.1",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

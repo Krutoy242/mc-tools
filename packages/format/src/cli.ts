@@ -14,13 +14,14 @@
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { performance } from 'node:perf_hooks'
 
+import process from 'node:process'
 import { defineCommand, runMain } from 'citty'
 import { consola } from 'consola'
 import { colors } from 'consola/utils'
 import { glob } from 'tinyglobby'
 
 import pkg from '../package.json' with { type: 'json' }
-import { lintFiles } from './eslintRunner.js'
+import { lintFilesBatch } from './eslintRunner.js'
 import { convertToTs, isFailure } from './formatFile.js'
 import { revert } from './index.js'
 
@@ -88,7 +89,7 @@ const main = defineCommand({
     if (!skip) {
       const startLint = performance.now()
       try {
-        await lintFiles(tsPaths, args.ignore, args.verbose)
+        await lintFilesBatch(tsPaths, args.ignore, args.verbose)
       }
       catch (error) {
         const err = error as { isFatal?: boolean, message?: string }

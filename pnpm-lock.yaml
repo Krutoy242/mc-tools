@@ -104,6 +104,21 @@ importers:
         specifier: ^1.0.0-alpha.6
         version: 1.0.0-alpha.6
 
+  packages/eslint-plugin-zs:
+    devDependencies:
+      '@mctools/format':
+        specifier: workspace:*
+        version: link:../format
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.6.1)
+      unbuild:
+        specifier: ^3.6.1
+        version: 3.6.1(typescript@6.0.3)
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
   packages/format:
     dependencies:
       citty:

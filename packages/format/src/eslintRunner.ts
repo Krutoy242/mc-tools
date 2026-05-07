@@ -1,18 +1,27 @@
 /**
  * Encapsulates ESLint --fix invocation.
  *
- * Splitting this out keeps the CLI tiny and testable, and ensures the ESLint
- * version constraint is felt in exactly one place. ESLint is consumed via
- * `peerDependencies` (see package.json) — the host project is expected to
- * bring it (and a config) along.
+ * `eslint` is a **peer dependency** — never import it at module-evaluation
+ * time. Consumers who only need pure helpers (`zsToTs`, `revert`,
+ * `formatZsSync` against their own adapter) must be able to load
+ * `@mctools/format` without an installed ESLint. All references to `eslint`
+ * therefore go through dynamic `import('eslint')` inside async function
+ * bodies.
+ *
+ * Two consumers:
+ *   - `lintFilesBatch` — FS batch path used by the `mctools-format` CLI.
+ *   - `createBatchAdapter` — `LintAdapter` shape used by external consumers
+ *     that want to lint a single TS string with the host's full config
+ *     resolution (plugins, presets, ignores) but no FS round-trip.
  */
 
+import type { LintAdapter, LintFixResult } from './lintAdapter.js'
 import { performance } from 'node:perf_hooks'
-import process from 'node:process'
 
+import process from 'node:process'
 import { consola } from 'consola'
+
 import { colors } from 'consola/utils'
-import { ESLint } from 'eslint'
 
 const formatMs = (ms: number) => colors.gray(` (${ms.toFixed(2)}ms)`)
 
@@ -24,11 +33,12 @@ export interface LintError extends Error {
  * Run `eslint --fix --quiet` on the given files. Throws a `LintError` with
  * `isFatal === true` if at least one error remains after fixing.
  */
-export async function lintFiles(
-  files: string[],
-  ignore: string | undefined,
+export async function lintFilesBatch(
+  files  : string[],
+  ignore : string | undefined,
   verbose = false
 ): Promise<void> {
+  const { ESLint } = await import('eslint')
   const normalized = files.map(f => f.replace(/\\/g, '/'))
   consola.start(
     '> eslint --fix --quiet',
@@ -74,5 +84,47 @@ export async function lintFiles(
     const err = new Error(`${errorCount} error${errorCount === 1 ? '' : 's'}`) as LintError
     err.isFatal = true
     throw err
+  }
+}
+
+/**
+ * Adapter that lazily creates one `ESLint` instance and reuses it across
+ * `fix(...)` calls via `lintText`. Useful when the caller already holds the
+ * source in memory (no FS round-trip) but still wants the host's full config
+ * resolution (plugins, presets, ignore patterns).
+ */
+export function createBatchAdapter(
+  opts: { ignore?: string } = {}
+): LintAdapter {
+  // Resolved on first .fix() call; ESLint module load is deferred until then.
+  let eslintP: Promise<import('eslint').ESLint> | undefined
+  const getInstance = async () => {
+    eslintP ??= import('eslint').then(({ ESLint }) => new ESLint({
+      fix                    : true,
+      ignorePatterns         : opts.ignore ? [opts.ignore] : undefined,
+      errorOnUnmatchedPattern: false,
+    }))
+    return eslintP
+  }
+
+  return {
+    async fix(tsSource, virtualFilename) {
+      const eslint = await getInstance()
+      const [result] = await eslint.lintText(tsSource, { filePath: virtualFilename })
+      const messages = (result.messages ?? []).map(m => ({
+        ruleId   : m.ruleId,
+        severity : m.severity,
+        message  : m.message,
+        line     : m.line,
+        column   : m.column,
+        endLine  : m.endLine,
+        endColumn: m.endColumn,
+      }))
+      return {
+        output    : result.output ?? tsSource,
+        errorCount: result.errorCount ?? 0,
+        messages,
+      } satisfies LintFixResult
+    },
   }
 }

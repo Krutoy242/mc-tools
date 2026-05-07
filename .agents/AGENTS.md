@@ -14,6 +14,7 @@ Monorepo containing specialized CLI tools and libraries for Minecraft modpack de
 | `@mctools/errors` | Scan `debug.log` file to find unknown errors |
 | `@mctools/modlist` | Generate `.md` file with all mods listed |
 | `@mctools/format` (private) | Format `.zs` (ZenScript) files using ESLint |
+| `@mctools/eslint-plugin-zs` (private) | ESLint plugin: lint/auto-format `.zs` via `@mctools/format` (no second ESLint instance) |
 | `@mctools/manifest` (private) | `manifest.json` generation tool |
 | `@mctools/reducer` (private) | Partially disable Minecraft mods |
 | `@mctools/tcon` (private) | Tweaks Tinker Construct's materials with CSV tables |
