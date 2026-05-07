@@ -25,19 +25,17 @@ import { colors } from 'consola/utils'
 
 const formatMs = (ms: number) => colors.gray(` (${ms.toFixed(2)}ms)`)
 
-export interface LintError extends Error {
-  isFatal: boolean
-}
-
 /**
- * Run `eslint --fix --quiet` on the given files. Throws a `LintError` with
- * `isFatal === true` if at least one error remains after fixing.
+ * Run `eslint --fix --quiet` on the given files. Applies all auto-fixes and
+ * prints any remaining errors via the stylish formatter. Returns the number
+ * of unfixable errors so the caller can decide what to do; never throws on
+ * lint errors (only on truly unexpected failures from ESLint itself).
  */
 export async function lintFilesBatch(
   files  : string[],
   ignore : string | undefined,
   verbose = false
-): Promise<void> {
+): Promise<number> {
   const { ESLint } = await import('eslint')
   const normalized = files.map(f => f.replace(/\\/g, '/'))
   consola.start(
@@ -79,12 +77,7 @@ export async function lintFilesBatch(
   const output = await formatter.format(errorResults)
   if (output) process.stdout.write(`${output}\n`)
 
-  const errorCount = errorResults.reduce((sum, r) => sum + r.errorCount, 0)
-  if (errorCount > 0) {
-    const err = new Error(`${errorCount} error${errorCount === 1 ? '' : 's'}`) as LintError
-    err.isFatal = true
-    throw err
-  }
+  return errorResults.reduce((sum, r) => sum + r.errorCount, 0)
 }
 
 /**

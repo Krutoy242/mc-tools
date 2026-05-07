@@ -82,24 +82,22 @@ const main = defineCommand({
 
     const tsPaths = forwards.map(o => o.dst)
 
-    // 2. ESLint --fix
+    // 2. ESLint --fix — best-effort: apply autofixes, surface remaining
+    //    errors, but never abort. The reverse pass below MUST run so we
+    //    don't leave .ts files lying around next to the .zs sources.
     const skip = args.pause
       ? await consola.prompt('Skip linting?', { type: 'confirm' })
       : false
     if (!skip) {
       const startLint = performance.now()
       try {
-        await lintFilesBatch(tsPaths, args.ignore, args.verbose)
+        const errorCount = await lintFilesBatch(tsPaths, args.ignore, args.verbose)
+        if (errorCount > 0) {
+          consola.warn(`${errorCount} unfixable lint error${errorCount === 1 ? '' : 's'} remaining; reverting anyway.`)
+        }
       }
       catch (error) {
-        const err = error as { isFatal?: boolean, message?: string }
-        const isFatal = err.isFatal === true
-          || !!String(err.message ?? error).match(/\d+\s+error/i)
-        if (isFatal) {
-          consola.error(`Fatal error during linting: `, error)
-          return
-        }
-        consola.warn('Have some manageable errors during linting.')
+        consola.error('Unexpected error during linting (continuing to revert):', error)
       }
       if (args.verbose) {
         consola.info(`Linting finished${formatMs(performance.now() - startLint)}`)
