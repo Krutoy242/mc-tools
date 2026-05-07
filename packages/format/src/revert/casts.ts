@@ -2,9 +2,12 @@
  * Bracket-counted unwinders for the two cast-shaped wrappers the forward pass
  * emits — `__as<Type>(expr)` and `Array<T>`. Both shapes can nest arbitrarily
  * (`__as<Array<int>>(__as<float>(x))`), which defeats the kind of single-pass
- * regex used in `./rules.ts`. Keeping these here means `rules.ts` only has to
- * deal with non-nestable patterns.
+ * regex used in `./rules.ts`. Bracket matching is delegated to `balanced-match`
+ * so this file only carries the cast-specific logic (parens around binary
+ * inner expressions, parens around member-access tail).
  */
+
+import balanced from 'balanced-match'
 
 import { MARKERS } from '../markers.js'
 
@@ -42,73 +45,50 @@ function castExprNeedsParens(expr: string): boolean {
 }
 
 /**
- * Unwind every `Array<...>` wrapper to ZS `[...]`, innermost first. A single
- * regex pass with `Array<(.+?)>` fails on any nesting — the non-greedy `.+?`
- * matches across unrelated `<>` pairs (e.g. `Array<Array<int>[string]>` would
- * partially-match `Array<Array<int>`, leaving the outer `>` stranded). The
- * `[^<>]+` pattern matches only innermost generics, and the loop peels one
- * level at a time until the source is stable.
+ * Unwind every `Array<...>` wrapper to ZS `[...]`. `balanced-match` gives us
+ * the matching `>` for the leftmost `<`, which handles nesting in one pass —
+ * `Array<Array<int>>` rewrites outer-first to `[Array<int>]` and the loop
+ * picks up the inner on the next iteration.
  */
 export function revertLists(source: string): string {
   let out = source
-  while (out.includes('Array<')) {
-    const next = out.replace(/Array<([^<>]+)>/g, (_m, a: string) => `[${a}]`)
-    if (next === out) break // malformed input (e.g. `Array<` without `>`)
-    out = next
+  for (;;) {
+    const idx = out.indexOf('Array<')
+    if (idx === -1) return out
+    const open = idx + 'Array'.length // position of '<'
+    const b = balanced('<', '>', out.slice(open))
+    if (!b) return out // malformed (unmatched `<`)
+    out = `${out.slice(0, idx)}[${b.body}]${b.post}`
   }
-  return out
 }
 
 /**
- * Unwind every `__as<Type>(expr)` wrapper to ZS `expr as Type`, innermost
- * first. Uses explicit bracket counting because angle/paren nesting defeats
- * regex (e.g. `__as<Array<int>>(__as<float>(x))`).
+ * Unwind every `__as<Type>(expr)` wrapper to ZS `expr as Type`, leftmost
+ * first. Each pass uses two `balanced-match` calls — one for the generic
+ * `<...>`, one for the call `(...)` — and the loop re-matches inside the
+ * rewritten body, so nesting (`__as<Array<int>>(__as<float>(x))`) unwinds
+ * cleanly without any custom bracket counting.
  */
 export function revertCasts(source: string): string {
   let out = source
   for (;;) {
-    // Innermost wrapper has the largest start index — it cannot contain
-    // another `__as<` (otherwise that one would have a larger index).
-    const start = out.lastIndexOf(CAST_OPEN)
+    const start = out.indexOf(CAST_OPEN)
     if (start === -1) return out
 
-    // Match the generic `<...>`.
-    let i = start + CAST_OPEN.length
-    let angle = 1
-    while (i < out.length && angle > 0) {
-      const c = out[i]
-      if (c === '<') {
-        angle++
-      }
-      else if (c === '>') {
-        angle--
-        if (angle === 0) break
-      }
-      i++
-    }
-    if (angle !== 0 || out[i + 1] !== '(') return out // malformed; bail
+    const angleStart = start + MARKERS.castFn.length // position of '<'
+    const angle = balanced('<', '>', out.slice(angleStart))
+    if (!angle) return out // malformed; bail
 
-    const type = out.slice(start + CAST_OPEN.length, i).trim()
+    const callStart = angleStart + angle.end + 1
+    if (out[callStart] !== '(') return out
 
-    // Match the call `(...)`.
-    let j = i + 2
-    let paren = 1
-    while (j < out.length && paren > 0) {
-      const c = out[j]
-      if (c === '(') {
-        paren++
-      }
-      else if (c === ')') {
-        paren--
-        if (paren === 0) break
-      }
-      j++
-    }
-    if (paren !== 0) return out
+    const paren = balanced('(', ')', out.slice(callStart))
+    if (!paren) return out
 
-    const inner = out.slice(i + 2, j)
+    const type = angle.body.trim()
+    const inner = paren.body
     const wrapped = castExprNeedsParens(inner) ? `(${inner})` : inner
-    const after = out.slice(j + 1)
+    const after = paren.post
     // `as` binds looser than member access / call in ZS, so a cast result
     // followed by `.foo`, `?.foo`, `[…]`, or `(…)` must stay parenthesised —
     // otherwise `(A as B).c` would revert to `A as B.c`, which the ZS parser
