@@ -4,73 +4,7 @@ function interleave(arr, thing) { return [].concat(...arr.map(n => [n, thing])).
 }}
 
 Start
-  = body:(_ SourceElements? _) {
-    return `
-
-// CONVERSION_DEBRIS
-// =============================================================
-/* eslint max-statements-per-line: "warn" */
-/* eslint style/no-multi-spaces: ["error", { ignoreEOLComments: true, exceptions: { "VariableDeclarator": true, "ArrayExpression": true }}] */
-/* eslint style/quote-props: ["warn", "consistent-as-needed"] */
-/* eslint style/semi: ["error", "always"] */
-/* eslint-disable antfu/consistent-list-newline */
-/* eslint-disable curly */
-/* eslint-disable dot-notation */
-/* eslint-disable eqeqeq */
-/* eslint-disable import/first */
-/* eslint-disable no-unreachable-loop */
-/* eslint-disable no-var */
-/* eslint-disable object-shorthand */
-/* eslint-disable perfectionist/sort-imports */
-/* eslint-disable prefer-arrow-callback */
-/* eslint-disable prefer-template */
-/* eslint-disable style/indent-binary-ops */
-/* eslint-disable style/max-statements-per-line */
-/* eslint-disable style/no-multi-spaces */
-/* eslint-disable ts/consistent-type-imports */
-/* eslint-disable ts/no-dupe-class-members */
-/* eslint-disable ts/no-unsafe-argument */
-/* eslint-disable ts/no-unsafe-assignment */
-/* eslint-disable ts/no-unsafe-call */
-/* eslint-disable ts/no-unsafe-member-access */
-/* eslint-disable ts/no-unsafe-return */
-/* eslint-disable ts/no-use-before-define */
-/* eslint-disable ts/restrict-plus-operands */
-/* eslint-disable unused-imports/no-unused-vars */
-/* eslint-disable vars-on-top */
-
-declare type int = number & { readonly __brand: 'int' };
-declare type byte = number & { readonly __brand: 'byte' };
-declare type float = number & { readonly __brand: 'float' };
-declare type double = number;
-declare type short = number & { readonly __brand: 'short' };
-declare type long = number & { readonly __brand: 'long' };
-declare type bool = boolean;
-declare function __float(n: number): float;
-declare function __double(n: number): number;
-declare function __byte(n: number): byte;
-declare function __short(n: number): short;
-declare function __long(n: number): long;
-declare function __as<T>(value: any): T;
-declare function $(s: any): any;
-declare function isNull(o: any): boolean;
-declare const recipes: Record<string, any>;
-declare const mods: Record<string, any>;
-declare const craft: Record<string, any>;
-declare const scripts: Record<string, any>;
-declare const furnace: Record<string, any>;
-declare const itemUtils: Record<string, any>;
-declare const oreDict: Record<string, any>;
-declare const game: Record<string, any>;
-declare const crafttweaker: any;
-declare const events: any;
-declare const mixin: any;
-declare const native: any;
-// =============================================================
-// CONVERSION_DEBRIS
-
-${flat(body)}`
-  }
+  = body:(_ SourceElements? _) { return flat(body) }
 
 // -----------------------------------------------
 

@@ -7,6 +7,7 @@
  * footguns.
  */
 
+import { DEBRIS_PREAMBLE } from './markers.js'
 // @ts-expect-error generated artifact, no .d.ts
 import { parse as peggyParseRaw } from './parser-generated.mjs'
 
@@ -19,5 +20,5 @@ export interface ZsParseError extends Error {
 
 /** Convert a ZenScript source into a marker-laden TypeScript source. */
 export function peggyParse(source: string): string {
-  return (peggyParseRaw as (s: string) => string)(source)
+  return DEBRIS_PREAMBLE + (peggyParseRaw as (s: string) => string)(source)
 }
