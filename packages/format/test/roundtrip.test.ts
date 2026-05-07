@@ -45,6 +45,28 @@ function foo(str as string) as string {
     const back = revert(fwd.ts)
     expect(back.trim()).toBe(source)
   })
+
+  it('wraps casts as `__as<T>(...)` so ESLint cannot strip them', () => {
+    const fwd = zsToTs('val x = 0.1 as int as double;')
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    // Chained casts nest left-to-right; no raw `as` keyword survives in the
+    // emitted TS expression (the only `as` is inside string-form types).
+    expect(fwd.ts).toContain('__as<double>(__as<int>(0.1))')
+    expect(revert(fwd.ts).trim()).toBe('val x = 0.1 as int as double;')
+  })
+
+  it('round-trips chained casts even after ESLint-style transformations', () => {
+    // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
+    // (raw `as`) emission: collapse chained assertions. The new wrapper is
+    // a function call, so ESLint cannot rewrite it — revert sees it intact.
+    const fwd = zsToTs('val n = (a + b) as int;')
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    // After ESLint removes the inner redundant parens around a binary expr.
+    const lintedLike = fwd.ts.replace('((a + b))', '(a + b)')
+    expect(revert(lintedLike).trim()).toBe('val n = (a + b) as int;')
+  })
 })
 
 describe('revert (reverse pass)', () => {

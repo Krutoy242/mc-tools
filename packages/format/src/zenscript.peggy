@@ -51,6 +51,7 @@ declare function __double(n: number): number;
 declare function __byte(n: number): byte;
 declare function __short(n: number): short;
 declare function __long(n: number): long;
+declare function __as<T>(value: any): T;
 declare function $(s: any): any;
 declare function isNull(o: any): boolean;
 declare const recipes: Record<string, any>;
@@ -194,7 +195,27 @@ Literal
 // -----------------------------------------------
 
 TypeAssignment
-  = Call _ TypeCast / Call
+  = call:Call _ casts:CastChain {
+    // Wrap each cast in `__as<Type>(...)`. The function call is opaque to
+    // ESLint (no `as` keyword survives in the TS), so rules like
+    // `ts/no-unnecessary-type-assertion` cannot strip it. Chained casts
+    // become nested calls, preserving left-to-right ZS semantics:
+    //   `x as A as B` → `__as<B>(__as<A>(x))`
+    let acc = flat(call)
+    for (const type of casts) {
+      acc = `__as<${flat(type).trim()}>(${acc})`
+    }
+    return acc
+  }
+  / Call
+
+CastChain
+  = first:CastSingle rest:(__ CastSingle)* {
+    return [first, ...rest.map(r => r[1])]
+  }
+
+CastSingle
+  = "as" !Letter _ type:TypeMutated { return type }
 
 Type
   = types:(TypeCast) {

@@ -41,6 +41,13 @@ export const MARKERS = {
   // Mixin block end sentinel
   mixinEnd: '/* MIXIN_END */',
 
+  // Type-cast wrapper. Forward pass emits `__as<Type>(expr)` for every ZS
+  // `expr as Type`; revert unwinds it via balanced bracket matching (see
+  // `revertCasts` in `tsToZs.ts`). Using a function call instead of a TS
+  // `as` assertion keeps ESLint rules like `no-unnecessary-type-assertion`
+  // from stripping casts that are runtime-meaningful in ZS.
+  castFn: '__as',
+
   // Debris fence
   debrisFence: 'CONVERSION_DEBRIS',
 } as const

@@ -21,6 +21,97 @@ import {
 } from './markers.js'
 
 // -----------------------------------------------------------------------------
+// Cast revert (bracket-matching, not regex)
+// -----------------------------------------------------------------------------
+
+const CAST_OPEN = `${MARKERS.castFn}<`
+
+/**
+ * True if `expr` contains a top-level binary operator. We need parens around
+ * such an expr in ZS because `as` binds tighter than `+`/`*`/etc:
+ *   `(a + b) as int` ≠ `a + b as int` (the latter is `a + (b as int)`).
+ *
+ * Only depth-0 operators count — those nested in `()` / `[]` / `{}` already
+ * have surrounding parens. Detection is heuristic: a space + operator-char +
+ * space is overwhelmingly a binary operator after ESLint's spacing pass.
+ */
+function castExprNeedsParens(expr: string): boolean {
+  let depth = 0
+  for (let i = 0; i < expr.length - 2; i++) {
+    const c = expr[i]
+    if (c === '(' || c === '[' || c === '{') {
+      depth++
+      continue
+    }
+    if (c === ')' || c === ']' || c === '}') {
+      depth--
+      continue
+    }
+    if (depth !== 0 || c !== ' ') continue
+    const next = expr[i + 1]
+    if (!next || !'+-*/%<>=&|^?:!~'.includes(next)) continue
+    // Confirm operator is followed by whitespace (rules out e.g. `->` style).
+    let j = i + 2
+    while (j < expr.length && '+-*/%<>=&|^?:!~'.includes(expr[j])) j++
+    if (expr[j] === ' ') return true
+  }
+  return false
+}
+
+/**
+ * Unwind every `__as<Type>(expr)` wrapper to ZS `expr as Type`, innermost
+ * first. Uses explicit bracket counting because angle/paren nesting defeats
+ * regex (e.g. `__as<Array<int>>(__as<float>(x))`).
+ */
+function revertCasts(source: string): string {
+  let out = source
+  for (;;) {
+    // Innermost wrapper has the largest start index — it cannot contain
+    // another `__as<` (otherwise that one would have a larger index).
+    const start = out.lastIndexOf(CAST_OPEN)
+    if (start === -1) return out
+
+    // Match the generic `<...>`.
+    let i = start + CAST_OPEN.length
+    let angle = 1
+    while (i < out.length && angle > 0) {
+      const c = out[i]
+      if (c === '<') {
+        angle++
+      }
+      else if (c === '>') {
+        angle--
+        if (angle === 0) break
+      }
+      i++
+    }
+    if (angle !== 0 || out[i + 1] !== '(') return out // malformed; bail
+
+    const type = out.slice(start + CAST_OPEN.length, i).trim()
+
+    // Match the call `(...)`.
+    let j = i + 2
+    let paren = 1
+    while (j < out.length && paren > 0) {
+      const c = out[j]
+      if (c === '(') {
+        paren++
+      }
+      else if (c === ')') {
+        paren--
+        if (paren === 0) break
+      }
+      j++
+    }
+    if (paren !== 0) return out
+
+    const inner = out.slice(i + 2, j)
+    const wrapped = castExprNeedsParens(inner) ? `(${inner})` : inner
+    out = `${out.slice(0, start)}${wrapped} as ${type}${out.slice(j + 1)}`
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Regex building blocks
 // -----------------------------------------------------------------------------
 
@@ -146,7 +237,11 @@ const RULES: Rule[] = [
 
 /** Apply all reverse rules in order. */
 export function tsToZs(source: string): string {
-  let out = source
+  // Cast wrappers are unwound first (bracket-matched, not regex). After this
+  // pass the source contains plain `as Type` again, which the rules below
+  // can treat like any other ZS-bound text — type-internal markers such as
+  // `Array<...>` and `/* $tag */` are then reverted by LIST/ORDERLY etc.
+  let out = revertCasts(source)
   for (const [, pattern, replacement] of RULES) {
     if (typeof replacement === 'string') {
       out = out.replace(pattern, replacement)
@@ -154,9 +249,9 @@ export function tsToZs(source: string): string {
     else {
       out = out.replace(pattern, (...args: unknown[]) => {
         const last = args[args.length - 1]
-        const groups = (typeof last === 'object' && last !== null
+        const groups = typeof last === 'object' && last !== null
           ? last as Record<string, string>
-          : {})
+          : {}
         const fullMatch = args[0] as string
         return replacement(groups, fullMatch)
       })
