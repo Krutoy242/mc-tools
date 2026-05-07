@@ -386,7 +386,22 @@ PropertyKey
 
 PropertyName
   = IdentifierName
-  / StringLiteral
+  / s:StringLiteral {
+    // ZS keywords used as object keys (`'function': v`) would be unquoted by
+    // ESLint's `quote-props: consistent-as-needed` (reserved words are valid
+    // bare property names in JS). The upstream ZS runtime then re-tokenises
+    // a bare `function:` as the start of a declaration. Swap the StringLiteral
+    // for a synthetic identifier `_$_kw_<name>` that ESLint passes through;
+    // the QUOTED_KEYWORD_KEY revert rule restores the quotes. Keep the list
+    // here in sync with `ZS_KEYWORDS` in `markers.ts`.
+    const text = flat(s)
+    const inner = text.slice(1, -1)
+    const ZS_KW = ('as break continue do else extends false for frigginClass'
+      + ' frigginConstructor frigginGetter frigginSetter function global has'
+      + ' if import in instanceof null return static to true val var version'
+      + ' while zenClass zenConstructor zenGetter zenSetter').split(' ')
+    return ZS_KW.includes(inner) ? `_$_kw_${inner}` : text
+  }
   / minus:($"-"?) body:NumericLiteral {
     if (!minus) return body
     // Negative numerics are not valid bare TS property keys (must be quoted

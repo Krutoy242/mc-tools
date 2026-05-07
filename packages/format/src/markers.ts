@@ -55,6 +55,16 @@ export const MARKERS = {
   // synthetic generic survives ESLint's spacing/comment-stripping passes.
   brandedTypePrefix: '__$',
 
+  // Keyword-as-property-key escape. A ZS keyword used as an object key
+  // (`'function': v`) would be unquoted by ESLint's
+  // `quote-props: consistent-as-needed` because reserved words are valid
+  // bare property names in JS. The upstream ZS runtime, however, reads a
+  // bare `function:` as the start of a function declaration. The forward
+  // pass therefore swaps the StringLiteral form for `_$_kw_function: v` —
+  // a synthetic identifier ESLint sees as an ordinary key — and the
+  // QUOTED_KEYWORD_KEY revert rule restores the quotes.
+  keywordKeyPrefix: '_$_kw_',
+
   // Debris fence
   debrisFence: 'CONVERSION_DEBRIS',
 } as const

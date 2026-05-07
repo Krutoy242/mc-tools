@@ -110,24 +110,40 @@ const m = {
   })
 
   it('keeps quotes around ZS-keyword string keys (e.g. `function`)', () => {
-    // `function` is a ZS keyword. As an *object key* the ZS grammar accepts
-    // it via PropertyName→IdentifierName, but in many surrounding contexts
-    // a bare `function` token reads as the start of a function definition.
-    // The forward pass quotes it; revert's UNQUOTE_KEY rule (which strips
-    // quotes from any `[a-z_]\w*` key) currently strips them anyway,
-    // producing invalid ZS. Other ZS keywords (`val`, `var`, `as`, `if`,
-    // `else`, `for`, `while`, `return`, `import`, `static`, `global`,
-    // `zenClass`, etc.) have the same problem.
+    // `function`, `val`, `static`, ... are ZS keywords. As an *object key*
+    // the ZS grammar accepts them via PropertyName→StringLiteral, but the
+    // upstream ZS runtime re-tokenises a bare `function:` as the start of a
+    // function declaration — so the quotes MUST survive the round-trip.
+    //
+    // The trap is ESLint, which runs between forward and revert: with
+    // `quote-props: consistent-as-needed` (set in DEBRIS_PREAMBLE) it would
+    // unquote `'function'` because reserved words are valid bare property
+    // names in JS. Once that happens, revert can never put the quotes back.
+    // The simulation below mirrors ESLint's unquoting on a single-key object
+    // whose key is a valid bare identifier — exactly the shape of the loot
+    // tweaker code that surfaced the bug.
     const cases = [
       `val m as string[string] = { 'function': 'foo' } as string[string];`,
       `val m as string[string] = { 'val': 'foo' } as string[string];`,
       `val m as string[string] = { 'static': 'foo' } as string[string];`,
+      `val m as string[string] = { 'has': 'foo' } as string[string];`,
+      `val m as string[string] = { 'zenClass': 'foo' } as string[string];`,
     ]
+    const simulateEslintUnquote = (ts: string) =>
+      // Mimic `quote-props: consistent-as-needed` on single-key objects:
+      // strip quotes from any identifier-shaped key in property position.
+      ts.replace(/(?<=[{,]\s*)'([a-z_]\w*)'(?=\s*:)/gi, '$1')
     for (const source of cases) {
       const fwd = zsToTs(source)
       expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
       if (!fwd.ok) continue
-      expect(revert(fwd.ts).trim()).toBe(source)
+      // Sanity: forward output must NOT carry the bare quoted form to ESLint
+      // (otherwise the simulated unquoting below would silently destroy it).
+      expect(fwd.ts, `forward must shield ZS-keyword keys for: ${source}`)
+        .not
+        .toMatch(/'(?:function|val|static|has|zenClass)'\s*:/)
+      const linted = simulateEslintUnquote(fwd.ts)
+      expect(revert(linted).trim()).toBe(source)
     }
   })
 

@@ -61,6 +61,7 @@ function stripOuterParens(s: string): string {
   return s.slice(1, -1)
 }
 
+const M_KW_KEY   = esc(MARKERS.keywordKeyPrefix)
 const M_CLASS    = esc(MARKERS.classMember)
 const M_CLASSFN  = esc(MARKERS.classFn)
 const M_VAR      = esc(MARKERS.varKind)
@@ -100,6 +101,14 @@ export const RULES: Rule[] = [
   ['IMPORTS',    /import(?: type)? (?<name>[^ ]+) from '(?<from>[^']+)';/g,    ({ from, name }) => `import ${from.replace(/^\.+\//gm, '')}${
     name !== from.split('.').pop() ? ` as ${name}` : ''
   };`],
+
+  // --- Object keys: restore quotes around ZS-keyword keys ------------------
+  // The forward pass rewrote `'function': v` (and other ZS keywords as keys)
+  // to `_$_kw_function: v` so that ESLint's `quote-props: consistent-as-needed`
+  // would not unquote the StringLiteral. Restore the quoted form before
+  // UNQUOTE_KEY runs (UNQUOTE_KEY's negative lookahead would otherwise be a
+  // dead-letter for keys ESLint had already unquoted in-place).
+  ['QUOTED_KEYWORD_KEY',    new RegExp(`${M_KW_KEY}(?<kw>${ZS_KEYWORDS_ALT})(?=\\s*:)`, 'g'),    ({ kw }) => `'${kw}'`],
 
   // --- Object keys: unquote forced-quoted numeric/identifier keys ----------
   // ESLint's `quote-props: consistent-as-needed` propagates quoting to every
