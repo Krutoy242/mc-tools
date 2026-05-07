@@ -1,10 +1,10 @@
-import type { QuestUid } from '@mctools/utils/ftbquests'
-
-import { buildIcon, getChapters, getCountValue, getIconCount, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, uidGenerator } from '@mctools/utils/ftbquests'
-import { Lang } from '@mctools/utils/lang'
+import type { QuestUid } from '../packages/utils/src/mods/ftbquests.ts'
 
 import chalk from 'chalk'
 import fast_glob from 'fast-glob'
+
+import { Lang } from '../packages/utils/src/lang.js'
+import { buildIcon, getChapters, getCountValue, getIconCount, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, uidGenerator } from '../packages/utils/src/mods/ftbquests.js'
 
 interface TextSource {
   description?: string | string[]

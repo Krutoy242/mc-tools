@@ -1,7 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
 import fast_glob from 'fast-glob'
-import { Memoize } from 'typescript-memoize'
 
 const SECTION_SIGN_REGEX = /§./g
 const LANG_EXT_REGEX = /\.lang$/
@@ -9,6 +8,8 @@ const LANG_EXT_REGEX = /\.lang$/
 export class Lang {
   static defaultLangCode = 'en_us'
   private deleteSet = new Set<string>()
+  private langFileCache = new Map<string, { [key: string]: string }>()
+  private codesCache: string[] | null = null
 
   constructor(public langOwner: string) {
 
@@ -18,8 +19,10 @@ export class Lang {
     return `resources/${this.langOwner}/lang/${langCode}.lang`
   }
 
-  @Memoize()
   private getLangFile(langCode = Lang.defaultLangCode): { [key: string]: string } {
+    if (this.langFileCache.has(langCode)) {
+      return this.langFileCache.get(langCode)!
+    }
     const text = readFileSync(this.langPath(langCode), 'utf8')
     const tuples: [string, string][] = text
       .split('\n')
@@ -28,7 +31,9 @@ export class Lang {
         l.substring(0, l.indexOf('=')),
         l.substring(l.indexOf('=') + 1),
       ])
-    return Object.fromEntries(tuples)
+    const result = Object.fromEntries(tuples)
+    this.langFileCache.set(langCode, result)
+    return result
   }
 
   public get(langEntry: string, langCode = Lang.defaultLangCode) {
@@ -54,12 +59,15 @@ export class Lang {
     return this.get(langEntry, langCode).replace(SECTION_SIGN_REGEX, '')
   }
 
-  @Memoize()
   public getCodes() {
-    return fast_glob.sync(
+    if (this.codesCache !== null) {
+      return this.codesCache
+    }
+    this.codesCache = fast_glob.sync(
       '*.lang',
       { cwd: `resources/${this.langOwner}/lang/` }
     ).map(s => s.replace(LANG_EXT_REGEX, ''))
+    return this.codesCache
   }
 
   public filter(keepSet: Set<string>) {
