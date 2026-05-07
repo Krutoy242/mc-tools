@@ -91,7 +91,7 @@ function printParseError(filePath: string, source: string, e: Error): void {
     .location
     ?.start
   if (!loc?.line || !loc.column) {
-    consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${e.message}`)
+    consola.error(`Failed to parse ${colors.blueBright(filePath)}:\n${e.message}`)
     return
   }
   const line = loc.line
@@ -99,5 +99,5 @@ function printParseError(filePath: string, source: string, e: Error): void {
   const lineText = source.split('\n')[line - 1] ?? ''
   const errorLine = `\n\n  ${line} | ${lineText}\n`
     + `   ${' '.repeat(String(line).length)}| ${' '.repeat(column - 1)}^`
-  consola.error(`Failed to parse ${colors.blueBright(filePath)}: ${e.message}${errorLine}`)
+  consola.error(`Failed to parse ${colors.blueBright(filePath)}:\n${e.message}${errorLine}`)
 }
