@@ -5,8 +5,6 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import chalk from 'chalk'
 
-import { Memoize } from 'typescript-memoize'
-
 export enum DependencyLevel {
   All,
   Emmbed,
@@ -49,7 +47,6 @@ export class Mod {
       + [...this.dependents].reduce((sum, current) => sum + current.getDependentsCount(antiloop), 0)
   }
 
-  @Memoize(() => '')
   getDepsLevel(antiloop = new Set<Mod>()): number {
     if (antiloop.has(this)) return 0
     antiloop.add(this)
