@@ -206,6 +206,80 @@ const m = {
     expect(revert(linted).trim()).toBe(source)
   })
 
+  it('shields revert rules from patterns sitting inside user comments', () => {
+    // The forward pass tags every source-level ZS comment with
+    // `MARKERS.userComment`; the reverse pass masks those bodies before
+    // applying RULES so a `for (…)` (or any other rewrite trigger) sitting
+    // inside a comment cannot be mistaken for live TS. Without the sentinel,
+    // FOR_TO would happily rewrite the loop here into `for i in -4 .. = 4 {`.
+    const cases = [
+      // Block comment containing a TS for-loop.
+      `/*
+// TS code in the comment:
+for (let i = -4; i <= 4; i++) {
+  console.log(i);
+}
+*/
+print('test');`,
+      // Line comment that contains a rewrite trigger.
+      `// for (let i = 0; i < 10; i++) { x }
+print('test');`,
+      // ZS \`#\` comments — grammar normalises them to \`//\` already,
+      // so the round-trip equality is checked against the post-normalised
+      // form the forward pass emits.
+      `// hash-style was once a # comment
+print('test');`,
+      // Multiple adjacent block comments.
+      `/* first */ /* second with as cast */ print('test');`,
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      // The forward pass tagged each comment with the user-comment sentinel.
+      expect(fwd.ts).toContain('__USR_CMT__')
+      const back = revert(fwd.ts).trim()
+      expect(back).toBe(source)
+      // No leftover sentinels in the round-tripped output.
+      expect(back).not.toContain('__USR_CMT__')
+    }
+  })
+
+  it('does not strip the user-comment sentinel from grammar-emitted markers', () => {
+    // Sanity: only source-level comments get tagged. Synthesised markers like
+    // `/* class */` (and the FOR_IN_PAIR `/**/` sentinel) carry no tag and
+    // must continue to revert as before.
+    const fwd = zsToTs('zenClass A { val x as int = 1; }')
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    expect(fwd.ts).toContain('/* class */')
+    expect(fwd.ts).not.toContain('/* __USR_CMT__class')
+    expect(revert(fwd.ts).trim()).toBe('zenClass A { val x as int = 1; }')
+  })
+
+  it('round-trips comments after ESLint adds whitespace around the sentinel', () => {
+    // ESLint pads whitespace on BOTH sides of the wrapper: `/*  X  */`. The
+    // forward pass writes a closing sentinel as well as an opening one, so
+    // any pad ESLint inserts on either side falls outside the capture group
+    // and the original body comes back byte-for-byte (including the empty
+    // body of `/**/`, which would otherwise gain a space on revert).
+    const cases = [
+      { src: '/**/', label: 'empty body' },
+      { src: '/* test */', label: 'simple body' },
+      { src: '/*x*/', label: 'no-space body' },
+    ]
+    for (const { src, label } of cases) {
+      const fwd = zsToTs(src)
+      expect(fwd.ok, label).toBe(true)
+      if (!fwd.ok) continue
+      // Inject extra padding on both sides of each sentinel pair.
+      const padded = fwd.ts
+        .replace('/* __USR_CMT__', '/*   __USR_CMT__')
+        .replace('__USR_CMT__ */', '__USR_CMT__   */')
+      expect(revert(padded).trim(), label).toBe(src)
+    }
+  })
+
   it('round-trips chained casts even after ESLint-style transformations', () => {
     // Simulate what `ts/no-unnecessary-type-assertion` would do to the OLD
     // (raw `as`) emission: collapse chained assertions. The new wrapper is

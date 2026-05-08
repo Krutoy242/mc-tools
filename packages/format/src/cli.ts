@@ -11,6 +11,13 @@
  * All conversion logic lives in `index.ts` / `formatFile.ts` / `tsToZs.ts`.
  */
 
+/*
+Useful command to test the tool:
+
+f=scripts/test.zs;cat $f;cp $f tmp;pnpm tsx mc-tools/packages/format/src/cli.ts $f;cat $f;mv tmp $f
+
+*/
+
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { performance } from 'node:perf_hooks'
 

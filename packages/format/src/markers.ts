@@ -67,6 +67,15 @@ export const MARKERS = {
 
   // Debris fence
   debrisFence: 'CONVERSION_DEBRIS',
+
+  // User-comment sentinel. The Peggy grammar tags every source-level ZS
+  // comment with this prefix (`/*__USR_CMT__ body *\/`, `//__USR_CMT__ body`)
+  // so the reverse pass can identify *user prose* by a positive signal — and
+  // mask its body before applying the regex rules. Without this, a `for (…)`
+  // sitting inside a `/* … *\/` block would be happily rewritten by FOR_TO.
+  // The literal string is duplicated in `zenscript.peggy`; both sides MUST
+  // agree.
+  userComment: '__USR_CMT__',
 } as const
 
 /**

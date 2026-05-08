@@ -18,14 +18,63 @@ import { revertBranded } from './revert/branded.js'
 import { revertCasts, revertLists } from './revert/casts.js'
 import { RULES } from './revert/rules.js'
 
+interface Masked { text: string, restore: (s: string) => string }
+
+/**
+ * Hide forward-tagged user comments from the revert pipeline.
+ *
+ * The Peggy grammar wraps every source-level ZS comment with the
+ * `MARKERS.userComment` sentinel — `/*__USR_CMT__ body *\/` for block,
+ * `//__USR_CMT__ body` for line. Here we detect those wrappers, swap their
+ * bodies for opaque numeric placeholders before any unwinder/RULE runs, and
+ * restore the original `/* body *\/` / `// body` shape at the end. Marker
+ * comments synthesised by the grammar (`/* class *\/`, `/* $ *\/`, the
+ * debris fence, …) carry no sentinel and pass through untouched, exactly as
+ * the marker protocol expects.
+ */
+function maskUserComments(source: string): Masked {
+  const stash: string[] = []
+  const sent = MARKERS.userComment
+  // Block forward shape: `/* __USR_CMT__<body>__USR_CMT__ */`. The body sits
+  // between two sentinels, so any whitespace ESLint pads on either side of
+  // the wrapper (`/* `, ` */`) falls OUTSIDE the capture and the original
+  // body is recovered byte-for-byte. Non-greedy is safe because `*/` cannot
+  // appear inside a JS block comment.
+  let out = source.replace(
+    new RegExp(`\\/\\*\\s*${sent}([\\s\\S]*?)${sent}\\s*\\*\\/`, 'g'),
+    (_m, body: string) => {
+      const id = stash.push(`/*${body}*/`) - 1
+      return `/*__USR_PH${id}__*/`
+    }
+  )
+  // Line forward shape: `// __USR_CMT__<body>`. Body ends at the newline, so
+  // a trailing sentinel isn't needed — `no-trailing-spaces` and friends
+  // strip rather than add to the line tail.
+  out = out.replace(
+    new RegExp(`\\/\\/\\s*${sent}([^\\n]*)`, 'g'),
+    (_m, body: string) => {
+      const id = stash.push(`//${body}`) - 1
+      return `//__USR_PH${id}__`
+    }
+  )
+  return {
+    text   : out,
+    restore: s => s.replace(
+      /\/\*__USR_PH(\d+)__\*\/|\/\/__USR_PH(\d+)__/g,
+      (_m, a: string | undefined, b: string | undefined) => stash[Number(a ?? b)]
+    ),
+  }
+}
+
 /** Apply the cast/list unwinders followed by every regex rule in order. */
 export function tsToZs(source: string): string {
+  const masked = maskUserComments(source)
   // Cast wrappers are unwound first (bracket-matched, not regex). After this
   // pass the source contains plain `as Type` again, which the rules below
   // can treat like any other ZS-bound text — type-internal markers such as
   // `Array<...>` are then reverted by LIST. `revertBranded` runs before
   // `revertLists` so an `Array<…>` inside a branded wrapper is still unwound.
-  let out = revertLists(revertBranded(revertCasts(source)))
+  let out = revertLists(revertBranded(revertCasts(masked.text)))
   for (const [, pattern, replacement] of RULES) {
     if (typeof replacement === 'string') {
       out = out.replace(pattern, replacement)
@@ -41,7 +90,7 @@ export function tsToZs(source: string): string {
       })
     }
   }
-  return out
+  return masked.restore(out)
 }
 
 /**

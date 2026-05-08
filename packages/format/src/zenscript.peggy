@@ -31,11 +31,18 @@ Comment "Comment"
   / MultiLineComment
   / SingleLineComment
 
+// Tag every source-level comment with `MARKERS.userComment` (`__USR_CMT__`)
+// so the reverse pass can mask the body before applying revert rules. The
+// leading space pre-empts ESLint's `style/spaced-comment`. Block comments
+// also carry a trailing sentinel: ESLint may pad whitespace before `*/`
+// (e.g. `/* X*/` → `/* X */`), and without a closing marker that pad would
+// be captured into the body and re-emitted on revert. The sentinel literal
+// here MUST match `MARKERS.userComment` in `markers.ts`.
 MultiLineComment
-  = "/*" (!"*/" .)* "*/"
+  = "/*" body:(!"*/" .)* "*/" { return '/* __USR_CMT__' + flat(body) + '__USR_CMT__ */' }
 
 SingleLineComment
-  = ("//" / "#") body:(!LineTerminator .)* {return '//' + flat(body)}
+  = ("//" / "#") body:(!LineTerminator .)* {return '// __USR_CMT__' + flat(body)}
 
 Preprocessor
   = PreprocessorMultipleMixin
