@@ -486,7 +486,8 @@ Parameter
   = Identifier _ Type (_ "=" _ ParameterDefault)?
 
 ParameterDefault
-  = Literal
+  = FunctionAnon
+  / Literal
   / "["_"]"
   / Capture
 
