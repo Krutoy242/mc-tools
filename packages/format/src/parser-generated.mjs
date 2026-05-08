@@ -444,7 +444,10 @@ function peg$parse(input, options) {
     return ["import '#preprocessor ", tail, "';"]
   };
   var peg$f10 = function(name) {
-    const reserved = ('default class case').split(' ')
+    // Keep in sync with `RESERVED_WORDS` in markers.ts — JS keywords/operators
+    // that are valid ZS identifiers and would otherwise be mangled by ESLint
+    // (e.g. `typeof(x)` → `typeof x`).
+    const reserved = ('default class case typeof').split(' ')
     return reserved.includes(flat(name))
       ? ['_$_',name]
       : name
@@ -7268,38 +7271,41 @@ function peg$parse(input, options) {
       return cached.result;
     }
 
-    s0 = peg$parseLiteral();
+    s0 = peg$parseFunctionAnon();
     if (s0 === peg$FAILED) {
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 91) {
-        s1 = peg$c40;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$e47); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (input.charCodeAt(peg$currPos) === 93) {
-          s3 = peg$c41;
+      s0 = peg$parseLiteral();
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.charCodeAt(peg$currPos) === 91) {
+          s1 = peg$c40;
           peg$currPos++;
         } else {
-          s3 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$e48); }
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$e47); }
         }
-        if (s3 !== peg$FAILED) {
-          s1 = [s1, s2, s3];
-          s0 = s1;
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parse_();
+          if (input.charCodeAt(peg$currPos) === 93) {
+            s3 = peg$c41;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$e48); }
+          }
+          if (s3 !== peg$FAILED) {
+            s1 = [s1, s2, s3];
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$FAILED;
+          }
         } else {
           peg$currPos = s0;
           s0 = peg$FAILED;
         }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$FAILED;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$parseCapture();
+        if (s0 === peg$FAILED) {
+          s0 = peg$parseCapture();
+        }
       }
     }
 

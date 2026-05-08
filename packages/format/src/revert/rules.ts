@@ -38,6 +38,43 @@ function esc(s: string): string {
 }
 
 /**
+ * True if `s` contains a binary operator at bracket depth 0 — used to decide
+ * whether an expression needs parens before ZS `..`. Same shape-heuristic as
+ * `castExprNeedsParens` in `./casts.ts`: a space + op-char-run + space at
+ * depth 0 is overwhelmingly a binary op after ESLint's spacing pass. Bracketed
+ * subexprs (`min(-1, 1)`, `[a, b]`) and block comments are skipped, so an
+ * inner `-` / `,` doesn't false-positive as a top-level operator.
+ */
+function hasTopLevelBinaryOp(s: string): boolean {
+  const OP = '+-*/%<>=&|^?!~'
+  let depth = 0
+  for (let i = 0; i < s.length - 2; i++) {
+    const c = s[i]
+    if (c === '/' && s[i + 1] === '*') {
+      const end = s.indexOf('*/', i + 2)
+      if (end === -1) break
+      i = end + 1
+      continue
+    }
+    if (c === '(' || c === '[' || c === '{') {
+      depth++
+      continue
+    }
+    if (c === ')' || c === ']' || c === '}') {
+      depth--
+      continue
+    }
+    if (depth !== 0 || c !== ' ') continue
+    const next = s[i + 1]
+    if (!next || !OP.includes(next)) continue
+    let j = i + 2
+    while (j < s.length && OP.includes(s[j])) j++
+    if (s[j] === ' ') return true
+  }
+  return false
+}
+
+/**
  * Drop a single outer pair of parentheses if (and only if) it wraps the whole
  * string with no escaping into nested groups. The forward pass routinely
  * writes `(expr).entries()` for ZS `for x, y in expr`; the original source
@@ -114,10 +151,10 @@ export const RULES: Rule[] = [
 
   // --- Loops ---------------------------------------------------------------
   ['FOR_TO',    /for \(let (?<v>[^=\s]+)\s*=\s*(?<from>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\s*<\s*(?<to>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\+\+\)\s*\{/g,    ({ v, from, to }) => {
-    // Numeric literals (incl. negative) are unambiguous before `..`; only wrap
-    // when `from` carries an operator or other non-token char.
-    const needsParens = /[^.\w()[\]?]/.test(from) && !new RegExp(`^${NUMBER}$`).test(from)
-    return `for ${v} in ${needsParens ? `(${from})` : from} .. ${to} {`
+    // Wrap only when `from` has a depth-0 binary op — `min(-1, 1)` looks
+    // operator-laden but its `-`/`,` are inside the call's own parens, so a
+    // bracket-aware walk keeps the original unparenthesised form.
+    return `for ${v} in ${hasTopLevelBinaryOp(from) ? `(${from})` : from} .. ${to} {`
   }],
   ['FOR_IN_PAIR',    /for \(const \[(?<v>[^\]]+)\] of (?<from>[\s\S]+?)\.entries\(\)\/\*\*\/\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
   ['FOR_IN',    /for \(const (?<v>\S+) of (?<from>[\s\S]+?)\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
