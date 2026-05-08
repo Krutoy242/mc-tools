@@ -26,11 +26,8 @@ import {
 const NUMBER = String.raw`-?\d+(?:\.\d+)?`
 const POSTFIX_FN_NAMES = Object.values(POSTFIX_TO_FN).join('|')
 const RESERVED = RESERVED_WORDS.join('|')
-// Bare ZS keywords would re-tokenise after unquoting (e.g. `function` would
-// start a function declaration), so UNQUOTE_KEY must skip them. Sort
-// long-first to keep the alternation prefix-safe (e.g. `zenClass` before
-// `zen…`-shaped substrings); the trailing `\b` is implicit because the
-// surrounding regex already ends the key with a closing quote.
+// Sort long-first to keep the alternation prefix-safe (e.g. `zenClass` before
+// `zen…`-shaped substrings).
 const ZS_KEYWORDS_ALT = [...ZS_KEYWORDS]
   .sort((a, b) => b.length - a.length)
   .join('|')
@@ -104,27 +101,12 @@ export const RULES: Rule[] = [
 
   // --- Object keys: restore quotes around ZS-keyword keys ------------------
   // The forward pass rewrote `'function': v` (and other ZS keywords as keys)
-  // to `_$_kw_function: v` so that ESLint's `quote-props: consistent-as-needed`
-  // would not unquote the StringLiteral. Restore the quoted form before
-  // UNQUOTE_KEY runs (UNQUOTE_KEY's negative lookahead would otherwise be a
-  // dead-letter for keys ESLint had already unquoted in-place).
+  // to `_$_kw_function: v` so that no ESLint rule (or other downstream pass)
+  // can drop the quotes — a bare `function:` re-tokenises on the ZS side as
+  // the head of a declaration. Restore the quoted form here. User quoting
+  // for *non*-keyword keys is preserved verbatim because `style/quote-props`
+  // is disabled for ZS-derived TS in `eslint.config.js`.
   ['QUOTED_KEYWORD_KEY',    new RegExp(`${M_KW_KEY}(?<kw>${ZS_KEYWORDS_ALT})(?=\\s*:)`, 'g'),    ({ kw }) => `'${kw}'`],
-
-  // --- Object keys: unquote forced-quoted numeric/identifier keys ----------
-  // ESLint's `quote-props: consistent-as-needed` propagates quoting to every
-  // key in an object as soon as one of them needs it (e.g. a negative-numeric
-  // ZS key like `-1`, which TS rejects as a bare property name). Stripping
-  // the quotes back here is uniform per line (always 2 chars), so the
-  // `key-spacing` alignment ESLint computed in TS survives revert intact.
-  // True string keys (containing characters that aren't valid in a numeric
-  // or identifier name, e.g. `'foo bar'`) don't match and stay quoted.
-  // Anchored to `[{,]` lookbehind so we never unquote a string in non-key
-  // position (ternary `: 'foo'`, array `['foo']`, etc.).
-  // The `(?!(?:keyword)')` negative lookahead keeps ZS reserved words quoted —
-  // `'function'` etc. parse fine as ZS PropertyName via the StringLiteral
-  // production but, once unquoted, the upstream ZS runtime re-tokenises them
-  // as the keyword (a bare `function:` reads as a declaration head).
-  ['UNQUOTE_KEY',    new RegExp(`(?<pre>[{,])(?<ws>\\s*)'(?!(?:${ZS_KEYWORDS_ALT})')(?<key>-?\\d+(?:\\.\\d+)?|[a-z_]\\w*)'(?=\\s*:)`, 'gi'),    ({ pre, ws, key }) => `${pre}${ws}${key}`],
 
   // --- Captures (`<...>`) and number postfixes -----------------------------
   ['CAPTURES', /\$`(?<cap>[^`]+)`/g, ({ cap }) => `<${cap}>`],

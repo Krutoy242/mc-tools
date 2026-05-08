@@ -1,3 +1,4 @@
+/* eslint-disable no-irregular-whitespace */
 /**
  * Bracket-counted unwinders for the two cast-shaped wrappers the forward pass
  * emits — `__as<Type>(expr)` and `Array<T>`. Both shapes can nest arbitrarily
@@ -22,10 +23,67 @@ const CAST_OPEN = `${MARKERS.castFn}<`
  * have surrounding parens. Detection is heuristic: a space + operator-char +
  * space is overwhelmingly a binary operator after ESLint's spacing pass.
  */
+/**
+ * Walk a string starting with `<` and find its matching `>`, skipping over
+ * block comments and the `=>` digraph. Returns the same shape as the bits of
+ * `balanced-match` we actually use (`body`, `post`).
+ *
+ * `balanced-match` is a plain character counter and gets confused by:
+ *   - `>` inside block-comment markers like `/​* => *​/` (preserved by the
+ *     forward pass to tag function-type return arrows);
+ *   - `>` that's the second char of a literal TS `=>` arrow inside a function
+ *     type (`__as<(a: T) => U>(x)`).
+ * Both shapes appear in real ZS-derived TS as soon as someone casts to a
+ * function type, so the cast/list unwinders must see them as opaque.
+ *
+ * Block comments cannot nest in TS, so the `*​/` lookup is safe; the `=>`
+ * skip handles the function-arrow case (a stray `>` paired with no `<` would
+ * otherwise drop our depth below zero on the wrong character).
+ */
+function matchAngle(s: string): { body: string, post: string, end: number } | null {
+  if (s[0] !== '<') return null
+  let depth = 0
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '/' && s[i + 1] === '*') {
+      const end = s.indexOf('*/', i + 2)
+      if (end === -1) return null
+      i = end + 1
+      continue
+    }
+    if (c === '=' && s[i + 1] === '>') {
+      i++
+      continue
+    }
+    if (c === '<') {
+      depth++
+    }
+    else if (c === '>') {
+      depth--
+      if (depth === 0) return { body: s.slice(1, i), post: s.slice(i + 1), end: i }
+    }
+  }
+  return null
+}
+
 function castExprNeedsParens(expr: string): boolean {
+  // Op chars excluding `:`. A bare `:` is a TS type annotation
+  // (`function (): T`, `function (x: T)`, etc.) — not a binary operator that
+  // needs parens around its left operand. The ternary `?:` still trips the
+  // heuristic at the `?`.
+  const OP = '+-*/%<>=&|^?!~'
   let depth = 0
   for (let i = 0; i < expr.length - 2; i++) {
     const c = expr[i]
+    // Skip block comments wholesale: forward markers like `/​* as *​/` and
+    // `/​* => *​/` sit between TS tokens and would otherwise be read as op
+    // runs by the inner walker (`/`, `*` are op chars).
+    if (c === '/' && expr[i + 1] === '*') {
+      const end = expr.indexOf('*/', i + 2)
+      if (end === -1) break
+      i = end + 1
+      continue
+    }
     if (c === '(' || c === '[' || c === '{') {
       depth++
       continue
@@ -36,19 +94,21 @@ function castExprNeedsParens(expr: string): boolean {
     }
     if (depth !== 0 || c !== ' ') continue
     const next = expr[i + 1]
-    if (!next || !'+-*/%<>=&|^?:!~'.includes(next)) continue
+    if (!next || !OP.includes(next)) continue
     let j = i + 2
-    while (j < expr.length && '+-*/%<>=&|^?:!~'.includes(expr[j])) j++
+    while (j < expr.length && OP.includes(expr[j])) j++
     if (expr[j] === ' ') return true
   }
   return false
 }
 
 /**
- * Unwind every `Array<...>` wrapper to ZS `[...]`. `balanced-match` gives us
- * the matching `>` for the leftmost `<`, which handles nesting in one pass —
- * `Array<Array<int>>` rewrites outer-first to `[Array<int>]` and the loop
- * picks up the inner on the next iteration.
+ * Unwind every `Array<...>` wrapper to ZS `[...]`. `matchAngle` gives us the
+ * matching `>` for the leftmost `<` while skipping block comments and `=>`,
+ * which handles nesting in one pass — `Array<Array<int>>` rewrites outer-first
+ * to `[Array<int>]` and the loop picks up the inner on the next iteration. The
+ * comment/arrow awareness matters once the inner type is a function type
+ * (`Array<() => T>`), where a naive counter would mis-close on the `=>`.
  */
 export function revertLists(source: string): string {
   let out = source
@@ -56,7 +116,7 @@ export function revertLists(source: string): string {
     const idx = out.indexOf('Array<')
     if (idx === -1) return out
     const open = idx + 'Array'.length // position of '<'
-    const b = balanced('<', '>', out.slice(open))
+    const b = matchAngle(out.slice(open))
     if (!b) return out // malformed (unmatched `<`)
     out = `${out.slice(0, idx)}[${b.body}]${b.post}`
   }
@@ -64,10 +124,12 @@ export function revertLists(source: string): string {
 
 /**
  * Unwind every `__as<Type>(expr)` wrapper to ZS `expr as Type`, leftmost
- * first. Each pass uses two `balanced-match` calls — one for the generic
- * `<...>`, one for the call `(...)` — and the loop re-matches inside the
- * rewritten body, so nesting (`__as<Array<int>>(__as<float>(x))`) unwinds
- * cleanly without any custom bracket counting.
+ * first. Each pass pairs a comment-/arrow-aware angle match (`matchAngle`)
+ * with a `balanced-match` call for the value parens, and the loop re-matches
+ * inside the rewritten body, so nesting (`__as<Array<int>>(__as<float>(x))`)
+ * unwinds cleanly without any custom bracket counting. Plain `balanced-match`
+ * doesn't fit for the angles because TS function types put `=>` and the
+ * forward pass's `/​* => *​/` marker inside cast bodies — both contain a `>`.
  */
 export function revertCasts(source: string): string {
   let out = source
@@ -76,7 +138,7 @@ export function revertCasts(source: string): string {
     if (start === -1) return out
 
     const angleStart = start + MARKERS.castFn.length // position of '<'
-    const angle = balanced('<', '>', out.slice(angleStart))
+    const angle = matchAngle(out.slice(angleStart))
     if (!angle) return out // malformed; bail
 
     const callStart = angleStart + angle.end + 1

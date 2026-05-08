@@ -542,17 +542,13 @@ function peg$parse(input, options) {
   var peg$f33 = function(minus, body) {
     if (!minus) return body
     // Negative numerics are not valid bare TS property keys (must be quoted
-    // string or `[computed]`). Emit as a quoted string: with the preamble's
-    // `quote-props: consistent-as-needed`, every other key in the object
-    // gets quoted too, so `key-spacing` adds the same 2-char skew to every
-    // line — and the `UNQUOTE_KEY` rule in tsToZs.ts strips those same 2
-    // chars uniformly, leaving the colon column unchanged. Postfix-typed
-    // negatives (e.g. `-1L`, effectively unseen as keys) fall back to the
-    // legacy `/* _ */[ ... /* _ */]` bracket marker.
-    const flatBody = Array.isArray(body) ? flat(body) : body
-    return /^[\d.]+$/.test(flatBody)
-      ? ["'", minus, flatBody, "'"]
-      : ['/* _ */[', minus, body, '/* _ */]']
+    // string or `[computed]`). Emit via the `/* _ */[ ... /* _ */]` bracket
+    // marker so `REMOVE_DEBRIS_GAP` peels it cleanly back to the bare ZS
+    // form on revert. Quoting them as strings would survive the round-trip
+    // intact too, but it would silently rewrite `-1: x` into `'-1': x` on
+    // output — and the whole point of the style-preserving overhaul is to
+    // leave user-chosen key syntax alone.
+    return ['/* _ */[', minus, body, '/* _ */]']
   };
   var peg$f34 = function() { return '/* ~ */ +' };
   var peg$f35 = function() { return '/* has */in' };

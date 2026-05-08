@@ -56,33 +56,39 @@ function foo(str as string) as string {
     expect(revert(fwd.ts).trim()).toBe('val x = 0.1 as int as double;')
   })
 
-  it('emits negative numeric object keys as quoted strings (no bracket markers)', () => {
-    const fwd = zsToTs('static m as int[int] = { 0: 1, -1: 2 } as int[int];')
+  it('emits negative numeric object keys via the bracket-marker (round-trips bare)', () => {
+    // Negative numerics aren't valid bare TS property keys, so the forward
+    // pass routes them through `/* _ */[ -1 /* _ */]:` — the same bracket
+    // marker used for arbitrary-expression keys. `REMOVE_DEBRIS_GAP` peels
+    // that back to a bare `-1:` on revert. (Quoting as `'-1'` would also
+    // survive the round-trip intact, but would silently flip `-1: x` to
+    // `'-1': x` on output, defeating the point of leaving user style alone.)
+    const source = 'static m as int[int] = { 0: 1, -1: 2 } as int[int];'
+    const fwd = zsToTs(source)
     expect(fwd.ok).toBe(true)
     if (!fwd.ok) return
-    // Quoted form; no `[-1]` computed-key + marker leftover.
-    expect(fwd.ts).toContain(`'-1'`)
-    expect(fwd.ts).not.toContain('/* _ */[-1')
+    expect(fwd.ts).toContain('/* _ */[-1')
+    expect(fwd.ts).not.toContain(`'-1'`)
+    expect(revert(fwd.ts).trim()).toBe(source)
   })
 
-  it('preserves colon-alignment of object literals through quoted-key revert', () => {
-    // Simulate what ESLint produces with `quote-props: consistent-as-needed`
-    // + `key-spacing` align: every key quoted, colons in the same column.
-    // `'-1'` is what our forward pass now emits for a negative ZS key.
-    const linted = `
-const m = {
-  '0' : 'a',
-  '-1': 'b',
-};`
-    const back = revert(linted)
-    // After revert: quotes stripped uniformly (-2 chars per line), so the
-    // colons remain in the SAME column relative to each other.
-    const lines = back.split('\n').filter(l => l.includes(':'))
-    const colonCols = lines.map(l => l.indexOf(':'))
-    expect(new Set(colonCols).size).toBe(1)
-    // And the keys came out as bare ZS literals.
-    expect(back).toContain('0 ')
-    expect(back).toContain('-1:')
+  it('preserves user-chosen key quoting across the round-trip (style-preserving)', () => {
+    // With `style/quote-props` disabled for ZS-derived TS in eslint.config.js
+    // (and no `UNQUOTE_KEY` rule on the revert side), every key the user
+    // wrote stays exactly as it was — quoted stays quoted, bare stays bare,
+    // and they can be mixed in the same object literal next to a key that
+    // genuinely requires quotes (`':'`).
+    const cases = [
+      `val a as int[string] = { 'A': 0, 'B': 1, ':': 2 } as int[string];`,
+      `val a as int[string] = { A: 0, B: 1, ':': 2 } as int[string];`,
+      `val a as int[string] = { 'A': 0, B: 1, ':': 2 } as int[string];`,
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      expect(revert(fwd.ts).trim()).toBe(source)
+    }
   })
 
   it('parses `[A][B]` as a map type (key=B, value=List<A>) — the ZS list-keyed map sugar', () => {

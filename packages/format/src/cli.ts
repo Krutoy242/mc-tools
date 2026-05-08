@@ -14,7 +14,7 @@
 /*
 Useful command to test the tool:
 
-f=scripts/test.zs;cat $f;cp $f tmp;pnpm tsx mc-tools/packages/format/src/cli.ts $f;cat $f;mv tmp $f
+p=mc-tools/packages/format && pnpm --dir $p exec scripts/build-parser.mjs && pnpm --dir $p exec vitest run && f=scripts/test.zs && cat $f && echo '---' && cp $f tmp && pnpm tsx $p/src/cli.ts $f && cat $f && mv tmp $f
 
 */
 
