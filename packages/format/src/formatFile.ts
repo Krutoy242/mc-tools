@@ -54,8 +54,11 @@ export function convertToTs(fileList: string[], verbose = false): ConvertOutcome
 
     const fileParsed = parse(filePath)
     const isForward = fileParsed.ext === '.zs'
-    const dstExt = isForward ? 'ts' : 'zs'
-    const newFilePath = join(fileParsed.dir, `${fileParsed.name}.${dstExt}`)
+    // Forward: foo.zs → foo.zs.ts (the `.zs.ts` suffix lets eslint.config.js
+    // target only ZS-derived files). Reverse: foo.zs.ts → foo.zs.
+    const newFilePath = isForward
+      ? join(fileParsed.dir, `${fileParsed.name}.zs.ts`)
+      : join(fileParsed.dir, fileParsed.name.endsWith('.zs') ? fileParsed.name : `${fileParsed.name}.zs`)
 
     if (!isForward) {
       const startRevert = performance.now()

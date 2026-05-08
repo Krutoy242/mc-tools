@@ -82,7 +82,6 @@ export const DEBRIS_PREAMBLE = `
 // ${MARKERS.debrisFence}
 // =============================================================
 /* eslint max-statements-per-line: "warn" */
-/* eslint style/no-multi-spaces: ["error", { ignoreEOLComments: true, exceptions: { "VariableDeclarator": true, "ArrayExpression": true }}] */
 /* eslint style/quote-props: ["warn", "consistent-as-needed"] */
 /* eslint style/semi: ["error", "always"] */
 /* eslint-disable antfu/consistent-list-newline */
@@ -98,7 +97,6 @@ export const DEBRIS_PREAMBLE = `
 /* eslint-disable prefer-template */
 /* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/max-statements-per-line */
-/* eslint-disable style/no-multi-spaces */
 /* eslint-disable ts/consistent-type-imports */
 /* eslint-disable ts/no-dupe-class-members */
 /* eslint-disable ts/no-unsafe-argument */
