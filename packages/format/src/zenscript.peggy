@@ -113,7 +113,10 @@ __
 // -----------------------------------------------
 Identifier "Identifier"
   = name:IdentifierName {
-    const reserved = ('default class case').split(' ')
+    // Keep in sync with `RESERVED_WORDS` in markers.ts — JS keywords/operators
+    // that are valid ZS identifiers and would otherwise be mangled by ESLint
+    // (e.g. `typeof(x)` → `typeof x`).
+    const reserved = ('default class case typeof').split(' ')
     return reserved.includes(flat(name))
       ? ['_$_',name]
       : name

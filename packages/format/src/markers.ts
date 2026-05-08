@@ -168,7 +168,11 @@ export const FN_TO_POSTFIX: Readonly<Record<string, string>> = Object.fromEntrie
 
 /** Reserved JS words escaped in ZS identifiers. */
 export const RESERVED_PREFIX = '_$_'
-export const RESERVED_WORDS = ['default', 'class', 'case'] as const
+// `typeof` is a ZS function (`typeof(<minecraft:dirt>)`) but a JS unary
+// operator — ESLint normalises `typeof(x)` to `typeof x`, dropping the parens
+// the ZS runtime requires. Escape it like the other reserved words so the TS
+// sees a plain identifier call.
+export const RESERVED_WORDS = ['default', 'class', 'case', 'typeof'] as const
 
 /** Anonymous parameter prefix for function-type signatures (e.g. `_arg0`). */
 export const ANON_ARG_PREFIX = '_arg'
