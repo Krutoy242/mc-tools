@@ -131,8 +131,12 @@ export const RULES: Rule[] = [
   ['NUMBER_POSTFIX',    new RegExp(`(?<p>${POSTFIX_FN_NAMES})\\((?<num>${NUMBER})\\)`, 'g'),    ({ p, num }) => num + FN_TO_POSTFIX[p]],
 
   // --- Loops ---------------------------------------------------------------
-  ['FOR_TO',    /for \(let (?<v>[^=\s]+)\s*=\s*(?<from>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\s*<\s*(?<to>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\+\+\)\s*\{/g,    ({ v, from, to }) =>
-    `for ${v} in ${/[^.\w()[\]?]/.test(from) ? `(${from})` : from} .. ${to} {`],
+  ['FOR_TO',    /for \(let (?<v>[^=\s]+)\s*=\s*(?<from>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\s*<\s*(?<to>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\+\+\)\s*\{/g,    ({ v, from, to }) => {
+    // Numeric literals (incl. negative) are unambiguous before `..`; only wrap
+    // when `from` carries an operator or other non-token char.
+    const needsParens = /[^.\w()[\]?]/.test(from) && !new RegExp(`^${NUMBER}$`).test(from)
+    return `for ${v} in ${needsParens ? `(${from})` : from} .. ${to} {`
+  }],
   ['FOR_IN_PAIR',    /for \(const \[(?<v>[^\]]+)\] of (?<from>[\s\S]+?)\.entries\(\)\/\*\*\/\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
   ['FOR_IN',    /for \(const (?<v>\S+) of (?<from>[\s\S]+?)\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
 
