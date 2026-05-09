@@ -109,7 +109,11 @@ forks:
   243121: [417392] # Quark
   245211: [977883] # TOP
   248453: [456403] # Forgelin
+  260912: [1504502] # XNet
+  261348: [1165010] # Avaritia 1.1x
   268387: [398267] # Extended Crafting
   268560: [813408] # Mekanism
+  287683: [1394222] # Construct's Armory
+  306770: [905159] # Patchouli
   357178: [419286] # MixinBootstrap
-  434516: [261348] # Avaritia
+  434516: [261348, 1165010] # Avaritia

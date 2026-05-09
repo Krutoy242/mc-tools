@@ -1,13 +1,11 @@
 import type { InstalledAddon } from './minecraftinstance.js'
-import { rename } from 'node:fs/promises'
+import { rename, stat } from 'node:fs/promises'
 
 import { resolve } from 'node:path'
-import process from 'node:process'
-import chalk from 'chalk'
 
 export enum DependencyLevel {
   All,
-  Emmbed,
+  Embed,
   Optional,
   Required,
   Tool
@@ -15,13 +13,32 @@ export enum DependencyLevel {
 
 export type ModdedAddon = InstalledAddon & { mod?: Mod }
 
+export type ModEvent
+  = | { type: 'enable',  mod: Mod }
+    | { type: 'disable', mod: Mod }
+    | { type: 'error',   mod: Mod, error: string }
+    | { type: 'refresh', mod: Mod }
+
+export type ModEventListener = (event: ModEvent) => void
+
+export interface ModSwitchFailure {
+  mod  : Mod
+  error: string
+}
+
+export interface ModSwitchResult {
+  ok    : number
+  failed: ModSwitchFailure[]
+}
+
 // Clear extensions and postfixes from mod file name
 export function purify(fileName?: string) {
   return fileName?.replace(/(?:-patched)?(?:\.jar|(?:\.jar)?(?:\.disabled)+)$/gm, '')
 }
 
 export class Mod {
-  static modsPath: string
+  static modsPath : string
+  static listener?: ModEventListener
 
   public isDisabled  : boolean
   public dependencies: Mod[] = []
@@ -55,87 +72,121 @@ export class Mod {
       .reduce((sum, current) => sum + current, 0)
   }
 
-  static async disable(mods: Iterable<Mod>, silent = false): Promise<number> {
-    return Mod.switch(mods, true, silent)
+  static async disable(mods: Iterable<Mod>): Promise<ModSwitchResult> {
+    return Mod.switchMany(mods, true)
   }
 
-  static async enable(mods: Iterable<Mod>, silent = false): Promise<number> {
-    return Mod.switch(mods, false, silent)
+  static async enable(mods: Iterable<Mod>): Promise<ModSwitchResult> {
+    return Mod.switchMany(mods, false)
   }
 
-  private static async switch(mods: Iterable<Mod>, toDisable: boolean, silent: boolean): Promise<number> {
+  private static async switchMany(mods: Iterable<Mod>, toDisable: boolean): Promise<ModSwitchResult> {
     const antiloop = new Set<Mod>()
-    let counter = 0
+    let ok = 0
+    const failed: ModSwitchFailure[] = []
     for (const m of mods) {
-      counter += +(toDisable
-        ? await m.disable(antiloop, silent)
-        : await m.enable(antiloop, silent))
+      await (toDisable ? m.disable(antiloop) : m.enable(antiloop))
+      const success = toDisable ? m.disabled : m.enabled
+      if (success) ok++
+      else failed.push({ mod: m, error: 'dependency cycle or already processed' })
     }
-    return counter
+    return { ok, failed }
   }
 
-  private async disable(antiloop = new Set<Mod>(), silent: boolean): Promise<boolean> {
-    if (antiloop.has(this)) return false
+  private async disable(antiloop = new Set<Mod>()): Promise<{ ok: boolean, error?: string }> {
+    if (antiloop.has(this)) return { ok: false }
     antiloop.add(this)
-    if (await this.switch(true, silent)) {
+    const r = await this.switch(true)
+    if (r.ok) {
       for (const d of this.dependents)
-        await d.disable(antiloop, silent)
+        await d.disable(antiloop)
     }
-    return true
+    return r
   }
 
-  private async enable(antiloop = new Set<Mod>(), silent: boolean): Promise<boolean> {
-    if (antiloop.has(this)) return false
+  private async enable(antiloop = new Set<Mod>()): Promise<{ ok: boolean, error?: string }> {
+    if (antiloop.has(this)) return { ok: false }
     antiloop.add(this)
-    if (await this.switch(false, silent)) {
+    const r = await this.switch(false)
+    if (r.ok) {
       for (const d of this.dependencies)
-        await d.enable(antiloop, silent)
+        await d.enable(antiloop)
     }
-    return true
+    return r
   }
 
-  private async switch(toDisable: boolean, silent: boolean) {
-    if (this.isDisabled === toDisable) return true
+  private async switch(toDisable: boolean, retried = false): Promise<{ ok: boolean, error?: string }> {
+    if (this.isDisabled === toDisable) return { ok: true }
     const newFileName = toDisable
       ? `${this.fileName}.disabled`
       : this.fileName.replace(/\.disabled/g, '')
-
-    if (!silent) {
-      process.stdout.write(
-        `${toDisable ? chalk.bgRgb(60, 30, 30)('disable') : chalk.bgRgb(30, 60, 30)('enable')} ${chalk.gray(this.fileNameNoExt)}`
-      )
-    }
 
     try {
       await rename(
         resolve(Mod.modsPath, this.fileName),
         resolve(Mod.modsPath, newFileName)
       )
-      if (!silent) process.stdout.write('\n')
       this.fileName = newFileName
       this.isDisabled = toDisable
+      Mod.listener?.({ type: toDisable ? 'disable' : 'enable', mod: this })
+      return { ok: true }
     }
     catch (err: unknown) {
-      const e = err as { message?: string }
-      if (!silent) console.error(` ${' '.repeat(Math.max(1, 49 - this.fileNameNoExt.length))}${chalk.red(e?.message)}`)
-      return false
+      const e = err as { message?: string, code?: string }
+      // If the source file vanished or got renamed externally, sync our state
+      // from disk and retry once.
+      if (!retried && (e?.code === 'ENOENT')) {
+        const refreshed = await this.refresh()
+        if (refreshed && this.isDisabled !== toDisable) {
+          return this.switch(toDisable, true)
+        }
+      }
+      const error = e?.message ?? 'unknown error'
+      Mod.listener?.({ type: 'error', mod: this, error })
+      return { ok: false, error }
     }
-    return true
+  }
+
+  /**
+   * Re-stat the file on disk and update `fileName` / `isDisabled` to match
+   * reality. Useful if the user renamed/deleted a mod outside the program
+   * while it was running.
+   *
+   * Returns true when the file was found (under any expected name), false
+   * when it has gone missing entirely.
+   */
+  public async refresh(): Promise<boolean> {
+    const base = this.fileNameNoExt
+    const candidates = [this.fileName, `${base}.jar`, `${base}.jar.disabled`]
+    const seen = new Set<string>()
+    for (const candidate of candidates) {
+      if (seen.has(candidate)) continue
+      seen.add(candidate)
+      try {
+        await stat(resolve(Mod.modsPath, candidate))
+        const wasDisabled = this.isDisabled
+        this.fileName = candidate
+        this.isDisabled = !candidate.endsWith('.jar')
+        if (wasDisabled !== this.isDisabled) {
+          Mod.listener?.({ type: 'refresh', mod: this })
+        }
+        return true
+      }
+      catch { /* try next candidate */ }
+    }
+    Mod.listener?.({ type: 'error', mod: this, error: 'file missing on disk' })
+    return false
   }
 
   public get fileNameNoExt() {
     return this.fileName.replace(/\.jar(?:\.disabled)?$/, '')
   }
 
-  static displayify(text: string) {
-    return text.replace(/(◂.*)/, chalk.gray('$1'))
-  }
-
-  public get display() {
-    return Mod.displayify(this.displayRaw)
-  }
-
   public get displayRaw() {
     return `${this.addon?.name ?? ''} ◂${this.fileNameNoExt}▸`.trim()
+  }
+
+  public get displayName(): string {
+    return this.addon?.name?.trim() || this.fileNameNoExt
   }
 }

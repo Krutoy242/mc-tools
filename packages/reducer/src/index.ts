@@ -1,41 +1,18 @@
-import chalk from 'chalk'
-import inquirer from 'inquirer'
-
-import { binary } from './binary.js'
-import { getConfig } from './config.js'
-import { createWarningCache, ModStore } from './ModStore.js'
-import { toggleMods } from './toggle.js'
+import process from 'node:process'
+import { render } from 'ink'
+import React from 'react'
+import { createReducerCache } from './cache.js'
+import { App } from './ui/App.js'
 
 export async function main(mcPath: string) {
-  const warnings = createWarningCache()
-
-  while (true) {
-    const config = await getConfig(mcPath)
-    const store = new ModStore(mcPath, config, warnings)
-
-    const { action } = await inquirer.prompt<{ action: string }>([
-      {
-        type   : 'list',
-        name   : 'action',
-        message: 'What do you want to do? (Ctrl+C to exit)',
-        choices: [
-          { name: `${chalk.cyan('☰')} Select mods to toggle`, value: 'select_mods' },
-          { name: `${chalk.yellow('❯')} Binary search`, value: 'binary' },
-        ],
-      },
-    ])
-
-    if (action === 'select_mods') await toggleMods(store.mods)
-    else if (action === 'binary') await binary(store.mods)
+  const cache = createReducerCache(mcPath)
+  const { waitUntilExit } = render(React.createElement(App, { mcPath, cache }), {
+    exitOnCtrlC: true,
+  })
+  try {
+    await waitUntilExit()
   }
-}
-
-/**
- * Partition `arr` into two lists: items for which `p(item)` is truthy, and the rest.
- */
-export function splitTwo<T>(arr: T[], p: (v: T) => boolean): [T[], T[]] {
-  const truthy: T[] = []
-  const falsy: T[] = []
-  for (const v of arr) (p(v) ? truthy : falsy).push(v)
-  return [truthy, falsy]
+  catch { /* swallow exit-via-ctrl-c rejection */ }
+  // Ensure terminal cursor is restored even when Ink exits asynchronously.
+  process.stdout.write('\n')
 }
