@@ -181,7 +181,7 @@ export const RULES: Rule[] = [
   ),    ({ s, a, b }) => {
     const head = `${s}#${a.split('.').join(' ')}`
     const indented = b.includes('\n') ? `\n${s}#` : ' '
-    const reflowed = b.replace(/\n(\s*)/g, (_, m: string) =>
+    const reflowed = b.replace(/,(?=\s*[\]}])/g, '').replace(/\n(\s*)/g, (_, m: string) =>
       `\n${s}#${m.substring(s.length)}`)
     return `${head}${indented}${reflowed}`
   }],
