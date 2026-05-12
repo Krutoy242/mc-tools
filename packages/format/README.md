@@ -56,8 +56,9 @@ ARGUMENTS
 
 OPTIONS
 
-  -i, --ignore    Same as --ignore-pattern for ESLint
-   -p, --pause    Pause and ask before linting
+   -i, --ignore    Same as --ignore-pattern for ESLint
+    -p, --pause    Pause and ask before linting       
+  -v, --verbose    Show timing for each step
 ```
 
 ## Author
