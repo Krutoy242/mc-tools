@@ -1,6 +1,7 @@
 import type { LintAdapter } from '@mctools/format'
 import type { Rule } from 'eslint'
 
+import { makeNoRedundantReturnCastRule } from './no-redundant-return-cast.js'
 import { makeZsFormatRule } from './zs-format.js'
 
 export interface PluginContext {
@@ -14,6 +15,7 @@ export type RuleFactory = (ctx: PluginContext) => Rule.RuleModule
  * and it auto-appears on the plugin object exposed by `defineConfig`.
  */
 export const ruleFactories: Record<string, RuleFactory> = {
+  'no-redundant-return-cast': () => makeNoRedundantReturnCastRule(),
   'zs-format': ({ getAdapter }) => makeZsFormatRule(getAdapter),
 }
 
