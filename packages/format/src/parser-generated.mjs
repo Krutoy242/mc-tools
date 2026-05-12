@@ -1436,7 +1436,7 @@ function peg$parse(input, options) {
       s2 = peg$parsePreprocessorBody();
       s3 = [];
       s4 = peg$currPos;
-      s5 = peg$parseLineTerminator();
+      s5 = peg$parseLineTerminatorSequence();
       if (s5 !== peg$FAILED) {
         s6 = peg$parsePreprocessorLine();
         if (s6 !== peg$FAILED) {
@@ -1453,7 +1453,7 @@ function peg$parse(input, options) {
       while (s4 !== peg$FAILED) {
         s3.push(s4);
         s4 = peg$currPos;
-        s5 = peg$parseLineTerminator();
+        s5 = peg$parseLineTerminatorSequence();
         if (s5 !== peg$FAILED) {
           s6 = peg$parsePreprocessorLine();
           if (s6 !== peg$FAILED) {

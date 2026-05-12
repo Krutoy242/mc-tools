@@ -71,7 +71,7 @@ PreprocessorSpace
   = (WhiteSpace / LineTerminatorSequence / "#")
 
 PreprocessorData
-  = "{" PreprocessorBody (LineTerminator PreprocessorLine)*
+  = "{" PreprocessorBody (LineTerminatorSequence PreprocessorLine)*
 
 PreprocessorLine
   = head:WhiteSpace* "#" body:PreprocessorBody { return [head, body] }

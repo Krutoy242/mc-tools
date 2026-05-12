@@ -174,13 +174,13 @@ export const RULES: Rule[] = [
   ['LET',   new RegExp(`${M_VAR}let`, 'g'), 'var'],
 
   // Decorators: `@foo()` → `#foo`, `@foo.bar(body)` → `#foo bar body`
-  ['DECORATOR',    /@(?<a>\w+(?:\.\w+)*)\(\s*\)/g,    ({ a }) => `#${a.split('.').join(' ')}`],
+  ['DECORATOR',    /@(?<a>\w+(?:\.\w+)*)\(\s*\)/g,    ({ a }) => `#${a.split('.').join(' ')}`.trimEnd()],
   ['DECORATOR_OBJ',    new RegExp(
     `(?<s>[ \\t]*)@(?<a>\\w+(?:\\.\\w+)*)\\((?<b>[\\s\\S]*?)\\)\\s*${M_MIXINEND}`,
     'g'
   ),    ({ s, a, b }) => {
-    const head = `${s}#${a.split('.').join(' ')} `
-    const indented = b.includes('\n') ? `\n${s}#` : ''
+    const head = `${s}#${a.split('.').join(' ')}`
+    const indented = b.includes('\n') ? `\n${s}#` : ' '
     const reflowed = b.replace(/\n(\s*)/g, (_, m: string) =>
       `\n${s}#${m.substring(s.length)}`)
     return `${head}${indented}${reflowed}`
