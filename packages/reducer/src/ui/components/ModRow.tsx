@@ -246,57 +246,56 @@ export function ModRow({
   // can find the cursor on long, dense rows. Bundle tints (binary search) win
   // because they encode separately-meaningful state; otherwise focus shows.
   const backgroundColor = tintColor ?? (isFocus ? t.rowFocus : undefined)
+  const bg = backgroundColor ? { backgroundColor } : {}
 
   return (
-    <Box backgroundColor={backgroundColor}>
-      <Box width={2}>
-        <Text color={cursorColor} bold={isFocus}>{cursorGlyph}</Text>
-      </Box>
-      <Box width={3}>
-        <Text color={checkboxColor}>{checkboxGlyph}</Text>
-      </Box>
-      <Text>{' '}</Text>
+    <Box>
+      <Text {...bg} color={cursorColor} bold={isFocus}>{cursorGlyph}{' '}</Text>
+      <Text {...bg} color={checkboxColor}>{checkboxGlyph}</Text>
+      <Text {...bg}>{' '}</Text>
       {prefix
-        ? <Text color={t.fgMuted}>{prefix}</Text>
+        ? <Text {...bg} color={t.fgMuted}>{prefix}</Text>
         : null}
       {nameTokens.map((tok, i) => (
-        <Text key={`n${i}`} color={tok.match ? t.accent : nameColor} bold={tok.match}>
+        <Text {...bg} key={`n${i}`} color={tok.match ? t.accent : nameColor} bold={tok.match}>
           {tok.text}
         </Text>
       ))}
-      {namePad > 0 ? <Text>{' '.repeat(namePad)}</Text> : null}
+      {namePad > 0 ? <Text {...bg}>{' '.repeat(namePad)}</Text> : null}
       {mod.addon
         ? (
             <>
-              <Text color={decorationColor}>{' ◂'}</Text>
+              <Text {...bg} color={decorationColor}>{' ◂'}</Text>
               {fileTokens.map((tok, i) => (
-                <Text key={`f${i}`} color={tok.match ? t.accent : fileColor} bold={tok.match}>
+                <Text {...bg} key={`f${i}`} color={tok.match ? t.accent : fileColor} bold={tok.match}>
                   {tok.text}
                 </Text>
               ))}
-              <Text color={decorationColor}>▸</Text>
-              {filePad > 0 ? <Text>{' '.repeat(filePad)}</Text> : null}
+              <Text {...bg} color={decorationColor}>▸</Text>
+              {filePad > 0 ? <Text {...bg}>{' '.repeat(filePad)}</Text> : null}
             </>
           )
         : (fileWidth !== undefined
-            ? <Text>{' '.repeat(fileWidth + 3)}</Text>
+            ? <Text {...bg}>{' '.repeat(fileWidth + 3)}</Text>
             : null)}
       {showBar
         ? (
-            <Box marginLeft={1}>
-              <SizeBar value={size} max={maxSize} width={10} noTrail />
-            </Box>
+            <>
+              <Text {...bg}>{' '}</Text>
+              <SizeBar value={size} max={maxSize} width={10} noTrail {...bg} />
+            </>
           )
         : null}
       {showDescription
         ? (
-            <Box marginLeft={1}>
-              <Text color={t.fgMuted}>{descriptionText}</Text>
-            </Box>
+            <>
+              <Text {...bg}>{' '}</Text>
+              <Text {...bg} color={t.fgMuted}>{descriptionText}</Text>
+            </>
           )
         : null}
       {trailText
-        ? <Text color={trailColor}>{' '}{trailText}</Text>
+        ? <Text {...bg} color={trailColor}>{' '}{trailText}</Text>
         : null}
     </Box>
   )

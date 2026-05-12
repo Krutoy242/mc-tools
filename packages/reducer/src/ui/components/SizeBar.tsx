@@ -4,15 +4,17 @@ import { useTheme } from '../ThemeContext.js'
 
 interface SizeBarProps {
   /** Current value (e.g. mod size in bytes). */
-  value   : number
+  value           : number
   /** Reference value treated as 100% (e.g. largest mod size in the list). */
-  max     : number
+  max             : number
   /** Total bar width in cells. */
-  width   : number
+  width           : number
   /** Optional override color for the filled portion. */
-  color?  : string
+  color?          : string
   /** Suppress the trailing humanized number. */
-  noTrail?: boolean
+  noTrail?        : boolean
+  /** Optional background color for the bar. */
+  backgroundColor?: string
 }
 
 const FRACTIONS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉']
@@ -35,7 +37,8 @@ export function humanSize(bytes: number | undefined): string {
  * so a small mod never looks like nothing. The unfilled portion uses a dim
  * full-block background instead of dots so the bar reads as a single track.
  */
-export function SizeBar({ value, max, width, color, noTrail }: SizeBarProps) {
+export function SizeBar({ value, max, width, color, noTrail, backgroundColor }: SizeBarProps) {
+  const bg = backgroundColor ? { backgroundColor } : {}
   const t = useTheme()
   const safeMax = max > 0 ? max : 1
 
@@ -57,14 +60,14 @@ export function SizeBar({ value, max, width, color, noTrail }: SizeBarProps) {
 
   return (
     <Box flexDirection="row">
-      {full > 0 ? <Text color={fillColor}>{FULL.repeat(full)}</Text> : null}
+      {full > 0 ? <Text {...bg} color={fillColor}>{FULL.repeat(full)}</Text> : null}
       {remainder > 0
         ? <Text color={fillColor} backgroundColor={t.fgMuted}>{FRACTIONS[remainder]}</Text>
         : null}
-      {empty > 0 ? <Text color={t.fgMuted}>{FULL.repeat(empty)}</Text> : null}
+      {empty > 0 ? <Text {...bg} color={t.fgMuted}>{FULL.repeat(empty)}</Text> : null}
       {noTrail
         ? null
-        :             <Text color={t.fgDim}>
+        :             <Text {...bg} color={t.fgDim}>
             {' '}
             {humanSize(value)}
           </Text>}

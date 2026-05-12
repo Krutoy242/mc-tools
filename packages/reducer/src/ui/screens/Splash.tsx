@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-// @ts-expect-error - ink-big-text ships untyped
 import BigText from 'ink-big-text'
 import Gradient from 'ink-gradient'
 import React, { useEffect, useState } from 'react'
