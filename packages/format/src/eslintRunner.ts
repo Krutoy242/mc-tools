@@ -38,10 +38,13 @@ export async function lintFilesBatch(
 ): Promise<number> {
   const { ESLint } = await import('eslint')
   const normalized = files.map(f => f.replace(/\\/g, '/'))
+  const fileArgs = normalized.length > 4
+    ? [`[... ${normalized.length} files]`]
+    : normalized
   consola.start(
     '> eslint --fix --quiet',
     ignore ? `--ignore-pattern ${ignore}` : '',
-    ...normalized
+    ...fileArgs
   )
 
   const startInit = performance.now()

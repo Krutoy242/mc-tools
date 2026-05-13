@@ -19,6 +19,7 @@ p=mc-tools/packages/format && pnpm --dir $p exec scripts/build-parser.mjs && pnp
 */
 
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
 import { performance } from 'node:perf_hooks'
 
 import process from 'node:process'
@@ -63,10 +64,10 @@ const main = defineCommand({
 
     const startGlob = performance.now()
     const normalizedFileList = args._.map(f => f.replace(/\\/g, '/'))
-    const fileList = await glob(normalizedFileList, {
+    const fileList = (await glob(normalizedFileList, {
       dot   : true,
       ignore: args.ignore ? [args.ignore] : [],
-    })
+    })).map(f => relative(process.cwd(), f).replace(/\\/g, '/'))
     if (!fileList.length) {
       throw new Error(`Files ${String(args._)} doesnt exist. Provide correct path.`)
     }
