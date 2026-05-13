@@ -74,7 +74,7 @@ PreprocessorData
   = "{" PreprocessorBody (LineTerminatorSequence PreprocessorLine)*
 
 PreprocessorLine
-  = head:WhiteSpace* "#" body:PreprocessorBody { return [head, body] }
+  = head:WhiteSpace* "#" !"mixin" body:PreprocessorBody { return [head, body] }
   
 PreprocessorBody
   = (!LineTerminator .)*
