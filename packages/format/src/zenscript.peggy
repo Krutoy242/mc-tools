@@ -315,7 +315,10 @@ LoopVars
   = first:Identifier rest:(Comma Identifier)*
 
 Return
-  = "return" _ Expression
+  = "return" ws:_ expr:Expression {
+    const wsFlat = flat(ws)
+    return wsFlat.includes('\n') ? ['return __return(', ws, expr, ')'] : ['return', ws, expr]
+  }
 
 Import
   = head:("import" _) classpath:(TypePath) rename:(__ "as" __ Identifier)? {

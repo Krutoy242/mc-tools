@@ -166,3 +166,21 @@ export function revertCasts(source: string): string {
     out = `${out.slice(0, start)}${replacement}${after}`
   }
 }
+
+/**
+ * Unwind every `__return(expr)` wrapper back to `return expr`.
+ *
+ * The forward pass wraps multiline return expressions so that TypeScript's
+ * ASI cannot insert a spurious semicolon between `return` and the expression.
+ */
+export function revertReturns(source: string): string {
+  let out = source
+  for (;;) {
+    const start = out.indexOf('return __return(')
+    if (start === -1) return out
+    const open = start + 'return __return'.length // position of '('
+    const paren = balanced('(', ')', out.slice(open))
+    if (!paren) return out
+    out = `${out.slice(0, start)}return${paren.body}${paren.post}`
+  }
+}

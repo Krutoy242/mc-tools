@@ -130,6 +130,7 @@ declare function __byte(n: number): byte;
 declare function __short(n: number): short;
 declare function __long(n: number): long;
 declare function __as<T>(value: any): T;
+declare function __return<T>(value: T): T;
 declare function $(s: any): any;
 declare function isNull(o: any): boolean;
 declare const recipes: Record<string, any>;

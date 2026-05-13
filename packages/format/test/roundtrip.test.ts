@@ -297,6 +297,41 @@ print('test');`,
     const lintedLike = fwd.ts.replace('((a + b))', '(a + b)')
     expect(revert(lintedLike).trim()).toBe('val n = (a + b) as int;')
   })
+
+  it('wraps multiline return expressions in __return(...) to prevent ASI', () => {
+    const source = `function foo() as bool {
+  return
+    (a || b)
+    && c;
+}`
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    expect(fwd.ts).toContain('return __return(')
+    expect(fwd.ts).not.toMatch(/return;[\t\v\f\r \xA0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]*\n\s*\(/)
+    expect(revert(fwd.ts).trim()).toBe(source)
+  })
+
+  it('does not wrap single-line return expressions', () => {
+    const source = 'function foo() as int { return 1 + 2; }'
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    expect(fwd.ts).not.toContain('__return(')
+    expect(revert(fwd.ts).trim()).toBe(source)
+  })
+
+  it('round-trips a cast inside a multiline return', () => {
+    const source = `function foo() as int {
+  return
+    (a + b) as int;
+}`
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    expect(fwd.ts).toContain('return __return(')
+    expect(revert(fwd.ts).trim()).toBe(source)
+  })
 })
 
 describe('revert (reverse pass)', () => {
