@@ -429,8 +429,16 @@ function peg$parse(input, options) {
   var peg$e126 = peg$literalExpectation("zenConstructor", false);
 
   var peg$f0 = function(body) { return flat(body) };
-  var peg$f1 = function(body) { return '/* __USR_CMT__' + flat(body) + '__USR_CMT__ */' };
-  var peg$f2 = function(body) {return '// __USR_CMT__' + flat(body)};
+  var peg$f1 = function(body) {
+      const text = flat(body)
+      if (/^\s*(?:eslint|globals?)\b/.test(text)) return '/*' + text + '*/'
+      return '/* __USR_CMT__' + text + '__USR_CMT__ */'
+    };
+  var peg$f2 = function(body) {
+      const text = flat(body)
+      if (/^\s*eslint\b/.test(text)) return '//' + text
+      return '// __USR_CMT__' + text
+    };
   var peg$f3 = function(head, tail) {
     return [head, "()", tail]
   };

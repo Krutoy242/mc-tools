@@ -282,6 +282,33 @@ print('test');`,
     expect(revert(fwd.ts).trim()).toBe('zenClass A { val x as int = 1; }')
   })
 
+  it('preserves eslint directives unwrapped so ESLint can act on them', () => {
+    const directives = [
+      '/* eslint-disable style/indent */',
+      '// eslint-disable-next-line no-console',
+      '/* eslint-enable style/indent */',
+      '/* global recipes */',
+      '/* globals recipes, mods */',
+      '/* eslint-env node */',
+    ]
+    for (const src of directives) {
+      const fwd = zsToTs(src)
+      expect(fwd.ok, src).toBe(true)
+      if (!fwd.ok) continue
+      expect(fwd.ts, src).not.toContain('__USR_CMT__')
+      expect(revert(fwd.ts).trim(), src).toBe(src)
+    }
+  })
+
+  it('still wraps non-eslint comments', () => {
+    const src = '/* normal comment */'
+    const fwd = zsToTs(src)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    expect(fwd.ts).toContain('__USR_CMT__')
+    expect(revert(fwd.ts).trim()).toBe(src)
+  })
+
   it('round-trips comments after ESLint adds whitespace around the sentinel', () => {
     // ESLint pads whitespace on BOTH sides of the wrapper: `/*  X  */`. The
     // forward pass writes a closing sentinel as well as an opening one, so

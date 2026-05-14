@@ -39,10 +39,18 @@ Comment "Comment"
 // be captured into the body and re-emitted on revert. The sentinel literal
 // here MUST match `MARKERS.userComment` in `markers.ts`.
 MultiLineComment
-  = "/*" body:(!"*/" .)* "*/" { return '/* __USR_CMT__' + flat(body) + '__USR_CMT__ */' }
+  = "/*" body:(!"*/" .)* "*/" {
+      const text = flat(body)
+      if (/^\s*(?:eslint|globals?)\b/.test(text)) return '/*' + text + '*/'
+      return '/* __USR_CMT__' + text + '__USR_CMT__ */'
+    }
 
 SingleLineComment
-  = ("//" / "#") body:(!LineTerminator .)* {return '// __USR_CMT__' + flat(body)}
+  = ("//" / "#") body:(!LineTerminator .)* {
+      const text = flat(body)
+      if (/^\s*eslint\b/.test(text)) return '//' + text
+      return '// __USR_CMT__' + text
+    }
 
 Preprocessor
   = PreprocessorMultipleMixin
