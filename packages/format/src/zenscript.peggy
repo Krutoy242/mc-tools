@@ -482,12 +482,18 @@ Expand "expand"
   }
 
 ExpandDefinition
-  = ExpandIdentifier _
-    "(" _ ParameterList? ")" (_ Type)? _
-    "{" _ SourceElements? _ "}"
-
-ExpandIdentifier
-  = IdentifierName "$" IdentifierName
+  = className:IdentifierName "$" methodName:IdentifierName _
+    "(" _ params:ParameterList? ")" type:(_ Type)? _
+    "{" ws1:_ body:SourceElements? ws2:_ "}" {
+      return [
+        methodName,
+        '(this: ', className,
+        params ? [', ', params] : '',
+        ')',
+        type,
+        ' {', ws1, body, ws2, '}'
+      ]
+    }
 
 Function "function"
   = body:("function" _ FunctionDefinition) {

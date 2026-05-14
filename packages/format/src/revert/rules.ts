@@ -128,7 +128,7 @@ export const RULES: Rule[] = [
   ['ANON_FN_ARGS',  new RegExp(`\\s?${ANON_ARG_PREFIX}\\d+\\s*:\\s?`, 'g'), ''],
 
   // --- $expand declarations ------------------------------------------------
-  ['EXPAND', /^(\s*)\/\* \$expand \*\/ export function/gm, '$1$expand'],
+  ['EXPAND', /^(?<ws>\s*)\/\* \$expand \*\/ export function (?<method>\w+)\(this:\s*(?<className>[A-Za-z_]\w*)(?:,(?<params>[^)]*))?\)/gm,    ({ ws, method, className, params }) => `${ws}$expand ${className}$${method}(${params ? params.trimStart() : ''})`],
 
   // --- Top-level functions: peggy emits `export function`, ZS has no export -
   ['EXPORT_FN', /^(\s*)export function/gm, '$1function'],
