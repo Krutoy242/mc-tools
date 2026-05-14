@@ -168,6 +168,33 @@ export function revertCasts(source: string): string {
 }
 
 /**
+ * Unwind every `.slice(start, end)` call back to `[start .. end]`.
+ *
+ * The forward pass turns ZS array/list slicing (`arr[a .. b]`) into the
+ * standard JS `.slice(a, b)` so ESLint handles it natively.  Because ZS
+ * arrays/lists do **not** have a `slice` method, every `.slice(…)` in the
+ * converted source must have come from this transform and can safely be
+ * reverted.
+ */
+export function revertSlices(source: string): string {
+  let out = source
+  for (;;) {
+    const start = out.indexOf('.slice(')
+    if (start === -1) return out
+    const open = start + '.slice'.length // position of '('
+    const paren = balanced('(', ')', out.slice(open))
+    if (!paren) return out
+    const args = paren.body.split(',').map(s => s.trim())
+    if (args.length < 2) return out
+    // Join all but the last argument with commas (handles nested calls that
+    // themselves contain commas, e.g. `.slice(fn(a, b), c)`).
+    const end = args.pop()!
+    const from = args.join(', ')
+    out = `${out.slice(0, start)}[${from} .. ${end}]${paren.post}`
+  }
+}
+
+/**
  * Unwind every `__return(expr)` wrapper back to `return expr`.
  *
  * The forward pass wraps multiline return expressions so that TypeScript's

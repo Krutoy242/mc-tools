@@ -15,7 +15,7 @@
 
 import { MARKERS } from './markers.js'
 import { revertBranded } from './revert/branded.js'
-import { revertCasts, revertLists, revertReturns } from './revert/casts.js'
+import { revertCasts, revertLists, revertReturns, revertSlices } from './revert/casts.js'
 import { RULES } from './revert/rules.js'
 
 interface Masked { text: string, restore: (s: string) => string }
@@ -74,7 +74,7 @@ export function tsToZs(source: string): string {
   // can treat like any other ZS-bound text — type-internal markers such as
   // `Array<...>` are then reverted by LIST. `revertBranded` runs before
   // `revertLists` so an `Array<…>` inside a branded wrapper is still unwound.
-  let out = revertLists(revertBranded(revertCasts(revertReturns(masked.text))))
+  let out = revertLists(revertBranded(revertCasts(revertReturns(revertSlices(masked.text)))))
   for (const [, pattern, replacement] of RULES) {
     if (typeof replacement === 'string') {
       out = out.replace(pattern, replacement)

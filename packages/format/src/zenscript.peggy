@@ -440,7 +440,10 @@ ExpressionList
 Member
   = Primary
     (
-        _ "[" _ Expression _ "]"
+        _ "[" _ start:Expression _ ".." _ end:Expression _ "]" {
+          return ['.slice(', start, ', ', end, ')']
+        }
+      / _ "[" _ Expression _ "]"
       / _ ("." / "?.") _ IdentifierName
     )*
 
