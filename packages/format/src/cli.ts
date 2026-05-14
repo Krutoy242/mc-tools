@@ -93,10 +93,28 @@ const main = defineCommand({
     // 2. ESLint --fix — best-effort: apply autofixes, surface remaining
     //    errors, but never abort. The reverse pass below MUST run so we
     //    don't leave .ts files lying around next to the .zs sources.
-    const skip = args.pause
-      ? await consola.prompt('Skip linting?', { type: 'confirm' })
-      : false
-    if (!skip) {
+    let shouldLint = true
+
+    if (args.pause) {
+      try {
+        const shouldExit = await consola.prompt('Skip linting?', {
+          type  : 'confirm',
+          cancel: 'reject',
+        })
+        if (shouldExit) {
+          // Yes — exit without linting or reversing
+          return
+        }
+        // No — skip linting, continue to reverse
+        shouldLint = false
+      }
+      catch {
+        // ESC / Ctrl+C — close immediately
+        return
+      }
+    }
+
+    if (shouldLint) {
       const startLint = performance.now()
       try {
         const errorCount = await lintFilesBatch(tsPaths, args.ignore, args.verbose)
