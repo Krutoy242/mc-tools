@@ -251,6 +251,25 @@ print('test');`,
     }
   })
 
+  it('round-trips $expand declarations', () => {
+    const cases = [
+      '$expand IItemStack$toData() as IData { return this.native.serializeNBT().wrapper; }',
+      `$expand IEntityDefinition$asSoul() as IItemStack {
+  return <draconicevolution:mob_soul>.withTag({EntityName: this.id});
+}`,
+      `$expand SubTileEntityInGame$isRedstonePowered(world as IWorld, pos as IBlockPos) as bool {
+  return false;
+}`,
+    ]
+    for (const source of cases) {
+      const fwd = zsToTs(source)
+      expect(fwd.ok, `forward parse should succeed for: ${source}`).toBe(true)
+      if (!fwd.ok) continue
+      expect(fwd.ts).toContain('/* $expand */')
+      expect(revert(fwd.ts).trim()).toBe(source)
+    }
+  })
+
   it('does not strip the user-comment sentinel from grammar-emitted markers', () => {
     // Sanity: only source-level comments get tagged. Synthesised markers like
     // `/* class */` (and the FOR_IN_PAIR `/**/` sentinel) carry no tag and

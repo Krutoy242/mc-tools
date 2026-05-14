@@ -471,6 +471,20 @@ SourceElement
   = Statement
   / Function
   / Class
+  / Expand
+
+Expand "expand"
+  = "$expand" _ def:ExpandDefinition {
+    return ['/* $expand */ export function ', def]
+  }
+
+ExpandDefinition
+  = ExpandIdentifier _
+    "(" _ ParameterList? ")" (_ Type)? _
+    "{" _ SourceElements? _ "}"
+
+ExpandIdentifier
+  = IdentifierName "$" IdentifierName
 
 Function "function"
   = body:("function" _ FunctionDefinition) {

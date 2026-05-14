@@ -127,6 +127,9 @@ export const RULES: Rule[] = [
   ['ANON_FN_ARROW', new RegExp(`${M_ARROW}\\s?=>\\s?`, 'g'), ''],
   ['ANON_FN_ARGS',  new RegExp(`\\s?${ANON_ARG_PREFIX}\\d+\\s*:\\s?`, 'g'), ''],
 
+  // --- $expand declarations ------------------------------------------------
+  ['EXPAND', /^(\s*)\/\* \$expand \*\/ export function/gm, '$1$expand'],
+
   // --- Top-level functions: peggy emits `export function`, ZS has no export -
   ['EXPORT_FN', /^(\s*)export function/gm, '$1function'],
 
