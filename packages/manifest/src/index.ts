@@ -5,16 +5,15 @@
  * @link https://github.com/Krutoy242
  */
 
-import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
+import type { InstalledAddon, Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 import type { ModpackManifest, ModpackManifestFile } from './manifest.js'
 
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
-import process from 'node:process'
 
 import { fetchMods, loadMCInstanceFiltered } from '@mctools/curseforge'
-import fse from 'fs-extra'
 
-const { readFileSync, readJsonSync, writeFileSync, existsSync } = fse
+export type { ModpackManifest, ModpackManifestFile }
 
 const RE_COLON_NUM = /(":)(\d+)/g
 const RE_NAME = /"___name":(".+?(?<!\\)")/g
@@ -24,7 +23,7 @@ const RE_BRACE_COMMA = /\},\{/g
 const RE_MC_VERSION = /for Minecraft (\d+\.\d+(?:\.\d+)?) loading/
 const RE_DOT = /\./g
 
-function formatModList(modsList: ModpackManifestFile[]) {
+export function formatModList(modsList: ModpackManifestFile[]) {
   return JSON.stringify(modsList)
     .replace(RE_COLON_NUM, (_m: string, r1: string, r2: string) => r1 + r2.padStart(6)) // Table aligning
     .replace(RE_NAME, (_m: string, r1: string) => `"___name":${r1.padEnd(42)}`) // Table aligning
@@ -34,8 +33,9 @@ function formatModList(modsList: ModpackManifestFile[]) {
 }
 
 export interface ManifestGenerationOptions {
-  ignore?: string
-  key    : string
+  mcinstancePath?: string
+  ignore?        : string
+  key            : string
 
   /** Override: pack name (falls back to cwd directory name). */
   name?: string
@@ -52,7 +52,61 @@ export interface ManifestGenerationOptions {
   /** manifest[postfix].json */
   postfix?: string
 
+  /** Working directory for resolving relative paths (default: `process.cwd()`). */
+  cwd?: string
+
   verbose?: boolean
+
+  /** Optional log callback. If omitted, verbose does nothing. */
+  onLog?: (msg: string) => void
+}
+
+/**
+ * Convert an InstalledAddon into a ModpackManifestFile entry.
+ */
+function addonToManifestFile(addon: InstalledAddon, cfName?: string): ModpackManifestFile {
+  return {
+    projectID  : addon.addonID,
+    fileID     : addon.installedFile?.id ?? 0,
+    ___name    : cfName ?? addon.name,
+    downloadUrl: addon.installedFile?.downloadUrl,
+    required   : !addon.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
+  }
+}
+
+/**
+ * Filter out optional mods, sort by projectID, and enforce a stable field order.
+ */
+function buildSortedModList(files: ModpackManifestFile[]): ModpackManifestFile[] {
+  return files
+    .filter(m => m.required)
+    .sort((a, b) => a.projectID - b.projectID)
+    .map(m => ({
+      projectID  : m.projectID,
+      fileID     : m.fileID,
+      ___name    : m.___name,
+      downloadUrl: m.downloadUrl,
+      required   : m.required,
+    }))
+}
+
+/**
+ * Serialize manifest with beautiful file list formatting and write to disk.
+ */
+function writeManifestToDisk(
+  manifestPath: string,
+  manifest: ModpackManifest,
+  files: ModpackManifestFile[]
+): void {
+  // Temporarily clear files so JSON.stringify emits the exact placeholder we replace
+  const originalFiles = manifest.files
+  manifest.files = []
+  const resultStr = JSON.stringify(manifest, null, 2).replace(
+    '  "files": []',
+    `  "files": ${formatModList(files)}`
+  )
+  manifest.files = originalFiles
+  writeFileSync(manifestPath, resultStr)
 }
 
 /**
@@ -61,12 +115,15 @@ export interface ManifestGenerationOptions {
  *   2. `baseModLoader.minecraftVersion` of `minecraftinstance.json`
  *   3. The "for Minecraft X.Y.Z loading" token in `logs/debug.log`
  */
-function detectMcVersion(mci: { gameVersion?: string, baseModLoader?: { minecraftVersion?: string } }): string | undefined {
+function detectMcVersion(
+  mci: { gameVersion?: string, baseModLoader?: { minecraftVersion?: string } },
+  cwd = '.'
+): string | undefined {
   if (mci.gameVersion) return mci.gameVersion
   if (mci.baseModLoader?.minecraftVersion) return mci.baseModLoader.minecraftVersion
 
   try {
-    return readFileSync('logs/debug.log', 'utf8').match(RE_MC_VERSION)?.[1]
+    return readFileSync(resolve(cwd, 'logs/debug.log'), 'utf8').match(RE_MC_VERSION)?.[1]
   }
   catch {
     return undefined
@@ -77,9 +134,9 @@ function detectMcVersion(mci: { gameVersion?: string, baseModLoader?: { minecraf
  * Try to read the Forge version from `logs/debug.log`.
  * Returns `undefined` if the log is missing or doesn't contain a Forge banner.
  */
-function detectForgeVersion(mcVersion: string): string | undefined {
+function detectForgeVersion(mcVersion: string, cwd = '.'): string | undefined {
   try {
-    const log = readFileSync('logs/debug.log', 'utf8')
+    const log = readFileSync(resolve(cwd, 'logs/debug.log'), 'utf8')
     const raw = log.match(new RegExp(`Forge Mod Loader version (\\S+) for Minecraft ${mcVersion.replace(RE_DOT, '\\.')} loading`))?.[1]
     return raw && !raw.endsWith('.0') ? raw : undefined
   }
@@ -94,7 +151,7 @@ function detectForgeVersion(mcVersion: string): string | undefined {
 function detectProjectID(manifestPath: string): number | undefined {
   if (!existsSync(manifestPath)) return undefined
   try {
-    const existing = readJsonSync(manifestPath) as Partial<ModpackManifest>
+    const existing = JSON.parse(readFileSync(manifestPath, 'utf-8')) as Partial<ModpackManifest>
     return typeof existing.projectID === 'number' ? existing.projectID : undefined
   }
   catch {
@@ -110,40 +167,63 @@ function requireOrAbort<T>(value: T | undefined, flag: string, hint: string): T 
   )
 }
 
+export function incrementalUpdateManifest(
+  manifestPath: string,
+  fresh: Minecraftinstance
+): void {
+  if (!existsSync(manifestPath)) throw new Error(`Manifest not found: ${manifestPath}`)
+
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as ModpackManifest
+  const freshMap = new Map<number, InstalledAddon>(fresh.installedAddons.map(a => [a.addonID, a]))
+
+  // Remove deleted
+  manifest.files = manifest.files.filter(f => freshMap.has(f.projectID))
+
+  // Update changed / add new
+  for (const [addonID, addon] of freshMap) {
+    const existingIdx = manifest.files.findIndex(f => f.projectID === addonID)
+    const entry = addonToManifestFile(addon)
+    if (existingIdx >= 0) {
+      manifest.files[existingIdx] = entry
+    }
+    else {
+      manifest.files.push(entry)
+    }
+  }
+
+  const modList = buildSortedModList(manifest.files)
+  writeManifestToDisk(manifestPath, manifest, modList)
+}
+
 export async function generateManifest(
-  mcinstancePath = 'minecraftinstance.json',
   options: ManifestGenerationOptions
 ): Promise<ModpackManifest> {
-  const manifestPath = `manifest${options.postfix ?? ''}.json`
+  const mcinstancePath = options.mcinstancePath ?? 'minecraftinstance.json'
+  const cwd = resolve(options.cwd ?? '.')
+  const manifestPath = resolve(cwd, `manifest${options.postfix ?? ''}.json`)
 
-  if (options.verbose) process.stdout.write('Determining version: ')
+  options.onLog?.('Determining version: ')
   const packVersion = options.packVersion ?? (() => {
     try {
-      return (readJsonSync(manifestPath) as Partial<ModpackManifest>).version
+      return (JSON.parse(readFileSync(manifestPath, 'utf-8')) as Partial<ModpackManifest>).version
     }
     catch { return undefined }
   })()
-  if (options.verbose) process.stdout.write(`${packVersion || 'unknown'}\n`)
+  options.onLog?.(`${packVersion || 'unknown'}\n`)
 
-  if (options.verbose) process.stdout.write('Loading minecraftinstance.json ... ')
-  const rawMci = readJsonSync(mcinstancePath) as Minecraftinstance
+  options.onLog?.('Loading minecraftinstance.json ... ')
+  const rawMci = JSON.parse(readFileSync(mcinstancePath, 'utf-8')) as Minecraftinstance
   const addonsListUnfiltered = loadMCInstanceFiltered(rawMci, options.ignore).installedAddons
-  if (options.verbose) process.stdout.write(`loaded, ${addonsListUnfiltered.length} addons\n`)
+  options.onLog?.(`loaded, ${addonsListUnfiltered.length} addons\n`)
 
-  if (options.verbose) process.stdout.write('Loading mods meta from CurseForge ... ')
+  options.onLog?.('Loading mods meta from CurseForge ... ')
   const cfModsList = await fetchMods(addonsListUnfiltered.map(a => a.addonID), options.key, undefined, options.verbose)
-  if (options.verbose) process.stdout.write('loaded\n')
+  options.onLog?.('loaded\n')
 
-  const modListUnfiltered: ModpackManifestFile[] = addonsListUnfiltered.map((a, i) => ({
-    projectID  : a.addonID,
-    fileID     : a.installedFile?.id,
-    ___name    : cfModsList[i].name,
-    downloadUrl: a.installedFile?.downloadUrl,
-    required   : !a.installedFile?.fileNameOnDisk.endsWith('.jar.disabled'),
-  }))
+  const modListUnfiltered = addonsListUnfiltered.map((a, i) => addonToManifestFile(a, cfModsList[i].name))
 
   const mcVersion = requireOrAbort(
-    options.mcVersion ?? detectMcVersion(rawMci),
+    options.mcVersion ?? detectMcVersion(rawMci, cwd),
     'mc-version',
     'Minecraft version'
   )
@@ -155,12 +235,12 @@ export async function generateManifest(
   )
 
   const name = requireOrAbort(
-    options.name ?? basename(resolve('.')),
+    options.name ?? basename(cwd),
     'name',
     'pack name'
   )
 
-  const forgeVersion = detectForgeVersion(mcVersion)
+  const forgeVersion = detectForgeVersion(mcVersion, cwd)
   const modLoaderId = forgeVersion ? `forge-${forgeVersion}` : undefined
 
   const resultObj: ModpackManifest = {
@@ -178,16 +258,8 @@ export async function generateManifest(
     files          : [],
   }
 
-  const modList = modListUnfiltered
-    .filter(m => m.required)
-    .sort((a, b) => a.projectID - b.projectID)
-
-  // Format beautifully
-  const resultStr = JSON.stringify(resultObj, null, 2).replace(
-    '  "files": []',
-    `  "files": ${formatModList(modList)}`
-  )
-  writeFileSync(manifestPath, resultStr)
+  const modList = buildSortedModList(modListUnfiltered)
+  writeManifestToDisk(manifestPath, resultObj, modList)
 
   resultObj.files = modList
   return resultObj

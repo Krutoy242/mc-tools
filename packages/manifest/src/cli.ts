@@ -80,15 +80,17 @@ if (!args.key) {
 }
 
 if (args.verbose) console.log('- Generating manifest -')
-generateManifest(args.mcinstance, {
-  ignore     : args.ignore,
-  key        : args.key,
-  name       : args.name,
-  mcVersion  : args['mc-version'],
-  projectID  : args['project-id'],
-  packVersion: args['pack-version'],
-  postfix    : args.postfix,
-  verbose    : args.verbose,
+generateManifest({
+  mcinstancePath: args.mcinstance,
+  ignore        : args.ignore,
+  key           : args.key,
+  name          : args.name,
+  mcVersion     : args['mc-version'],
+  projectID     : args['project-id'],
+  packVersion   : args['pack-version'],
+  postfix       : args.postfix,
+  verbose       : args.verbose,
+  onLog         : args.verbose ? (msg: string) => process.stdout.write(msg) : undefined,
 }).catch((err: Error) => {
   process.stderr.write(`${err.message}\n`)
   process.exit(1)

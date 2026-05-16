@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extensions",
+        "--disable-extension=GitHub.copilot",
+        "--disable-extension=GitHub.copilot-chat",
+        "--skip-release-notes",
+        "--skip-welcome",
+        "--disable-workspace-trust",
+        "${workspaceFolder}/../../.."
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "Build Extension",
+      "env": {
+        "VSCODE_EXTENSION_MODE": "development"
+      },
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/resources/app/extensions/copilot/**",
+        "**/resources/app/extensions/copilot-chat/**"
+      ]
+    },
+    {
+      "name": "Run Extension (no build)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extensions",
+        "--disable-extension=GitHub.copilot",
+        "--disable-extension=GitHub.copilot-chat",
+        "--skip-release-notes",
+        "--skip-welcome",
+        "--disable-workspace-trust",
+        "${workspaceFolder}/../../.."
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/resources/app/extensions/copilot/**",
+        "**/resources/app/extensions/copilot-chat/**"
+      ]
+    }
+  ]
+}

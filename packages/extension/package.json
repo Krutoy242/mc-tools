@@ -1,0 +1,267 @@
+{
+  "name": "@mctools/extension",
+  "displayName": "MC Tools: Modpack Dev Assistant",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VS Code extension for Minecraft 1.12.2 modpack development automation",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+  },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
+  "keywords": [
+    "minecraft",
+    "modpack",
+    "curseforge",
+    "crafttweaker",
+    "modded"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.mjs",
+  "engines": {
+    "vscode": "^1.120.0",
+    "node": ">=24.0.0"
+  },
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:mc-tools.modChanges",
+    "workspaceContains:logs/debug.log",
+    "workspaceContains:debug.log",
+    "workspaceContains:crafttweaker.log",
+    "workspaceContains:minecraftinstance.json",
+    "workspaceContains:manifest.json"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "mc-tools.showDebugLogPanel",
+        "title": "MC Tools: Show Debug Log Errors",
+        "category": "MC Tools"
+      },
+      {
+        "command": "mc-tools.showCtErrors",
+        "title": "MC Tools: Show CraftTweaker Errors",
+        "category": "MC Tools"
+      },
+      {
+        "command": "mc-tools.refreshModChanges",
+        "title": "Refresh Mod Changes",
+        "category": "MC Tools",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mc-tools.stageMod",
+        "title": "Stage Selected Mod",
+        "category": "MC Tools"
+      },
+      {
+        "command": "mc-tools.stageAllMods",
+        "title": "Stage All Mods",
+        "category": "MC Tools",
+        "icon": "$(check)"
+      },
+      {
+        "command": "mc-tools.updateModsMd",
+        "title": "Update MODS.md",
+        "category": "MC Tools",
+        "icon": "$(markdown)"
+      },
+      {
+        "command": "mc-tools.updateManifest",
+        "title": "Update Manifest",
+        "category": "MC Tools",
+        "icon": "$(package)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "mc-tools.modChanges",
+          "name": "Mod Changes",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "mc-tools.refreshModChanges",
+          "when": "view == mc-tools.modChanges",
+          "group": "navigation"
+        },
+        {
+          "command": "mc-tools.updateModsMd",
+          "when": "view == mc-tools.modChanges",
+          "group": "navigation"
+        },
+        {
+          "command": "mc-tools.updateManifest",
+          "when": "view == mc-tools.modChanges",
+          "group": "navigation"
+        },
+        {
+          "command": "mc-tools.stageAllMods",
+          "when": "view == mc-tools.modChanges",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "mc-tools.stageMod",
+          "when": "view == mc-tools.modChanges && viewItem == mod",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "MC Tools",
+      "properties": {
+        "mc-tools.debugLog.path": {
+          "type": "string",
+          "default": "logs/debug.log",
+          "description": "Path to debug.log relative to workspace root"
+        },
+        "mc-tools.debugLog.maxInitialReadBytes": {
+          "type": "number",
+          "default": 10485760,
+          "description": "Maximum bytes to read on initial load for large debug.log files"
+        },
+        "mc-tools.debugLog.overlapBytes": {
+          "type": "number",
+          "default": 4096,
+          "description": "Overlap window in bytes for incremental debug.log parsing"
+        },
+        "mc-tools.debugLog.configPath": {
+          "type": "string",
+          "default": "dev/tools/mct-errors-config.yml",
+          "description": "Path to debug-log error-filter config (YAML) relative to workspace root"
+        },
+        "mc-tools.debugLog.defaultMatchRegex": {
+          "type": "string",
+          "default": ".*(?:WARN|ERROR|FATAL).*",
+          "description": "Default regex for debug-log when no workspace config is present"
+        },
+        "mc-tools.crafttweakerLog.path": {
+          "type": "string",
+          "default": "crafttweaker.log",
+          "description": "Path to crafttweaker.log relative to workspace root"
+        },
+        "mc-tools.crafttweakerLog.fileExtensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [".zs"],
+          "description": "File extensions that trigger CraftTweaker log re-scan on save"
+        },
+        "mc-tools.modTracker.inputPath": {
+          "type": "string",
+          "default": "minecraftinstance.json",
+          "description": "Path to minecraftinstance.json for mod tracker (relative to workspace root)"
+        },
+        "mc-tools.modTracker.configWatchPattern": {
+          "type": "string",
+          "default": "config/**/*",
+          "description": "Glob pattern for config files that trigger mod tracker refresh"
+        },
+        "mc-tools.modTracker.globalFiles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["MODS.md", ".gitignore", ".gitattributes"],
+          "description": "Files treated as global changes in mod tracker"
+        },
+        "mc-tools.modTracker.ignoredMappingPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["mods/*", "minecraftinstance.json", "manifest*.json", "MODS.md", ".gitignore", ".gitattributes"],
+          "description": "File patterns ignored when mapping changed files to mods"
+        },
+        "mc-tools.modlist.baselinePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to baseline minecraftinstance.json for MODS.md diff (relative to workspace root). Leave empty to skip diff."
+        },
+        "mc-tools.modlist.ignorePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to ignore file for MODS.md generation (relative to workspace root)"
+        },
+        "mc-tools.modlist.templatePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to MODS.md Handlebars template (relative to workspace root)"
+        },
+        "mc-tools.modlist.outputPath": {
+          "type": "string",
+          "default": "MODS.md",
+          "description": "Output path for MODS.md (relative to workspace root)"
+        },
+        "mc-tools.modlist.sortBy": {
+          "type": "string",
+          "enum": ["addonID", "name"],
+          "default": "addonID",
+          "description": "Sort order for MODS.md"
+        },
+        "mc-tools.manifest.autoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically update manifest.json when minecraftinstance.json changes"
+        },
+        "mc-tools.manifest.postfix": {
+          "type": "string",
+          "default": "",
+          "description": "Manifest file postfix (e.g. '-server' for manifest-server.json)"
+        },
+        "mc-tools.manifest.ignorePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to ignore file for manifest generation (relative to workspace root)"
+        },
+        "mc-tools.manifest.inputPath": {
+          "type": "string",
+          "default": "minecraftinstance.json",
+          "description": "Path to minecraftinstance.json for manifest generation (relative to workspace root)"
+        },
+        "mc-tools.curseforge.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "CurseForge API key for MODS.md / manifest generation. Falls back to CF_API_KEY environment variable."
+        },
+        "mc-tools.logging.level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "Log output channel verbosity"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "unbuild",
+    "build:watch": "node scripts/watch.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mctools/curseforge": "workspace:*",
+    "@mctools/errors": "workspace:*",
+    "@mctools/manifest": "workspace:*",
+    "@mctools/modlist": "workspace:*",
+    "ohash": "^2.0.11",
+    "pathe": "^1.1.2",
+    "perfect-debounce": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "@types/vscode": "^1.120.0",
+    "typescript": "^6.0.3",
+    "unbuild": "^3.6.1",
+    "vitest": "^3.2.4"
+  }
+}

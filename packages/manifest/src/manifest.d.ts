@@ -15,10 +15,12 @@ export interface ExternalDependency {
 }
 
 export interface ModpackManifestFile {
-  fileID   : number
-  projectID: number
-  required : boolean
-  sides?   : ('client' | 'server')[]
+  fileID      : number
+  projectID   : number
+  sides?      : ('client' | 'server')[]
+  ___name?    : string
+  downloadUrl?: string
+  required    : boolean
 }
 
 export interface ModpackManifest {

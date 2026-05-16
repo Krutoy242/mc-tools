@@ -128,7 +128,7 @@ Parsed `minecraftinstance.json`.
 
 ### `modListDiff`
 
-> **modListDiff**(`fresh`, `old`, `ignore?`): `ModsComparsion`
+> **modListDiff**(`fresh`, `old`, `ignore?`): `ModsComparison`
 
 Compare two minecraftinstance.json snapshots and return a full breakdown
 (`added`, `removed`, `both`, `updated`, plus the total `union`).
@@ -152,7 +152,7 @@ generating a changelog.
 
 ### Returns
 
-`ModsComparsion`
+`ModsComparison`
 
 ### `modListUnion`
 

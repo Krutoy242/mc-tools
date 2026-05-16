@@ -1,4 +1,5 @@
 import { naturalSort } from '@mctools/utils/natural-sort'
+import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
 
 // YAML's empty scalar parses to `null`, so accept it and normalize to undefined.
@@ -41,6 +42,10 @@ export function parseConfig(raw: unknown): Config {
     .map(i => `  - ${i.path.join('.') || '<root>'}: ${i.message}`)
     .join('\n')
   throw new Error(`Invalid errors config:\n${issues}`)
+}
+
+export function compileConfigFromYaml(yamlString: string): CompiledConfig {
+  return compileConfig(parseConfig(parseYaml(yamlString)))
 }
 
 export function compileConfig(config: Config): CompiledConfig {
@@ -136,6 +141,6 @@ function makeLineLookup(text: string): (offset: number) => number {
       if (newlines[mid] < offset) lo = mid + 1
       else hi = mid
     }
-    return lo + 1
+    return lo
   }
 }

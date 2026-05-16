@@ -1,0 +1,11 @@
+{
+  "files.watcherExclude": {
+    "dist/**": true,
+    "node_modules/**": true
+  },
+  "search.exclude": {
+    "dist": true,
+    "node_modules": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "on"
+}

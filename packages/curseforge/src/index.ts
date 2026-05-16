@@ -1,26 +1,15 @@
-/**
- * Get mod data from CurseForge or hashed file
- *
- * @author Krutoy242
- * @see {@link https://github.com/Krutoy242}
- */
-
 import type { Ignore } from 'ignore'
-
 import type { AddonID, InstalledAddon, Minecraftinstance } from './minecraftinstance.js'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-
 import process from 'node:process'
 import CFV2 from 'curseforge-v2'
-import fse from 'fs-extra'
-
 import ignore from 'ignore'
 
 export { asAddonID, asFileID } from './minecraftinstance.js'
 export type { AddonID, FileID } from './minecraftinstance.js'
 
-const { readJsonSync, writeJsonSync } = fse
 const { CFV2Client } = CFV2
 type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
 
@@ -36,62 +25,29 @@ function getCachePath(): string {
   return cachePathOverride ?? process.env.MCTOOLS_CF_CACHE ?? DEFAULT_CACHE_PATH
 }
 
-/**
- * Get mod information from CurseForge, such as name, summary, download count, etc.
- * @param modIds IDs of mods you want to fetch. `[32274, 59751, 59816]`
- * @param cfApiKey CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
- * @param timeout If file was already fetched last `timeout` hours, it would be loaded from cache file
- * @param doLogging Log into stdout
- * @returns Object with information about mods
- * @example const cfMods = await fetchMods([32274, 59751, 59816], key)
- * console.log(cfMods.map(m => m.name)) // ["JourneyMap", "Forestry", "Random Things"]
- */
-export async function fetchMods(modIds: number[], cfApiKey: string, timeout = 96, doLogging = false): Promise<CFV2.CF2Addon[]> {
-  const result: CFV2.CF2Addon[] = []
-  const fromCFIds: number[] = []
-
-  const cachePath = getCachePath()
-  let cacheObj: Record<number, ModCached>
-
+function readCache(): Record<number, ModCached> {
   try {
-    cacheObj = readJsonSync(cachePath) as Record<number, ModCached>
+    return JSON.parse(readFileSync(getCachePath(), 'utf-8')) as Record<number, ModCached>
   }
   catch {
-    cacheObj = {}
+    return {}
   }
+}
 
-  modIds.forEach((modID) => {
-    const cached = cachedMod(cacheObj[modID], timeout)
-    if (cached) result.push(cached)
-    else fromCFIds.push(modID)
-  })
-  if (doLogging) process.stdout.write(`Found cached mods: ${result.length} `)
-
-  const cfLoaded = await loadFromCF(fromCFIds, cfApiKey)
-
-  cfLoaded.forEach((mod) => {
-    cacheObj[mod.id] = { __lastUpdated: Date.now(), ...mod }
-  })
-  if (cfLoaded.length) {
-    fse.mkdirpSync(join(cachePath, '..'))
-    writeJsonSync(cachePath, cacheObj)
-  }
-
-  return modIds.map(
-    id => result.find(a => a.id === id) ?? cfLoaded.find(a => a.id === id) as CFV2.CF2Addon
-  )
+function writeCache(cache: Record<number, ModCached>): void {
+  const cachePath = getCachePath()
+  mkdirSync(join(cachePath, '..'), { recursive: true })
+  writeFileSync(cachePath, JSON.stringify(cache), 'utf-8')
 }
 
 function cachedMod(cached: ModCached, timeout: number): CFV2.CF2Addon | undefined {
   if (!cached) return
 
-  const hoursPass
-    = (Date.now() - (cached.__lastUpdated ?? 0)) / (1000 * 60 * 60)
+  const hoursPass = (Date.now() - (cached.__lastUpdated ?? 0)) / (1000 * 60 * 60)
   if (hoursPass > timeout) return
 
-  const result = { ...cached }
-  delete result.__lastUpdated
-  return result
+  const { __lastUpdated: _, ...rest } = cached
+  return rest
 }
 
 let cachedClient: { key: string, client: CFV2.CFV2Client } | undefined
@@ -99,34 +55,68 @@ let cachedClient: { key: string, client: CFV2.CFV2Client } | undefined
 async function loadFromCF(modIds: number[], cfApiKey: string): Promise<CFV2.CF2Addon[]> {
   if (!modIds.length) return []
 
-  // Rebuild client whenever API key changes — otherwise subsequent calls would
-  // silently reuse the first key ever passed in, masking credential swaps.
-  if (!cachedClient || cachedClient.key !== cfApiKey)
+  if (!cachedClient || cachedClient.key !== cfApiKey) {
     cachedClient = { key: cfApiKey, client: new CFV2Client({ apiKey: cfApiKey }) }
+  }
 
   const mods = (await cachedClient.client.getMods({ modIds })).data?.data
 
-  if (!mods || !mods.length)
+  if (!mods?.length)
     throw new Error(`Cant fetch mods for IDs: ${modIds.join(', ')}`)
 
   return mods
 }
 
-function keyBy<T extends { [key: string]: any }>(arr: T[], key: keyof T) {
-  const result = {} as { [key: number]: T }
-  arr.forEach(o => result[o[key]] = o)
-  return result
+/**
+ * Get mod information from CurseForge, such as name, summary, download count, etc.
+ * @param modIds IDs of mods you want to fetch. `[32274, 59751, 59816]`
+ * @param cfApiKey CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
+ * @param timeout If file was already fetched last `timeout` hours, it would be loaded from cache file
+ * @param doLogging Log into stdout
+ * @returns Object with information about mods
+ */
+export async function fetchMods(
+  modIds: number[],
+  cfApiKey: string,
+  timeout = 96,
+  doLogging = false
+): Promise<CFV2.CF2Addon[]> {
+  const cacheObj = readCache()
+  const result: CFV2.CF2Addon[] = []
+  const fromCFIds: number[] = []
+
+  for (const modID of modIds) {
+    const cached = cachedMod(cacheObj[modID], timeout)
+    if (cached) result.push(cached)
+    else fromCFIds.push(modID)
+  }
+
+  if (doLogging) process.stdout.write(`Found cached mods: ${result.length} `)
+
+  const cfLoaded = await loadFromCF(fromCFIds, cfApiKey)
+  for (const mod of cfLoaded) {
+    cacheObj[mod.id] = { __lastUpdated: Date.now(), ...mod }
+  }
+
+  if (cfLoaded.length) writeCache(cacheObj)
+
+  return modIds.map(
+    id => result.find(a => a.id === id) ?? cfLoaded.find(a => a.id === id) as CFV2.CF2Addon
+  )
+}
+
+function keyBy<T>(arr: T[], key: keyof T): Record<number, T> {
+  return Object.fromEntries(arr.map(o => [o[key] as number, o]))
 }
 
 type IgnoreArgument = Parameters<Ignore['add']>[0]
 
 function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument): Set<AddonID> {
-  const ignoredByUnavaliable = mci.installedAddons.filter(
-    // Unavailable like Optifine or Nutrition
+  const ignoredByUnavailable = mci.installedAddons.filter(
     addon => !addon.installedFile?.isAvailable
   )
 
-  if (!ignoreArg) return new Set(ignoredByUnavaliable.map(addon => addon.addonID))
+  if (!ignoreArg) return new Set(ignoredByUnavailable.map(addon => addon.addonID))
 
   const ignoring = (ignore as unknown as () => Ignore)().add(ignoreArg)
   const ignoredByDevonly = mci.installedAddons.filter(addon =>
@@ -134,7 +124,7 @@ function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument): S
   )
 
   return new Set(
-    [...ignoredByDevonly, ...ignoredByUnavaliable].map(addon => addon.addonID)
+    [...ignoredByDevonly, ...ignoredByUnavailable].map(addon => addon.addonID)
   )
 }
 
@@ -147,7 +137,10 @@ function getIgnoredModIds(mci: Minecraftinstance, ignoreArg?: IgnoreArgument): S
  * @param mci Parsed `minecraftinstance.json`.
  * @param ignore .gitignore-like content — mods matching these patterns (by `mods/<file>`) are excluded.
  */
-export function loadMCInstanceFiltered(mci: Minecraftinstance, ignore?: IgnoreArgument): Minecraftinstance {
+export function loadMCInstanceFiltered(
+  mci: Minecraftinstance,
+  ignore?: IgnoreArgument
+): Minecraftinstance {
   const ignoredModIds = getIgnoredModIds(mci, ignore)
   return {
     ...mci,
@@ -155,29 +148,20 @@ export function loadMCInstanceFiltered(mci: Minecraftinstance, ignore?: IgnoreAr
   }
 }
 
-/**
- * Mods list that always present in mc instance
- * @internal
- */
+/** Mods list that always present in mc instance */
 export interface ModsUnion {
   /** Union of all mods in both instances */
   union: InstalledAddon[]
 }
 
-/**
- * Old and new addons
- * @internal
- */
+/** Old and new addons */
 export interface AddonDifference {
   now: InstalledAddon
   was: InstalledAddon
 }
 
-/**
- * Result of comparsion of two `minecraftinstance`s
- * @internal
- */
-export interface ModsComparsion extends ModsUnion {
+/** Result of comparison of two `minecraftinstance`s */
+export interface ModsComparison extends ModsUnion {
   /** Mods that exist in new instance, but absent in old */
   added?: InstalledAddon[]
 
@@ -212,7 +196,7 @@ export function modListDiff(
   fresh: Minecraftinstance,
   old: Minecraftinstance,
   ignore?: IgnoreArgument
-): ModsComparsion {
+): ModsComparison {
   const B = loadMCInstanceFiltered(fresh, ignore).installedAddons
   const A = loadMCInstanceFiltered(old, ignore).installedAddons
 

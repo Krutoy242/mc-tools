@@ -5,48 +5,49 @@
  * @see {@link https://github.com/Krutoy242}
  */
 
-import type { AddonDifference, ModsComparsion } from '@mctools/curseforge'
+import type { ModsComparison } from '@mctools/curseforge'
 import type { InstalledAddon, Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 
-import process from 'node:process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { fetchMods, modListDiff, modListUnion } from '@mctools/curseforge'
-import fse from 'fs-extra'
 import Handlebars from 'handlebars'
 
-const { readFileSync } = fse
+interface AddonDifference {
+  now: InstalledAddon
+  was: InstalledAddon
+}
 
-function relative(relPath: string) {
+function relative(relPath: string): string {
   return fileURLToPath(new URL(relPath, import.meta.url))
 }
 
 const QUERY_INDEX_REGEX = /\[(\d+)\]/g
 const QUERY_DOT_REGEX = /^\./
 
-// Simple implementation of lodash.get
-// Handles arrays, objects, and any nested combination of the two.
-// Also handles undefined as a valid value - see test case for details.
-// Based on: https://gist.github.com/harish2704/d0ee530e6ee75bad6fd30c98e5ad9dab
-function deepGet(obj: unknown, query: (number | string)[] | string, defaultVal?: unknown): unknown {
-  const queryArray = Array.isArray(query)
-    ? query
-    : query.replace(QUERY_INDEX_REGEX, '.$1').replace(QUERY_DOT_REGEX, '').split('.')
-
-  const key = queryArray[0]
-  if (key === undefined || typeof obj !== 'object' || obj === null || !(key in obj)) return defaultVal
-
-  const nextObj = (obj as Record<string, unknown>)[key]
-  if (nextObj && queryArray.length > 1)
-    return deepGet(nextObj, queryArray.slice(1), defaultVal)
-
-  return nextObj
+/** Typed lodash.get-lite. Returns `defaultVal` when path cannot be resolved. */
+function getPath(obj: unknown, query: string, defaultVal?: unknown): unknown {
+  const parts = query.replace(QUERY_INDEX_REGEX, '.$1').replace(QUERY_DOT_REGEX, '').split('.')
+  let cur: unknown = obj
+  for (const part of parts) {
+    if (cur === null || cur === undefined || typeof cur !== 'object') return defaultVal
+    if (!(part in cur)) return defaultVal
+    cur = (cur as Record<string, unknown>)[part]
+  }
+  return cur
 }
 
 /**
  * Options for mod list generator
  */
 export interface ModListOpts {
+  /** Json object from `minecraftinstance.json` of current version */
+  fresh: Minecraftinstance
+
+  /** Json object from `minecraftinstance.json` of previous version. */
+  old?: Minecraftinstance
+
   /**
    * .gitignore-like file content with mods to ignore.
    * @see modListDiff
@@ -66,8 +67,11 @@ export interface ModListOpts {
   /** Custom Handlebars template to generate result */
   template?: string
 
-  /** Output information about working process in stdout */
+  /** Output information about working process */
   verbose?: boolean
+
+  /** Callback for verbose logging. If not provided, verbose does nothing. */
+  onLog?: (msg: string) => void
 }
 
 const SANITIZE_NEWLINES_REGEX = /\n/g
@@ -75,55 +79,61 @@ const SANITIZE_MARKDOWN_REGEX = /([|`*_])/g
 
 /**
  * Generate modlist for given `minecraftinstance.json` file
- * @param mcInstanceFresh Json object from `minecraftinstance.json` of current version
- * @param mcInstanceOld Json object from `minecraftinstance.json` of previous version.
  * @param opts Options for mod list generator
  * @returns Markdown file based on given Handlebars template
  */
-export async function generateModsList(
-  mcInstanceFresh: Minecraftinstance,
-  mcInstanceOld?: Minecraftinstance,
-  opts?: ModListOpts
-) {
-  if (opts?.verbose) process.stdout.write('Get Mods diffs from JSONs ... ')
-  const diff: ModsComparsion = mcInstanceOld
-    ? modListDiff(mcInstanceFresh, mcInstanceOld, opts?.ignore)
-    : modListUnion(mcInstanceFresh, opts?.ignore)
-  if (opts?.verbose) process.stdout.write(' done\n')
+export async function generateModsList(opts: ModListOpts): Promise<string> {
+  const log = (msg: string): void => {
+    if (opts.verbose) opts.onLog?.(msg)
+  }
 
-  const cursedMap: Record<number, Awaited<ReturnType<typeof fetchMods>>[number]> = {}
-  if (opts?.key) {
-    if (opts?.verbose) process.stdout.write('Asking Curseforge API for mods ... ')
+  log('Get Mods diffs from JSONs ... ')
+  const diff: ModsComparison = opts.old
+    ? modListDiff(opts.fresh, opts.old, opts.ignore)
+    : modListUnion(opts.fresh, opts.ignore)
+  log(' done\n')
+
+  const cursedMap = new Map<number, Awaited<ReturnType<typeof fetchMods>>[number]>()
+  if (opts.key) {
+    log('Asking Curseforge API for mods ... ')
     const cursedUnion = await fetchMods(diff.union.map(addon => addon.addonID), opts.key)
     cursedUnion.sort((a, b) => a.id - b.id)
-    if (opts?.verbose) process.stdout.write('done\n')
+    log('done\n')
 
-    cursedUnion.forEach(o => cursedMap[o.id] = o)
+    cursedUnion.forEach(o => cursedMap.set(o.id, o))
   }
 
   // Sorting function
-  let sortKey = opts?.sort ?? 'addonID'
-  let sortDirection = true
+  let sortKey = opts.sort ?? 'addonID'
+  let sortDirection = 1
   if (sortKey.startsWith('/')) {
-    sortDirection = false
+    sortDirection = -1
     sortKey = sortKey.substring(1)
   }
-  const sortFn = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon) => (deepGet(a, sortKey) as number) - (deepGet(b, sortKey) as number)
-  const sort = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon) => sortDirection ? sortFn(a, b) : sortFn(b, a)
+  const sortFn = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon): number => {
+    const av = getPath(a, sortKey, 0) as number
+    const bv = getPath(b, sortKey, 0) as number
+    return av - bv
+  }
+  const sort = (a: AddonDifference | InstalledAddon, b: AddonDifference | InstalledAddon): number => sortDirection * sortFn(a, b)
 
-  if (diff.updated) {
-    diff.updated.forEach((o) => {
-      o.now.cf2Addon = cursedMap[o.now.addonID]
-      o.was.cf2Addon = cursedMap[o.was.addonID]
-    })
-    diff.updated.sort((a, b) => sort(a.now, b.now))
+  type EnrichedAddon = InstalledAddon & { cf2Addon?: Awaited<ReturnType<typeof fetchMods>>[number] }
+  type EnrichedDiff = AddonDifference & { now: EnrichedAddon, was: EnrichedAddon }
+
+  const enrichAddon = (o: InstalledAddon): EnrichedAddon => ({ ...o, cf2Addon: cursedMap.get(o.addonID) })
+  const enrichDiff = (o: AddonDifference): EnrichedDiff => ({ now: enrichAddon(o.now), was: enrichAddon(o.was) })
+
+  const enriched: ModsComparison & { updated?: EnrichedDiff[] } = {
+    union  : diff.union.map(enrichAddon),
+    both   : diff.both?.map(enrichAddon),
+    added  : diff.added?.map(enrichAddon),
+    removed: diff.removed?.map(enrichAddon),
+    updated: diff.updated?.map(enrichDiff),
   }
 
+  enriched.updated?.sort((a, b) => sort(a.now, b.now))
   for (const key of ['union', 'both', 'added', 'removed'] as const) {
-    diff[key]?.forEach((o) => {
-      o.cf2Addon = cursedMap[o.addonID]
-    })
-    diff[key]?.sort(sort)
+    enriched[key]?.sort(sort)
   }
 
   Handlebars.registerHelper('sanitize', (str: string) => String(str).replace(SANITIZE_NEWLINES_REGEX, ' ').replace(SANITIZE_MARKDOWN_REGEX, '\\$1').trim())
@@ -131,7 +141,7 @@ export async function generateModsList(
   Handlebars.registerHelper('padEnd', (str: string, pad: number, options: { hash: { pre?: string, post?: string } }) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padEnd(pad))
   Handlebars.registerHelper('padStart', (str: string, pad: number, options: { hash: { pre?: string, post?: string } }) => ((options.hash.pre ?? '') + String(str) + (options.hash.post ?? '')).padStart(pad))
 
-  const builder = Handlebars.compile(opts?.template ?? readFileSync(relative('../default.hbs'), 'utf8'))
+  const builder = Handlebars.compile(opts.template ?? readFileSync(relative('../default.hbs'), 'utf8'))
 
-  return builder(diff)
+  return builder(enriched)
 }

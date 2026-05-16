@@ -4,16 +4,14 @@ import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 
 import type { Argv } from 'yargs'
 
+import { readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
 import { assertPath } from '@mctools/utils/args'
 import chalk from 'chalk'
 
-import fse from 'fs-extra'
 import yargs from 'yargs'
 
 import { generateModsList } from './index.js'
-
-const { readFileSync, writeFileSync, readJsonSync } = fse
 
 const args = (yargs(process.argv.slice(2))
   .scriptName('@mctools/modlist')
@@ -52,7 +50,7 @@ Used to exclude mods that used only in dev environment and should not be include
 This json file generates by CurseForge launcher.
 It located at the root of Minecraft instance folder.`),
     default: 'minecraftinstance.json',
-    coerce : (f: string) => readJsonSync(assertPath(f)) as Minecraftinstance,
+    coerce : (f: string) => JSON.parse(readFileSync(assertPath(f), 'utf8')) as Minecraftinstance,
   })
 
   .option('old', {
@@ -60,7 +58,7 @@ It located at the root of Minecraft instance folder.`),
     describe: chalk.gray(`Path to old instance json to compare with.
 This option is useful when you want to make changelog and compare two modpack versions.`),
     normalize: true,
-    coerce   : (f: string) => readJsonSync(assertPath(f)) as Minecraftinstance,
+    coerce   : (f: string) => JSON.parse(readFileSync(assertPath(f), 'utf8')) as Minecraftinstance,
   })
 
   .option('template', {
@@ -124,11 +122,16 @@ if (!args.key) {
 }
 
 if (args.verbose) console.log('- Generating Modlist -')
-generateModsList(
-  args.mcinstance,
-  args.old,
-  args
-).then((content: string) => writeFileSync(args.output, content)).catch((e) => {
+generateModsList({
+  fresh   : args.mcinstance,
+  old     : args.old,
+  key     : args.key,
+  ignore  : args.ignore,
+  sort    : args.sort,
+  template: args.template,
+  verbose : args.verbose,
+  onLog   : msg => process.stdout.write(msg),
+}).then((content: string) => writeFileSync(args.output, content)).catch((e) => {
   console.error(e)
   process.exit(1)
 })
