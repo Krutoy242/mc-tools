@@ -27,20 +27,10 @@ Various utilities for Minecraft-Tools monorepo, intended to be bundled not depen
 Natural string comparator — sorts "mod-v2" before "mod-v10".
 Meant for `Array.prototype.sort(naturalSort)`.
 
-### Parameters
+- `a` `string`
+- `b` `string`
 
-#### a
-
-`string`
-
-#### b
-
-`string`
-
-### Returns
-
-`number`
-
+**Returns:** `number`
 ## Author
 
 * https://github.com/Krutoy242
