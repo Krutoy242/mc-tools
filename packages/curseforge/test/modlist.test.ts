@@ -1,6 +1,6 @@
 import type { InstalledAddon, Minecraftinstance } from '../src/minecraftinstance.js'
 import { describe, expect, it } from 'vitest'
-import { loadMCInstanceFiltered, modListDiff, modListUnion } from '../src/index.js'
+import { loadMCInstanceFiltered, modListDiff, modListUnion } from '../src/diff.js'
 import { asAddonID, asFileID } from '../src/minecraftinstance.js'
 
 function mockAddon(id: number, fileId: number, fileName: string, isAvailable = true): InstalledAddon {

@@ -28,15 +28,9 @@ Bunch of functions, used for other `@mctools/` packages, such as fetching info f
 
 Assert-cast a plain number into a branded AddonID.
 
-### Parameters
+- `n` `number`
 
-#### n
-
-`number`
-
-### Returns
-
-[`AddonID`](../type-aliases/AddonID.md)
+**Returns:** [`AddonID`](../type-aliases/AddonID.md)
 
 ### `asFileID`
 
@@ -44,15 +38,90 @@ Assert-cast a plain number into a branded AddonID.
 
 Assert-cast a plain number into a branded FileID.
 
-### Parameters
+- `n` `number`
 
-#### n
+**Returns:** [`FileID`](../type-aliases/FileID.md)
 
-`number`
+### `fetchChangelog`
 
-### Returns
+> **fetchChangelog**(`entry`, `cfApiKey`): `Promise`\<`string`\>
 
-[`FileID`](../type-aliases/FileID.md)
+Fetch a single file changelog from CurseForge.
+
+- `entry` [`ChangelogEntry`](../interfaces/ChangelogEntry.md) — Object with modId and fileId
+- `cfApiKey` `string` — CurseForge API key
+
+**Returns:** `Promise`\<`string`\> — Changelog HTML string, or empty string if not found
+
+### `fetchChangelogs`
+
+> **fetchChangelogs**(`entries`, `cfApiKey`, `doLogging?`, `concurrency?`): `Promise`\<`Map`\<`number`, `string`\>\>
+
+Fetch changelogs for specific mod files from CurseForge.
+Requests are executed in parallel with a concurrency limit.
+
+- `entries` [`ChangelogEntry`](../interfaces/ChangelogEntry.md)[] — Array of { modId, fileId } objects
+- `cfApiKey` `string` — CurseForge API key
+- `doLogging?` `boolean` = `false` — Log progress into stdout
+- `concurrency?` `number` = `15` — Maximum number of concurrent requests (default: 10)
+
+**Returns:** `Promise`\<`Map`\<`number`, `string`\>\> — Map of fileId → changelog HTML string
+
+### `fetchFile`
+
+> **fetchFile**(`modId`, `fileId`, `cfApiKey`): `Promise`\<`CF2File` \| `undefined`\>
+
+Fetch metadata for a single file.
+
+- `modId` `number` — Mod ID the file belongs to
+- `fileId` `number` — File ID
+- `cfApiKey` `string` — CurseForge API key
+
+**Returns:** `Promise`\<`CF2File` \| `undefined`\> — File metadata
+
+### `fetchFiles`
+
+> **fetchFiles**(`fileIds`, `cfApiKey`): `Promise`\<`CF2File`[]\>
+
+Fetch metadata for multiple files at once using the batch endpoint.
+
+- `fileIds` `number`[] — Array of file IDs
+- `cfApiKey` `string` — CurseForge API key
+
+**Returns:** `Promise`\<`CF2File`[]\> — Array of file metadata
+
+### `fetchIntermediateFileChangelogs`
+
+> **fetchIntermediateFileChangelogs**(`modId`, `oldFileId`, `newFileId`, `cfApiKey`, `doLogging?`, `gameVersion?`, `maxFiles?`, `concurrency?`): `Promise`\<[`FileChangelog`](../interfaces/FileChangelog.md)[]\>
+
+Fetch all file changelogs between two file versions of a mod.
+Files are ordered by upload date and filtered to include only those
+strictly after oldFileId and up to newFileId.
+Changelog requests are executed in parallel with a concurrency limit.
+
+- `modId` `number`
+- `oldFileId` `number`
+- `newFileId` `number`
+- `cfApiKey` `string`
+- `doLogging?` `boolean` = `false`
+- `gameVersion?` `string`
+- `maxFiles?` `number` = `15`
+- `concurrency?` `number` = `15`
+
+**Returns:** `Promise`\<[`FileChangelog`](../interfaces/FileChangelog.md)[]\>
+
+### `fetchMod`
+
+> **fetchMod**(`modId`, `cfApiKey`, `timeout?`, `doLogging?`): `Promise`\<`CF2Addon`\>
+
+Fetch a single mod from CurseForge.
+
+- `modId` `number` — ID of the mod to fetch
+- `cfApiKey` `string` — CurseForge API key
+- `timeout?` `number` = `96` — Cache timeout in hours
+- `doLogging?` `boolean` = `false` — Log into stdout
+
+**Returns:** `Promise`\<`CF2Addon`\>
 
 ### `fetchMods`
 
@@ -60,44 +129,21 @@ Assert-cast a plain number into a branded FileID.
 
 Get mod information from CurseForge, such as name, summary, download count, etc.
 
-### Parameters
+- `modIds` `number`[] — IDs of mods you want to fetch. `[32274, 59751, 59816]`
+- `cfApiKey` `string` — CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
+- `timeout?` `number` = `96` — If file was already fetched last `timeout` hours, it would be loaded from cache file
+- `doLogging?` `boolean` = `false` — Log into stdout
 
-#### modIds
+**Returns:** `Promise`\<`CF2Addon`[]\> — Object with information about mods
 
-`number`[]
+### `loadFromCF`
 
-IDs of mods you want to fetch. `[32274, 59751, 59816]`
+> **loadFromCF**(`modIds`, `cfApiKey`): `Promise`\<`CF2Addon`[]\>
 
-#### cfApiKey
+- `modIds` `number`[]
+- `cfApiKey` `string`
 
-`string`
-
-CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
-
-#### timeout?
-
-`number` = `96`
-
-If file was already fetched last `timeout` hours, it would be loaded from cache file
-
-#### doLogging?
-
-`boolean` = `false`
-
-Log into stdout
-
-### Returns
-
-`Promise`\<`CF2Addon`[]\>
-
-Object with information about mods
-
-### Example
-
-```ts
-const cfMods = await fetchMods([32274, 59751, 59816], key)
-console.log(cfMods.map(m => m.name)) // ["JourneyMap", "Forestry", "Random Things"]
-```
+**Returns:** `Promise`\<`CF2Addon`[]\>
 
 ### `loadMCInstanceFiltered`
 
@@ -108,27 +154,14 @@ Load a filtered view of a minecraftinstance.json object.
 Returns a shallow-cloned instance with `installedAddons` narrowed to
 on-CF, non-ignored mods. The original `mci` is not mutated.
 
-### Parameters
+- `mci` `Minecraftinstance` — Parsed `minecraftinstance.json`.
+- `ignore?` `string` \| `Ignore` \| readonly (`string` \| `Ignore`)[] — .gitignore-like content — mods matching these patterns (by `mods/<file>`) are excluded.
 
-#### mci
-
-`Minecraftinstance`
-
-Parsed `minecraftinstance.json`.
-
-#### ignore?
-
-`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
-
-.gitignore-like content — mods matching these patterns (by `mods/<file>`) are excluded.
-
-### Returns
-
-`Minecraftinstance`
+**Returns:** `Minecraftinstance`
 
 ### `modListDiff`
 
-> **modListDiff**(`fresh`, `old`, `ignore?`): `ModsComparison`
+> **modListDiff**(`fresh`, `old`, `ignore?`): [`ModsComparison`](../interfaces/ModsComparison.md)
 
 Compare two minecraftinstance.json snapshots and return a full breakdown
 (`added`, `removed`, `both`, `updated`, plus the total `union`).
@@ -136,46 +169,25 @@ Compare two minecraftinstance.json snapshots and return a full breakdown
 Use this when you have the previous version to diff against, typically for
 generating a changelog.
 
-### Parameters
+- `fresh` `Minecraftinstance`
+- `old` `Minecraftinstance`
+- `ignore?` `string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
 
-#### fresh
-
-`Minecraftinstance`
-
-#### old
-
-`Minecraftinstance`
-
-#### ignore?
-
-`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
-
-### Returns
-
-`ModsComparison`
+**Returns:** [`ModsComparison`](../interfaces/ModsComparison.md)
 
 ### `modListUnion`
 
-> **modListUnion**(`fresh`, `ignore?`): `ModsUnion`
+> **modListUnion**(`fresh`, `ignore?`): [`ModsUnion`](../interfaces/ModsUnion.md)
 
 Collect the full set of addons from a single minecraftinstance, after
 applying the same `.gitignore`-style filter as [modListDiff](modListDiff.md).
 
 Use this when you don't have a previous instance to compare against.
 
-### Parameters
+- `fresh` `Minecraftinstance`
+- `ignore?` `string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
 
-#### fresh
-
-`Minecraftinstance`
-
-#### ignore?
-
-`string` \| `Ignore` \| readonly (`string` \| `Ignore`)[]
-
-### Returns
-
-`ModsUnion`
+**Returns:** [`ModsUnion`](../interfaces/ModsUnion.md)
 
 ### `setCachePath`
 
@@ -183,43 +195,9 @@ Use this when you don't have a previous instance to compare against.
 
 Override the file the CF mod cache reads/writes. Defaults to `~/.cache/mctools/curseforge-mods.json`.
 
-### Parameters
+- `path` `string`
 
-#### path
-
-`string`
-
-### Returns
-
-`void`
-
-## type-aliases
-
-### `AddonID`
-
-> **AddonID** = `number` & `object`
-
-Branded numeric ID of a CurseForge addon (project).
-Use `asAddonID(n)` to construct from a plain number when you own the value.
-
-### Type Declaration
-
-#### \_\_brand
-
-> `readonly` **\_\_brand**: `"AddonID"`
-
-### `FileID`
-
-> **FileID** = `number` & `object`
-
-Branded numeric ID of a specific file (release) of an addon.
-
-### Type Declaration
-
-#### \_\_brand
-
-> `readonly` **\_\_brand**: `"FileID"`
-
+**Returns:** `void`
 ## Author
 
 * https://github.com/Krutoy242
