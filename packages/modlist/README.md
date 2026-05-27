@@ -53,6 +53,8 @@ Options:
                     It located at the root of Minecraft instance folder.  [default: "minecraftinstance.json"]
   -l, --old         Path to old instance json to compare with.
                     This option is useful when you want to make changelog and compare two modpack versions.  [string]
+      --changelog   Fetch changelogs for updated mods from CurseForge API.
+                    Only applies when --old is used. Defaults to true. Use --no-changelog to disable.  [boolean] [default: true]
   -t, --template    Path to Handlebar template.
                     See `default.hbs` for more info.
   -s, --sort        Sort field of CurseForge addon.
@@ -100,88 +102,13 @@ To use as library:
 
 ### `generateModsList`
 
-> **generateModsList**(`mcInstanceFresh`, `mcInstanceOld?`, `opts?`): `Promise`\<`string`\>
+> **generateModsList**(`opts`): `Promise`\<`string`\>
 
 Generate modlist for given `minecraftinstance.json` file
 
-### Parameters
+- `opts` [`ModListOpts`](../interfaces/ModListOpts.md) — Options for mod list generator
 
-#### mcInstanceFresh
-
-`Minecraftinstance`
-
-Json object from `minecraftinstance.json` of current version
-
-#### mcInstanceOld?
-
-`Minecraftinstance`
-
-Json object from `minecraftinstance.json` of previous version.
-
-#### opts?
-
-[`ModListOpts`](../interfaces/ModListOpts.md)
-
-Options for mod list generator
-
-### Returns
-
-`Promise`\<`string`\>
-
-Markdown file based on given Handlebars template
-
-## interfaces
-
-### `ModListOpts`
-
-Options for mod list generator
-
-### Properties
-
-#### ignore?
-
-> `optional` **ignore?**: `string`
-
-.gitignore-like file content with mods to ignore.
-
-##### See
-
-modListDiff
-
-***
-
-#### key
-
-> **key**: `string`
-
-CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys
-
-***
-
-#### sort?
-
-> `optional` **sort?**: `string`
-
-Sort field of CurseForge addon.
-Accept deep path like `cf2Addon.downloadCount`.
-`/` symbol at start of value flip sort order.
-
-***
-
-#### template?
-
-> `optional` **template?**: `string`
-
-Custom Handlebars template to generate result
-
-***
-
-#### verbose?
-
-> `optional` **verbose?**: `boolean`
-
-Output information about working process in stdout
-
+**Returns:** `Promise`\<`string`\> — Markdown file based on given Handlebars template
 ## Author
 
 * https://github.com/Krutoy242

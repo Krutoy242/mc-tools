@@ -61,6 +61,13 @@ This option is useful when you want to make changelog and compare two modpack ve
     coerce   : (f: string) => JSON.parse(readFileSync(assertPath(f), 'utf8')) as Minecraftinstance,
   })
 
+  .option('changelog', {
+    type    : 'boolean',
+    describe: chalk.gray(`Fetch changelogs for updated mods from CurseForge API.
+Only applies when --old is used. Defaults to true. Use --no-changelog to disable.`),
+    default: true,
+  })
+
   .option('template', {
     alias   : 't',
     describe: chalk.gray(`Path to Handlebar template.
@@ -123,14 +130,15 @@ if (!args.key) {
 
 if (args.verbose) console.log('- Generating Modlist -')
 generateModsList({
-  fresh   : args.mcinstance,
-  old     : args.old,
-  key     : args.key,
-  ignore  : args.ignore,
-  sort    : args.sort,
-  template: args.template,
-  verbose : args.verbose,
-  onLog   : msg => process.stdout.write(msg),
+  fresh    : args.mcinstance,
+  old      : args.old,
+  key      : args.key,
+  ignore   : args.ignore,
+  sort     : args.sort,
+  template : args.template,
+  changelog: args.changelog,
+  verbose  : args.verbose,
+  onLog    : msg => process.stdout.write(msg),
 }).then((content: string) => writeFileSync(args.output, content)).catch((e) => {
   console.error(e)
   process.exit(1)
