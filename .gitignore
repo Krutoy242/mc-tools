@@ -6,3 +6,4 @@ npm-debug.log
 packages/*/coverage
 packages/*/dist
 packages/*/lib
+.cache
