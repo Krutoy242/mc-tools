@@ -198,16 +198,10 @@ importers:
       '@mctools/utils':
         specifier: workspace:*
         version: link:../utils
-      fs-extra:
-        specifier: ^11.1.1
-        version: 11.1.1
       yargs:
         specifier: ^17.7.1
         version: 17.7.1
     devDependencies:
-      '@types/fs-extra':
-        specifier: ^11.0.1
-        version: 11.0.1
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24
@@ -223,9 +217,6 @@ importers:
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
-      fs-extra:
-        specifier: ^11.1.1
-        version: 11.1.1
       handlebars:
         specifier: ^4.7.7
         version: 4.7.7
@@ -233,9 +224,6 @@ importers:
         specifier: ^17.7.1
         version: 17.7.1
     devDependencies:
-      '@types/fs-extra':
-        specifier: ^11.0.1
-        version: 11.0.1
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24
