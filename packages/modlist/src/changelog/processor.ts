@@ -103,6 +103,15 @@ export async function buildModChangelog(
 
   if (!fileChangelogs.length) {
     if (verbose) process.stdout.write(`[${modId}] No intermediate changelogs (${formatDuration(performance.now() - t0)})\n`)
+    // Fallback: fetch changelog for the new file alone (e.g. when old file belongs to a different mod project)
+    const newChangelogMap = await fetchChangelogs([{ modId, fileId: newFileId }], key)
+    const newChangelog = newChangelogMap.get(newFileId)
+    if (newChangelog) {
+      const cleaned = stripGarbagePreamble(cleanChangelogHtml(normalizeChangelog(newChangelog)))
+      if (!isEmptyChangelog(cleaned)) {
+        return cleaned.replace(/\r?\n/g, ' ').trim()
+      }
+    }
     return ''
   }
 

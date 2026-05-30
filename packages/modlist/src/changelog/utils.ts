@@ -15,12 +15,27 @@ interface VersionHeading {
 
 function extractVersionHeadings(html: string): VersionHeading[] {
   const headings: VersionHeading[] = []
-  const regex = /<(?:h[1-6]|b)[^>]*>\D*(\d+(?:\.\d+)+)\D*<\/(?:h[1-6]|b)>/gi
-  let match: RegExpExecArray | null = regex.exec(html)
-  while (match !== null) {
-    headings.push({ version: match[1], index: match.index })
-    match = regex.exec(html)
+  const tagRegex = /<(?:h[1-6]|b)[^>]*>/gi
+
+  let tagMatch = tagRegex.exec(html)
+  while (tagMatch !== null) {
+    const start = tagMatch.index + tagMatch[0].length
+    const endTagMatch = html.slice(start).match(/<\/(?:h[1-6]|b)>/i)
+    if (!endTagMatch) {
+      tagMatch = tagRegex.exec(html)
+      continue
+    }
+
+    const text = html.slice(start, start + (endTagMatch.index ?? 0))
+    const versionMatch = text.match(/\d+(?:\.\d+)+/g)
+    if (versionMatch) {
+      // Use the last version number in the heading (e.g. "1.12.2-2.3.2" -> "2.3.2")
+      headings.push({ version: versionMatch[versionMatch.length - 1], index: tagMatch.index })
+    }
+
+    tagMatch = tagRegex.exec(html)
   }
+
   return headings
 }
 
