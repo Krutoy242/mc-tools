@@ -85,7 +85,16 @@ function trimBeforeBoundary(text: string, index: number): string {
     before.lastIndexOf('<hr/>'),
     before.lastIndexOf('<hr />')
   )
-  return lastHr >= 0 ? before.slice(0, lastHr).trim() : before.trim()
+  if (lastHr >= 0) {
+    const trimmed = before.slice(0, lastHr).trim()
+    // If trimming at <hr> leaves almost nothing, the <hr> was right after the
+    // current version's heading (not between versions). Fall back to trimming
+    // at the duplicated heading itself so the current version content is kept.
+    if (trimmed.length > 200) {
+      return trimmed
+    }
+  }
+  return before.trim()
 }
 
 export function truncateOverlap(

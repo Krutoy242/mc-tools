@@ -32,6 +32,35 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
   const diff: ModsComparison = opts.old
     ? modListDiff(opts.fresh, opts.old, opts.ignore)
     : modListUnion(opts.fresh, opts.ignore)
+
+  // Auto-detect mod replacements (forks/remakes) by matching base file names.
+  // If a removed mod and an added mod share the same base file name
+  // (e.g. "thaumicwonders-1.8.4.jar" vs "thaumicwonders-2.3.1.jar"),
+  // treat the added mod as an update from the removed one.
+  if (diff.added?.length && diff.removed?.length) {
+    const addedByBase = new Map<string, typeof diff.added[0]>()
+    for (const a of diff.added) {
+      const base = a.installedFile.fileName.replace(/-\d[\w.-]*\.jar$/, '.jar')
+      addedByBase.set(base, a)
+    }
+    const matchedRemoved: typeof diff.removed = []
+    const matchedAdded: typeof diff.added = []
+    for (const r of diff.removed) {
+      const base = r.installedFile.fileName.replace(/-\d[\w.-]*\.jar$/, '.jar')
+      const a = addedByBase.get(base)
+      if (a) {
+        matchedRemoved.push(r)
+        matchedAdded.push(a)
+        diff.updated = diff.updated ?? []
+        diff.updated.push({ now: a, was: r })
+      }
+    }
+    if (matchedRemoved.length) {
+      diff.removed = diff.removed.filter(r => !matchedRemoved.includes(r))
+      diff.added = diff.added.filter(a => !matchedAdded.includes(a))
+    }
+  }
+
   log(` done (${formatDuration(performance.now() - tDiff)})\n`)
 
   const cursedMap = new Map<number, Awaited<ReturnType<typeof fetchMods>>[number]>()
@@ -72,6 +101,40 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
       UPDATED_CONCURRENCY
     )
     log(`  Total changelog build time: ${formatDuration(performance.now() - tBuild)}\n`)
+
+    // Also fetch changelogs for added mods (e.g. forks/replacements that appear as added)
+    if (diff.added?.length) {
+      const tAdded = performance.now()
+      const addedEntries = diff.added.map(a => ({
+        modId : a.addonID,
+        fileId: a.installedFile.id,
+      }))
+      const addedChangelogsMap = await fetchChangelogs(addedEntries, opts.key)
+      log(`  Added mod changelogs fetched (${formatDuration(performance.now() - tAdded)})\n`)
+
+      await runConcurrent(
+        diff.added,
+        async (added, idx) => {
+          const tMod = performance.now()
+          const html = addedChangelogsMap.get(added.installedFile.id)
+          if (html) {
+            // Import processor functions directly to normalize/clean
+            const { cleanChangelogHtml, isEmptyChangelog, stripGarbagePreamble } = await import('./changelog/utils.js')
+            const { markdownToHtml, sanitizeHtml } = await import('./utils/markdown.js')
+            const looksLikeMarkdown = (text: string) => /#{1,6}\s/.test(text) && !/<h[1-6]/i.test(text)
+            let normalized = sanitizeHtml(html)
+            if (looksLikeMarkdown(normalized)) normalized = markdownToHtml(normalized)
+            const cleaned = stripGarbagePreamble(cleanChangelogHtml(normalized))
+            if (!isEmptyChangelog(cleaned)) {
+              modChangelogs.set(added.addonID, cleaned.replace(/\r?\n/g, ' ').trim())
+            }
+          }
+          log(`  [added ${idx + 1}/${diff.added!.length}] Mod ${added.addonID} changelog built (${formatDuration(performance.now() - tMod)})\n`)
+        },
+        UPDATED_CONCURRENCY
+      )
+    }
+
     log('done\n')
   }
 
@@ -88,7 +151,7 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
   const enriched: ModsComparison & { updated?: EnrichedDiff[] } = {
     union  : diff.union.map(a => enrichAddon(a)),
     both   : diff.both?.map(a => enrichAddon(a)),
-    added  : diff.added?.map(a => enrichAddon(a)),
+    added  : diff.added?.map(a => enrichAddon(a, modChangelogs.get(a.addonID))),
     removed: diff.removed?.map(a => enrichAddon(a)),
     updated: diff.updated?.map(enrichDiff),
   }
