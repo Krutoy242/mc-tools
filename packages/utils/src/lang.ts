@@ -45,10 +45,12 @@ export class Lang {
   }
 
   public set(key: string, text: string | string[]) {
+    const escapePercent = (s: string) => s.replace(/%(?!%)/g, '%%')
+    const value = Array.isArray(text) ? text.join('\\n') : text
+    const escaped = escapePercent(value)
     this.getCodes()
       .forEach(langCode =>
-        this.getLangFile(langCode)[key]
-          = Array.isArray(text) ? text.join('\\n') : text
+        this.getLangFile(langCode)[key] = escaped
       )
   }
 
