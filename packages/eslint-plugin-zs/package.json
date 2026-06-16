@@ -8,7 +8,8 @@
   "homepage": "https://github.com/Krutoy242/mc-tools",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Krutoy242/mc-tools.git"
+    "url": "git+https://github.com/Krutoy242/mc-tools.git",
+    "directory": "packages/eslint-plugin-zs"
   },
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
