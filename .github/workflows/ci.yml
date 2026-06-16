@@ -58,10 +58,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # `@mctools/eslint-plugin-zs/config` and `@mctools/format` are resolved
-      # from their built dist by the flat config, so build before linting.
-      - name: Build lint toolchain
-        run: pnpm --filter @mctools/format --filter @mctools/eslint-plugin-zs run build
+      # Type-aware rules resolve cross-package imports through each package's
+      # built dist (.d.ts), and the flat config itself imports the built
+      # @mctools/eslint-plugin-zs + @mctools/format — so build everything first.
+      - name: Build all packages
+        run: pnpm -r run build
 
       - name: Lint
         run: pnpm run lint
@@ -83,6 +84,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r run build
 
       - name: Regenerate READMEs
         run: pnpm run build:readme
