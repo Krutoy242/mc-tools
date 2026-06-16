@@ -14,7 +14,15 @@ export default {
   plugins : [
     '@semantic-release/commit-analyzer',
     '@semantic-release/release-notes-generator',
-    '@semantic-release/npm',
+    // `@semantic-release/npm` only verifies auth and writes the next version
+    // into package.json — it does NOT publish, because it shells out to
+    // `npm publish`, which cannot resolve pnpm's `workspace:*` protocol.
+    ['@semantic-release/npm', { npmPublish: false }],
+    // `pnpm publish` rewrites `workspace:*` specifiers to real versions before
+    // uploading, so it is the only thing that can publish from this workspace.
+    // semantic-release runs each plugin in the package's own dir (pnpm -r exec),
+    // so this publishes the current package.
+    ['@semantic-release/exec', { publishCmd: 'pnpm publish --no-git-checks --access public' }],
     '@semantic-release/github',
   ],
 }

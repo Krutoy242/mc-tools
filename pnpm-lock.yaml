@@ -17,6 +17,9 @@ importers:
       '@mctools/format':
         specifier: workspace:*
         version: link:packages/format
+      '@semantic-release/exec':
+        specifier: ^7.0.3
+        version: 7.1.0(semantic-release@24.2.9(typescript@6.0.3))
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -1349,6 +1352,12 @@ packages:
   '@semantic-release/error@4.0.0':
     resolution: {integrity: sha512-mgdxrHTLOjOddRVYIYDo0fR3/v61GNN1YGkfbrjuIKg/uMgCd+Qzo3UAXJ+woLQQpos4pl5Esuw5A7AoNlzjUQ==}
     engines: {node: '>=18'}
+
+  '@semantic-release/exec@7.1.0':
+    resolution: {integrity: sha512-4ycZ2atgEUutspPZ2hxO6z8JoQt4+y/kkHvfZ1cZxgl9WKJId1xPj+UadwInj+gMn2Gsv+fLnbrZ4s+6tK2TFQ==}
+    engines: {node: '>=20.8.1'}
+    peerDependencies:
+      semantic-release: '>=24.1.0'
 
   '@semantic-release/github@11.0.6':
     resolution: {integrity: sha512-ctDzdSMrT3H+pwKBPdyCPty6Y47X8dSrjd3aPZ5KKIKKWTwZBE9De8GtsH3TyAlw3Uyo2stegMx6rJMXKpJwJA==}
@@ -6557,6 +6566,18 @@ snapshots:
       - supports-color
 
   '@semantic-release/error@4.0.0': {}
+
+  '@semantic-release/exec@7.1.0(semantic-release@24.2.9(typescript@6.0.3))':
+    dependencies:
+      '@semantic-release/error': 4.0.0
+      aggregate-error: 3.1.0
+      debug: 4.4.3
+      execa: 9.6.1
+      lodash-es: 4.18.1
+      parse-json: 8.3.0
+      semantic-release: 24.2.9(typescript@6.0.3)
+    transitivePeerDependencies:
+      - supports-color
 
   '@semantic-release/github@11.0.6(semantic-release@24.2.9(typescript@6.0.3))':
     dependencies:
