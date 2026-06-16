@@ -1,3 +1,7 @@
+shellEmulator: true
+
+trustPolicy: no-downgrade
+
 packages:
   # all packages in subdirs of packages/ and components/
   - 'packages/*'

@@ -32,9 +32,11 @@ describe('findErrors (pure)', () => {
 
   it('preserves line numbers from original log', () => {
     const errors = findErrors(sampleLog, defaultConfig)
-    expect(errors[0].line).toBe(2)
-    expect(errors[1].line).toBe(10)
-    expect(errors[2].line).toBe(12)
+    // 0-based line offsets (VS Code `Position` convention) — the extension's
+    // debug-log provider consumes these directly without adjustment.
+    expect(errors[0].line).toBe(1)
+    expect(errors[1].line).toBe(9)
+    expect(errors[2].line).toBe(11)
   })
 
   it('returns empty array (does not throw) when no entries match', () => {

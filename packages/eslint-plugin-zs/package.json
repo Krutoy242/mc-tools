@@ -1,8 +1,7 @@
 {
   "name": "@mctools/eslint-plugin-zs",
   "type": "module",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "ESLint plugin: lint and auto-format .zs (ZenScript) via @mctools/format",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
@@ -26,6 +25,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.mjs",
+      "require": "./dist/config.cjs"
     }
   },
   "main": "./dist/index.mjs",
@@ -40,11 +44,13 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@mctools/format": "workspace:*",
     "eslint": "^9.0.0"
   },
+  "dependencies": {
+    "@antfu/eslint-config": "^8.2.0",
+    "@mctools/format": "workspace:*"
+  },
   "devDependencies": {
-    "@mctools/format": "workspace:*",
     "@typescript-eslint/parser": "^8.59.3",
     "@typescript-eslint/utils": "^8.59.3",
     "eslint": "^9.39.4",

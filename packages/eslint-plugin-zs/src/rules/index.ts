@@ -16,7 +16,7 @@ export type RuleFactory = (ctx: PluginContext) => Rule.RuleModule
  */
 export const ruleFactories: Record<string, RuleFactory> = {
   'no-redundant-return-cast': () => makeNoRedundantReturnCastRule(),
-  'zs-format': ({ getAdapter }) => makeZsFormatRule(getAdapter),
+  'zs-format'               : ({ getAdapter }) => makeZsFormatRule(getAdapter),
 }
 
 export function buildRules(ctx: PluginContext): Record<string, Rule.RuleModule> {

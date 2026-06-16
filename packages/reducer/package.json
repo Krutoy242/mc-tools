@@ -1,8 +1,7 @@
 {
   "name": "@mctools/reducer",
   "type": "module",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Partially disable minecraft mods",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
@@ -43,7 +42,6 @@
   "dependencies": {
     "@leeoniya/ufuzzy": "^1.0.19",
     "@mctools/curseforge": "workspace:*",
-    "@mctools/utils": "workspace:*",
     "c12": "^1.11.2",
     "chalk": "^5.6.2",
     "citty": "^0.1.6",
@@ -64,6 +62,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@mctools/utils": "workspace:*",
     "@types/culori": "^2.1.1",
     "@types/fast-levenshtein": "^0.0.4",
     "@types/react": "^18.3.28",

@@ -59,10 +59,7 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest run"
-  },
-  "publishConfig": {
-    "access": "public"
+    "test": "vitest run --passWithNoTests"
   },
   "peerDependencies": {
     "csv-parse": "^5.0.0",

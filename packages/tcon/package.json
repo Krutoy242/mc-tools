@@ -1,8 +1,7 @@
 {
   "name": "@mctools/tcon",
   "type": "module",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Tweaks Tinker Constructs' materials with csv tables",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
@@ -41,13 +40,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mctools/utils": "workspace:*",
     "csv-parse": "^5.3.8",
     "fast-glob": "^3.2.12",
     "table": "^6.8.1",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@mctools/utils": "workspace:*",
     "@types/yargs": "^17.0.24"
   },
   "publishConfig": {

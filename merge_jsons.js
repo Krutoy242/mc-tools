@@ -26,4 +26,11 @@ for (let i = 0; i < template.length; i++) {
 }
 resultObj = merge(resultObj, actualObj)
 
+// Private packages are never published (e.g. `@mctools/utils` is bundled into
+// its consumers, `@mctools/extension` ships via vsce). The shared template
+// carries `publishConfig.access: "public"`, which is misleading on these — drop
+// it so the manifest reflects reality.
+if (resultObj.private === true)
+  delete resultObj.publishConfig
+
 writeFileSync(process.argv[2], `${JSON.stringify(resultObj, undefined, 2)}\n`)

@@ -342,7 +342,7 @@ export function getItemName(i?: Item) {
 export function getQuestTaskItem(q: QuestUid) {
   const firstTask = (q?.tasks?.[0] as ItemQuestTask)?.items?.[0]
   if (!firstTask) return undefined
-  const rawItem = 'item' in firstTask ? (firstTask).item : firstTask
+  const rawItem = 'item' in firstTask ? firstTask.item : firstTask
   const taskItem = getItem(rawItem)
   if (taskItem) return taskItem
   const displayName = typeof rawItem === 'string' ? rawItem : rawItem.id

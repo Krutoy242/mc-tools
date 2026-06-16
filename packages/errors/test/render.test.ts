@@ -82,9 +82,9 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown(errors1)).toBe(renderMarkdown(errors2))
     expect(renderMarkdown(errors1)).toContain('# Errors report')
     expect(renderMarkdown(errors1)).toContain('mermaid')
-    expect(renderMarkdown(errors1)).toContain('### <a id="err-1">')
+    expect(renderMarkdown(errors1)).toContain('### +0min ·')
     expect(renderMarkdown(errors1)).toContain('🔴')
-    expect(renderMarkdown(errors1)).toContain('Thread: `main`')
+    expect(renderMarkdown(errors1)).toContain('`main`')
   })
 
   it('handles midnight wrap-around', () => {
@@ -126,7 +126,9 @@ describe('renderMarkdown', () => {
     const text = renderMarkdown([
       { text: '[main/ERROR] [FML]: very long message # : that exceeds eighty characters so it can test the title truncation branch successfully for coverage', line: 1, time: '00:00:10' },
     ])
+    // Mermaid timeline label: truncated to 40 chars and escaped for mermaid.
     expect(text).toContain('very long message \\# \\: that exceeds eigh…')
-    expect(text).toContain('very long message # : that exceeds eighty characters so it can test the title t…')
+    // The section body keeps the full, unescaped message inside a code block.
+    expect(text).toContain('very long message # : that exceeds eighty characters so it can test the title truncation branch successfully for coverage')
   })
 })

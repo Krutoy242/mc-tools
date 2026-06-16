@@ -9,6 +9,11 @@ import { defineBuildConfig } from 'unbuild'
 export default defineBuildConfig({
   declaration: true,
   rollup     : {
-    emitCJS: false,
+    emitCJS           : false,
+    // `@mctools/utils` is bundled-only (private, never published), so it must
+    // be inlined into this package's dist instead of left as an external
+    // dependency that npm could never resolve. The regex also catches its
+    // subpath exports (e.g. `@mctools/utils/natural-sort`).
+    inlineDependencies: [/@mctools\/utils(\/|$)/],
   },
 })

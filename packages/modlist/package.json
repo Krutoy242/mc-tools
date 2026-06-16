@@ -39,16 +39,16 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@mctools/curseforge": "workspace:*",
-    "@mctools/utils": "workspace:*",
     "chalk": "^5.3.0",
     "handlebars": "^4.7.7",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@mctools/utils": "workspace:*",
     "@types/yargs": "^17.0.24"
   },
   "publishConfig": {

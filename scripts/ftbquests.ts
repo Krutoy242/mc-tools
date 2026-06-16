@@ -84,7 +84,7 @@ export function removeNameOfQuests() {
         }
         else {
           if (!nameOfQuest) console.error(`Cant find name: ${questLangKey}`)
-          if (nameOfTask === nameOfQuest || (levenshtein as { get: (a: string, b: string) => number }).get(nameOfTask, nameOfQuest) <= 5) {
+          if (nameOfTask === nameOfQuest || levenshtein.get(nameOfTask, nameOfQuest) <= 5) {
             delete q.title
             dirty = true
           }

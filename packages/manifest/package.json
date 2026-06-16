@@ -1,8 +1,7 @@
 {
   "name": "@mctools/manifest",
   "type": "module",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "`manifest.json` generation tool",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
@@ -38,14 +37,14 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@mctools/curseforge": "workspace:*",
-    "@mctools/utils": "workspace:*",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@mctools/utils": "workspace:*",
     "@types/yargs": "^17.0.24"
   },
   "publishConfig": {

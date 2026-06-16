@@ -1,0 +1,12 @@
+# Normalize line endings to LF for cross-platform consistency.
+# Tooling here (unbuild, the ZenScript formatter, vitest) emits LF, so CRLF
+# checkouts on Windows break round-trip/format tests.
+* text=auto eol=lf
+
+# Binary assets must never be normalized.
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.jar  binary
+*.zip  binary
+*.woff binary

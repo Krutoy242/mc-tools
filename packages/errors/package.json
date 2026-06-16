@@ -42,12 +42,12 @@
     "build:demo": "mkdir -p \"$(bat --config-dir)/syntaxes\" && cp scripts/debug.log.sublime-syntax \"$(bat --config-dir)/syntaxes/\" && bat cache --build && echo -e '--theme=\"TwoDark\"\n--wrap=never\n--map-syntax=\"*debug.log:Minecraft Log\"' > \"$(bat --config-file)\" && expect scripts/demo.sh"
   },
   "dependencies": {
-    "@mctools/utils": "workspace:*",
     "citty": "^0.1.6",
     "yaml": "^2.2.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@mctools/utils": "workspace:*",
     "esbuild": "^0.25.0",
     "postject": "^1.0.0-alpha.6"
   },

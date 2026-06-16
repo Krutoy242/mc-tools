@@ -1,8 +1,7 @@
 {
   "name": "@mctools/format",
   "type": "module",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Format .zs files by using ESLint for typescript",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",

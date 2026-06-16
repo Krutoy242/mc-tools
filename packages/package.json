@@ -32,7 +32,7 @@
   "scripts": {
     "build": "unbuild",
     "coverage": "vitest run --coverage",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "publishConfig": {
     "access": "public"

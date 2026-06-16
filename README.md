@@ -22,5 +22,10 @@ return fast_glob
 -->
 * [@mctools/curseforge](packages/curseforge) - Lib for working with CurseForge using minecraftinstance.json
 * [@mctools/errors](packages/errors) - Scan debug.log file to find unknown errors
+* [@mctools/eslint-plugin-zs](packages/eslint-plugin-zs) - ESLint plugin: lint and auto-format .zs (ZenScript) via @mctools/format
+* [@mctools/format](packages/format) - Format .zs files by using ESLint for typescript
+* [@mctools/manifest](packages/manifest) - `manifest.json` generation tool
 * [@mctools/modlist](packages/modlist) - Generate .md file with all mods listed
+* [@mctools/reducer](packages/reducer) - Partially disable minecraft mods
+* [@mctools/tcon](packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
 <!-- eval:end -->

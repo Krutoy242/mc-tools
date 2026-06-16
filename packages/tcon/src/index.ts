@@ -68,7 +68,7 @@ function evalMathContext(code: string, context = {}) {
   try {
     const _Func: any = Function
     // eslint-disable-next-line ts/no-unsafe-call
-    return (new _Func(...Object.keys(lContext), `return ${code}`))(...Object.values(lContext)) as number
+    return new _Func(...Object.keys(lContext), `return ${code}`)(...Object.values(lContext)) as number
   }
   catch (err: unknown) {
     const error = err as Error
@@ -240,7 +240,7 @@ export function parseStats(
 
     const defaultVals = match.groups.rawValues
       .split(':')
-      .map(n => (Number.isNaN(Number(n)) ? 'd' : Number(n)))
+      .map(n => Number.isNaN(Number(n)) ? 'd' : Number(n))
 
     existMats.add(matID)
 
