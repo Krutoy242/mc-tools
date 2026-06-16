@@ -1,0 +1,3 @@
+{
+  "extends": "../../release.config.js"
+}
