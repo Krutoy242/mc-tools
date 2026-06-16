@@ -29,3 +29,18 @@ return fast_glob
 * [@mctools/reducer](packages/reducer) - Partially disable minecraft mods
 * [@mctools/tcon](packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
 <!-- eval:end -->
+
+## Monorepo structure
+
+- pnpm workspace; every package lives in `packages/*`, is ESM-only and built with `unbuild`.
+- `@mctools/utils` is **bundled-only**: `private`, inlined into consumers (kept in their `devDependencies`), never published.
+- Shared ESLint flat config comes from `@mctools/eslint-plugin-zs/config`.
+- Releases run on push to `master` via `semantic-release` + `pnpm publish`; only `fix:`/`feat:` commits bump versions.
+
+## Adding a new package
+
+1. `mkdir packages/<name>` with `package.json` (name `@mctools/<name>`, `"type": "module"`), `src/index.ts` and a `README.md`.
+2. Copy the build/test scripts from `packages/package.json`; run `node merge_jsons.js packages/<name>/package.json` to sync shared fields.
+3. If it imports `@mctools/utils`, add it to `devDependencies` and inline it: `build.config.ts` → `rollup: { inlineDependencies: [/@mctools\/utils(\/|$)/] }`.
+4. Add path aliases to root `tsconfig.json`; `pnpm install`; add `vitest` tests under `test/`.
+5. Keep it `private: true` until ready to publish.
