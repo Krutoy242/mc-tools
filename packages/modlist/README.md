@@ -2,7 +2,7 @@
 
 Generate .md file with all mods listed
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 > This tool was created for the mod list of [E2E-E](https://github.com/Krutoy242/Enigmatica2Expert-Extended/blob/cd12cfc750393b2ac4f9fa6ef2a4d103c412cb1b/MODS.md) modpack as well as for its [changelogs](https://github.com/Krutoy242/Enigmatica2Expert-Extended/blob/489f7f9c2dc41efc8c8a7cf565e0de655f61ea20/changelogs/LATEST.md).
 
 This tool can be used for two purposes:
@@ -17,7 +17,7 @@ Example of resulted file with icons and formatting:
 Result of comparsion two manifests:
 
 ![Example of comparsion](https://i.imgur.com/b7s0AfD.png)
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

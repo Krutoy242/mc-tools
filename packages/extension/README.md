@@ -2,7 +2,7 @@
 
 VS Code extension for Minecraft 1.12.2 modpack development automation
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 ## Features
 
 ### Debug Log Monitor
@@ -95,7 +95,7 @@ src/
     ├── regex.ts
     └── throttle.ts
 ```
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

@@ -2,7 +2,7 @@
 
 Various utilities for Minecraft-Tools monorepo, intended to be bundled not dependent
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten --><!-- /persistent_desc -->
 
 ## Usage
 

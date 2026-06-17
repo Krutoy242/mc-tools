@@ -2,7 +2,7 @@
 
 Partially disable minecraft mods
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten --><!-- /persistent_desc -->
 
 ## Usage
 

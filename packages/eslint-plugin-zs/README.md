@@ -2,7 +2,7 @@
 
 ESLint plugin: lint and auto-format .zs (ZenScript) via @mctools/format
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 The plugin lets `eslint .` (or `eslint --fix .`) participate in formatting `.zs` files alongside the host project's TS rules. The host project's flat config is reused verbatim against an in-process `Linter` to fix the marker-laden TypeScript produced from each `.zs` source — no second `new ESLint(...)` is created at runtime.
 
 **Requirements:**
@@ -24,7 +24,7 @@ export default [
 ```
 
 `defineConfig` returns a flat-config fragment that registers the parser stub for `*.zs`, the plugin object, and the `zs-format` rule.
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

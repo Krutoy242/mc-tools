@@ -2,7 +2,7 @@
 
 Scan debug.log file to find unknown errors
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 <!--
 
 To create preview of this console app, you need to follow this steps:
@@ -27,7 +27,7 @@ In large modpacks, the `debug.log` file can contain hundreds of thousands of lin
 *   **Stack Trace Shortening:** Truncates long stack traces.
 *   **Error Grouping:** Groups identical errors together.
 *   **Advanced Filtering:** Ignores a huge number of known harmless errors and warnings from many mods.
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

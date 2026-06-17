@@ -264,8 +264,8 @@ await Promise.all(packagesInfo.map(async (pkgInfo) => {
   }
 
   const readmeContent = await readFile(readmePath, 'utf8')
-  const extended_desc = readmeContent.match(
-    /<!-- extended_desc -->([\s\S]*?)<!-- \/extended_desc -->/
+  const persistent_desc = readmeContent.match(
+    /<!-- persistent_desc any other changes in this file except this block will be overwritten -->([\s\S]*?)<!-- \/persistent_desc -->/
   )?.[1] ?? ''
 
   const pkg = pkgInfo.package
@@ -281,7 +281,7 @@ await Promise.all(packagesInfo.map(async (pkgInfo) => {
   const data = {
     package   : pkg,
     packages  : packagesInfo,
-    extended_desc,
+    persistent_desc,
     helpOutput: helpMap.get(pkgInfo.name),
     typedoc   : typedocMap.get(pkgInfo.name) ?? '',
   }

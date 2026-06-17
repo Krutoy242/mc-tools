@@ -2,7 +2,7 @@
 
 Locate, clone or decompile Minecraft mod source code
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 The resolved absolute path is printed to **stdout**; all diagnostics go to **stderr**, so the result is easy to capture.
 
 ### Resolution pipeline
@@ -13,7 +13,7 @@ The resolved absolute path is printed to **stdout**; all diagnostics go to **std
 4. **Same author / Gemini** — repos of other mods by the same author, or the `gemini` CLI.
 5. **Decompile** — `cfr*.jar` (in the MC dir) or `vineflower*.jar` (in `$MOD_SOURCES`).
 
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

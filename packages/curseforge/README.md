@@ -2,9 +2,9 @@
 
 Lib for working with CurseForge using minecraftinstance.json
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 Bunch of functions, used for other `@mctools/` packages, such as fetching info for several mods at once.
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 

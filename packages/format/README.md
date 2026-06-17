@@ -2,7 +2,7 @@
 
 Format .zs files by using ESLint for typescript
 
-<!-- extended_desc -->
+<!-- persistent_desc any other changes in this file except this block will be overwritten -->
 The pipeline is:
 
 ```
@@ -27,7 +27,7 @@ if (result.ok) {
 ```
 
 `zsToTs` / `revert` are pure (string in → string out). For batch file I/O see `convertToTs` from `@mctools/format/dist/formatFile`.
-<!-- /extended_desc -->
+<!-- /persistent_desc -->
 
 ## Usage
 
