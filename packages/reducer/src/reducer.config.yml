@@ -101,11 +101,13 @@ dependents:
 # Example:
 #   <base_mod_id>: [<fork_1_id>, <fork_2_id>]
 forks:
+  64578: [1530854] #Ender IO
   74072: [1242239] # Tinker's Construct
   223794: [570458] # Applied
   228404: [1252600] # Actually Additions
   236542: [1024225] # Advanced Rocketry
   238222: [557549] # HEI
+  242818: [1328922] #CodeChicken Lib 1.8.+
   243121: [417392] # Quark
   245211: [977883] # TOP
   248453: [456403] # Forgelin
