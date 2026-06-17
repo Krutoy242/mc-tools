@@ -27,6 +27,7 @@ return fast_glob
 * [@mctools/manifest](packages/manifest) - `manifest.json` generation tool
 * [@mctools/modlist](packages/modlist) - Generate .md file with all mods listed
 * [@mctools/reducer](packages/reducer) - Partially disable minecraft mods
+* [@mctools/source](packages/source) - Locate, clone or decompile Minecraft mod source code
 * [@mctools/tcon](packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
 <!-- eval:end -->
 

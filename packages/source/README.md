@@ -1,8 +1,19 @@
-<h1 align="center">@mctools/tcon</h1>
+<h1 align="center">@mctools/source</h1>
 
-Tweaks Tinker Constructs' materials with csv tables
+Locate, clone or decompile Minecraft mod source code
 
-<!-- extended_desc --><!-- /extended_desc -->
+<!-- extended_desc -->
+The resolved absolute path is printed to **stdout**; all diagnostics go to **stderr**, so the result is easy to capture.
+
+### Resolution pipeline
+
+1. **Local match** — existing folder / `.index.yaml` under `$MOD_SOURCES`, checked out to a `1.12.x` branch.
+2. **Clone** — GitHub/GitLab URL from `minecraftinstance.json` or the CurseForge API (`$CF_API_KEY`).
+3. **Jar metadata** — `mcmod.info` / `META-INF/MANIFEST.MF`, then a GitHub search by author or name.
+4. **Same author / Gemini** — repos of other mods by the same author, or the `gemini` CLI.
+5. **Decompile** — `cfr*.jar` (in the MC dir) or `vineflower*.jar` (in `$MOD_SOURCES`).
+
+<!-- /extended_desc -->
 
 ## Usage
 
@@ -15,18 +26,26 @@ Tweaks Tinker Constructs' materials with csv tables
 
 3. Run:
     ```sh
-    > npx @mctools/tcon --help
+    > npx @mctools/source --help
     ```
 
 ### Options
 
 ```shell
+@mctools/source <query> [options]
+
+Locate, clone or decompile the source code of a Minecraft 1.12.2 mod.
+The resolved absolute path is printed to stdout; diagnostics go to stderr.
+
+Positionals:
+  query  Mod id, name, or jar filename fragment  [string]
+
 Options:
       --version  Show version number  [boolean]
-  -d, --default  Path default tweakersconstruct.cfg (with "Fill Defaults" enabled)  [string] [required]
-  -m, --mc       Minecraft directory  [string] [default: "./"]
-  -s, --save     Where to save new sorted stats  [string]
-  -t, --tweaks   Directory with tweaks csv files  [string] [required]
+  -m, --mc       Minecraft instance directory (default: cwd)  [string]
+  -s, --sources  Directory holding mod sources (default: $MOD_SOURCES)  [string]
+  -k, --key      CurseForge API key (default: $CF_API_KEY)  [string]
+      --silent   Suppress diagnostic logging  [boolean]
   -h, --help     Show help  [boolean]
 ```
 

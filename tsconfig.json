@@ -17,7 +17,8 @@
       "@mctools/curseforge/minecraftinstance": ["./packages/curseforge/src/minecraftinstance.ts"],
       "@mctools/errors": ["./packages/errors/src/index.ts"],
       "@mctools/manifest": ["./packages/manifest/src/index.ts"],
-      "@mctools/modlist": ["./packages/modlist/src/index.ts"]
+      "@mctools/modlist": ["./packages/modlist/src/index.ts"],
+      "@mctools/source": ["./packages/source/src/index.ts"]
     },
     "resolveJsonModule": true,
     "strict": true,
