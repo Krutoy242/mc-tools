@@ -44,7 +44,6 @@
     "curseforge-v2": "^1.2.0",
     "ignore": "^5.2.4"
   },
-  "devDependencies": {},
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts"
