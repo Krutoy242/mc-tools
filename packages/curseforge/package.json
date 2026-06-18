@@ -21,8 +21,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs"
     },
     "./minecraftinstance": {
       "types": "./dist/minecraftinstance.d.mts",
@@ -43,8 +42,5 @@
   "dependencies": {
     "curseforge-v2": "^1.2.0",
     "ignore": "^5.2.4"
-  },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts"
+  }
 }
