@@ -8,11 +8,11 @@ import { getChapter, getChapters, getIndex, getItem, getItemName, getQuestTaskIt
 import { Lang } from '@mctools/utils/lang'
 import { naturalSort } from '@mctools/utils/natural-sort'
 
-import fast_glob from 'fast-glob'
-
 import levenshtein from 'fast-levenshtein'
+
 import { Int, parse } from 'ftbq-nbt'
 import sanitize from 'sanitize-filename'
+import { globSync } from 'tinyglobby'
 
 const TRIM_REGEX = /\W+/g
 
@@ -202,8 +202,7 @@ export function injectLatestLine() {
   const rarity = process.argv[2]
   if (!rarity) throw new Error('Enter rarity first')
 
-  const fileUids = fast_glob
-    .sync('*.snbt', { cwd: 'config/ftbquests/normal/reward_tables' })
+  const fileUids = globSync(['*.snbt'], { cwd: 'config/ftbquests/normal/reward_tables' })
     .map(f => f.replace('.snbt', ''))
   const fileRewards = fileUids
     .map(f => getRewardFile(f))

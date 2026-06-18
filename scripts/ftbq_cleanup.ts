@@ -1,7 +1,7 @@
 import type { QuestUid } from '../packages/utils/src/mods/ftbquests.ts'
 
 import chalk from 'chalk'
-import fast_glob from 'fast-glob'
+import { globSync } from 'tinyglobby'
 
 import { Lang } from '../packages/utils/src/lang.js'
 import { buildIcon, getChapters, getCountValue, getIconCount, getRewardFile, getTaskName, isLangKeyInParenth, langKeyWithoutParenth, saveChapter, saveQuest, saveReward, uidGenerator } from '../packages/utils/src/mods/ftbquests.js'
@@ -136,7 +136,7 @@ export function cleanupLangEntries() {
  */
 function matchCountOfRewards() {
   const folder = 'config/ftbquests/normal/reward_tables'
-  const fileUids = fast_glob.sync('*.snbt', { cwd: folder })
+  const fileUids = globSync(['*.snbt'], { cwd: folder })
     .map(f => f.replace('.snbt', ''))
   const fileRewards = fileUids
     .map(f => [f, getRewardFile(f)] as const)
