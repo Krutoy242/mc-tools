@@ -1,8 +1,8 @@
 import type CFV2 from 'curseforge-v2'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import process from 'node:process'
-import fse from 'fs-extra'
 
 type ModCached = CFV2.CF2Addon & { __lastUpdated?: number }
 
@@ -20,7 +20,7 @@ function getCachePath(): string {
 
 export function readCache(): Record<number, ModCached> {
   try {
-    return fse.readJsonSync(getCachePath()) as Record<number, ModCached>
+    return JSON.parse(readFileSync(getCachePath(), 'utf8')) as Record<number, ModCached>
   }
   catch {
     return {}
@@ -29,8 +29,8 @@ export function readCache(): Record<number, ModCached> {
 
 export function writeCache(cache: Record<number, ModCached>): void {
   const cachePath = getCachePath()
-  fse.mkdirpSync(join(cachePath, '..'))
-  fse.writeJsonSync(cachePath, cache)
+  mkdirSync(dirname(cachePath), { recursive: true })
+  writeFileSync(cachePath, JSON.stringify(cache))
 }
 
 export function cachedMod(cached: ModCached, timeout: number): CFV2.CF2Addon | undefined {

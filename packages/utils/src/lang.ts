@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
-import fast_glob from 'fast-glob'
+import { globSync } from 'tinyglobby'
 
 const SECTION_SIGN_REGEX = /§./g
 const LANG_EXT_REGEX = /\.lang$/
@@ -65,7 +65,7 @@ export class Lang {
     if (this.codesCache !== null) {
       return this.codesCache
     }
-    this.codesCache = fast_glob.sync(
+    this.codesCache = globSync(
       '*.lang',
       { cwd: `resources/${this.langOwner}/lang/` }
     ).map(s => s.replace(LANG_EXT_REGEX, ''))

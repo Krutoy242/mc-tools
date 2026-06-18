@@ -6,4 +6,5 @@ npm-debug.log
 packages/*/coverage
 packages/*/dist
 packages/*/lib
+packages/curseforge/*-cache.json
 .cache

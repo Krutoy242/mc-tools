@@ -3,8 +3,8 @@ import type { Byte, Tag, TagMap } from 'ftbq-nbt'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import fast_glob from 'fast-glob'
 import { Int, parse, stringify } from 'ftbq-nbt'
+import { globSync } from 'tinyglobby'
 
 import { getItemNames } from './tellme.js'
 
@@ -298,7 +298,7 @@ export function getChapters(mc = './'): Chapter[] {
   // Add quests to chapters
   chapters.forEach(ch =>
     ch.quests
-      = fast_glob.sync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
+      = globSync(`${ch.uid}/*.snbt`, { cwd: chapCwd })
         .map(f => f.split(PATH_SEP_REGEX)[1].replace(SNBT_EXT_REGEX, ''))
         .filter(f => f !== 'chapter')
         .map(uid => getQuest(ch.uid, uid, mc))

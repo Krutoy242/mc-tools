@@ -6,7 +6,8 @@ Generate README.md files for main repo and packages
 
 import { exec } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { readFile, writeFile } from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { parse } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -14,13 +15,19 @@ import { promisify } from 'node:util'
 
 import chalk from 'chalk'
 import { stripAnsi } from 'consola/utils'
-import fast_glob from 'fast-glob'
-import fse from 'fs-extra'
 import Handlebars from 'handlebars'
+import { glob, globSync } from 'tinyglobby'
 
 const execP = promisify(exec)
 
-const { readJSON, existsSync, remove, ensureDir } = fse
+// Compatibility shims for eval'd code blocks in README.md
+const fast_glob = {
+  sync: (pattern: string | string[], opts?: object) =>
+    globSync(Array.isArray(pattern) ? pattern : [pattern], opts as object),
+}
+const fse = {
+  readFileSync: (path: string, encoding: BufferEncoding) => readFileSync(path, encoding),
+}
 
 function relative(relPath: string) {
   return fileURLToPath(new URL(relPath, import.meta.url))
@@ -74,11 +81,11 @@ log('main-readme', 'Main README updated')
 // -------------------------------------------------------
 
 _startTimer('scan-packages')
-const packagePaths = await fast_glob('packages/*/package.json')
+const packagePaths = await glob('packages/*/package.json')
 const packagesInfo = await Promise.all(packagePaths.map(async f => ({
   dir    : parse(f).dir,
   name   : parse(f).dir.split(/\/|\\/).pop(),
-  package: (await readJSON(f)) as { name: string, keywords: string[], private?: boolean, description?: string, homepage?: string },
+  package: JSON.parse(await readFile(f, 'utf8')) as { name: string, keywords: string[], private?: boolean, description?: string, homepage?: string },
 })))
 log('scan-packages', `Found ${chalk.green(packagesInfo.length)} packages`)
 
@@ -153,7 +160,7 @@ _startTimer('typedoc-all')
 log('typedoc-all', `Generating docs for ${libPackages.length} packages in parallel`)
 
 const cacheDir = '.cache/readme-build'
-await ensureDir(cacheDir)
+await mkdir(cacheDir, { recursive: true })
 
 function getCacheFile(name: string, content: string): string {
   const cacheKey = createHash('sha256')
@@ -173,7 +180,7 @@ async function getCachedDocs(pkgInfo: typeof libPackages[0]): Promise<string> {
   const typedocCommand = `pnpm exec typedoc ${pkgPath}/src/index.ts --out docs/${pkgInfo.name} --plugin typedoc-plugin-markdown --hideBreadcrumbs --hidePageTitle --hidePageHeader --disableSources --excludeInternal --readme none --exclude '**/*.test.ts' --exclude '**/*.spec.ts' --skipErrorChecking --logLevel Error --excludeExternals`
   await execP(typedocCommand)
 
-  const resultedDocs = await fast_glob(`docs/${pkgInfo.name}/*/*.md`)
+  const resultedDocs = await glob(`docs/${pkgInfo.name}/*/*.md`)
   const docsWithText = await Promise.all(resultedDocs.map(async (file) => {
     let text = (await readFile(file, 'utf8'))
       .replace(/^(#+) /gm, '#$1 ') // lower title level
@@ -299,5 +306,5 @@ log('readme-all', 'All READMEs written')
 
 // Remove whole "docs/" folder
 _startTimer('cleanup')
-await remove('docs')
+await rm('docs', { recursive: true, force: true })
 log('cleanup', 'Removed docs/ folder')

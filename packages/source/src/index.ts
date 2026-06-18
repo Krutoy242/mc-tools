@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import process from 'node:process'
 import chalk from 'chalk'
-import glob from 'fast-glob'
 import { join, normalize } from 'pathe'
+import { glob } from 'tinyglobby'
 import { decompileMod } from './decompile.js'
 import { ensureCorrectBranch, verifySourceFolder } from './git.js'
 import { findAddon, findModJar, loadInstance } from './instance.js'
@@ -57,7 +57,7 @@ async function findLocalCandidates(query: string, ctx: Ctx): Promise<string[]> {
     if (await verifySourceFolder(directPath, ctx.log)) candidates.push(directPath)
   }
   else {
-    const matches = await glob(`${query}*`, { cwd: ctx.modSources, onlyDirectories: true, suppressErrors: true })
+    const matches = await glob(`${query}*`, { cwd: ctx.modSources, onlyDirectories: true })
     for (const folder of matches) {
       const p = join(ctx.modSources, folder)
       const modId = await resolveModId(p)

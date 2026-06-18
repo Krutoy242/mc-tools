@@ -2,6 +2,7 @@ import type { InstanceAddon, MinecraftInstance } from './types.js'
 import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import { join } from 'pathe'
+import { glob } from 'tinyglobby'
 import { readJarMcmodInfo } from './jar.js'
 
 /** Read and parse `minecraftinstance.json` from `mcDir`, or `null` if absent. */
@@ -52,8 +53,7 @@ export async function findModJar(
   }
 
   // Fallback: scan jars for a matching modid.
-  const { default: glob } = await import('fast-glob')
-  const jars = await glob('*.jar', { cwd: modsDir, suppressErrors: true })
+  const jars = await glob('*.jar', { cwd: modsDir })
   for (const file of jars) {
     const jarPath = join(modsDir, file)
     const entries = await readJarMcmodInfo(jarPath)

@@ -14,17 +14,20 @@ import { z } from 'zod'
 export interface Branch { [mod: string]: string | Branch | (string | Branch)[] }
 
 const BranchSchema: z.ZodType<Branch> = z.lazy(() =>
-  z.record(z.union([
+  z.record(
     z.string(),
-    z.array(z.union([z.string(), BranchSchema])),
-    BranchSchema,
-  ]))
+    z.union([
+      z.string(),
+      z.array(z.union([z.string(), BranchSchema])),
+      BranchSchema,
+    ])
+  )
 )
 
 export const ReducerConfigSchema = z.object({
   dependencies: BranchSchema.default({}),
   dependents  : BranchSchema.default({}),
-  forks       : z.record(z.coerce.number(), z.array(z.number())).default({}),
+  forks       : z.record(z.string(), z.array(z.number())).default({}),
 })
 
 export type ReducerConfig = z.infer<typeof ReducerConfigSchema>

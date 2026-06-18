@@ -1,7 +1,7 @@
 import type { Ctx } from './types.js'
 import chalk from 'chalk'
-import glob from 'fast-glob'
 import { join } from 'pathe'
+import { glob } from 'tinyglobby'
 import { execAsync, verifySourceFolder } from './git.js'
 
 /**
@@ -13,8 +13,8 @@ export async function decompileMod(jarPath: string, displayName: string, ctx: Ct
   const outDir = join(ctx.modSources, `${displayName.replace(/[^\w-]/g, '')}-decompiled`)
   ctx.log(chalk.blue(`Decompiling ${jarPath} → ${outDir}...`))
 
-  const cfrJars = await glob('cfr*.jar', { cwd: ctx.mcDir, absolute: true, suppressErrors: true })
-  const vfJars = await glob('vineflower*.jar', { cwd: ctx.modSources, absolute: true, suppressErrors: true })
+  const cfrJars = await glob('cfr*.jar', { cwd: ctx.mcDir, absolute: true })
+  const vfJars = await glob('vineflower*.jar', { cwd: ctx.modSources, absolute: true })
 
   let decompiled = false
   if (cfrJars.length > 0) {

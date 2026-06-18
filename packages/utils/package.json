@@ -20,52 +20,41 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./natural-sort": {
-      "types": "./dist/natural-sort.d.ts",
-      "import": "./dist/natural-sort.mjs",
-      "require": "./dist/natural-sort.js"
+      "types": "./dist/natural-sort.d.mts",
+      "import": "./dist/natural-sort.mjs"
     },
     "./args": {
-      "types": "./dist/args.d.ts",
-      "import": "./dist/args.mjs",
-      "require": "./dist/args.js"
+      "types": "./dist/args.d.mts",
+      "import": "./dist/args.mjs"
     },
     "./lang": {
-      "types": "./dist/lang.d.ts",
-      "import": "./dist/lang.mjs",
-      "require": "./dist/lang.js"
+      "types": "./dist/lang.d.mts",
+      "import": "./dist/lang.mjs"
     },
     "./ftbquests": {
-      "types": "./dist/mods/ftbquests.d.ts",
-      "import": "./dist/mods/ftbquests.mjs",
-      "require": "./dist/mods/ftbquests.js"
+      "types": "./dist/mods/ftbquests.d.mts",
+      "import": "./dist/mods/ftbquests.mjs"
     },
     "./tellme": {
-      "types": "./dist/mods/tellme.d.ts",
-      "import": "./dist/mods/tellme.mjs",
-      "require": "./dist/mods/tellme.js"
+      "types": "./dist/mods/tellme.d.mts",
+      "import": "./dist/mods/tellme.mjs"
     }
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "tsdown",
     "coverage": "vitest run --coverage",
     "test": "vitest run --passWithNoTests"
   },
   "peerDependencies": {
     "csv-parse": "^5.0.0",
-    "ftbq-nbt": "^1.4.1",
-    "tinyglobby": "^0.2.0",
-    "yargs": "^17.7.1"
+    "ftbq-nbt": "^1.4.1"
   },
   "peerDependenciesMeta": {
     "csv-parse": {
@@ -73,23 +62,14 @@
     },
     "ftbq-nbt": {
       "optional": true
-    },
-    "tinyglobby": {
-      "optional": true
-    },
-    "yargs": {
-      "optional": true
     }
   },
   "dependencies": {
     "consola": "^3.1.0",
-    "fast-glob": "^3.2.12"
+    "tinyglobby": "^0.2.14"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.24",
     "csv-parse": "^5.3.8",
-    "ftbq-nbt": "^1.4.1",
-    "tinyglobby": "^0.2.14",
-    "yargs": "^17.7.1"
+    "ftbq-nbt": "^1.4.1"
   }
 }

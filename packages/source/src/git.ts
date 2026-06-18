@@ -3,7 +3,7 @@ import child_process from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { promisify } from 'node:util'
 import chalk from 'chalk'
-import glob from 'fast-glob'
+import { glob } from 'tinyglobby'
 
 export const execAsync = promisify(child_process.exec)
 
@@ -16,7 +16,7 @@ const MIN_JAVA_FILES = 3
  */
 export async function verifySourceFolder(dir: string, log: Logger): Promise<boolean> {
   try {
-    const javaFiles = await glob('**/*.java', { cwd: dir, onlyFiles: true, suppressErrors: true })
+    const javaFiles = await glob('**/*.java', { cwd: dir })
     if (javaFiles.length >= MIN_JAVA_FILES) return true
     log(chalk.yellow(`Folder ${dir} found but contains only ${javaFiles.length} .java files (requires >= ${MIN_JAVA_FILES}).`))
     return false

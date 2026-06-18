@@ -1,14 +1,12 @@
-import fse from 'fs-extra'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCachePath } from '../src/cache.js'
 import { fetchMod, fetchMods, loadFromCF } from '../src/mods.js'
 
-vi.mock('fs-extra', () => ({
-  default: {
-    readJsonSync : vi.fn(),
-    writeJsonSync: vi.fn(),
-    mkdirpSync   : vi.fn(),
-  },
+vi.mock('node:fs', () => ({
+  mkdirSync    : vi.fn(),
+  readFileSync : vi.fn(),
+  writeFileSync: vi.fn(),
 }))
 
 const getModsMock = vi.fn()
@@ -32,7 +30,7 @@ describe('fetchMods', () => {
   })
 
   it('should fetch mods from CF when cache is empty', async () => {
-    vi.mocked(fse.readJsonSync).mockImplementation(() => {
+    vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('File not found')
     })
     getModsMock.mockResolvedValue({
@@ -45,14 +43,14 @@ describe('fetchMods', () => {
 
     expect(mods).toHaveLength(1)
     expect(mods[0].name).toBe('Mod 1')
-    expect(fse.readJsonSync).toHaveBeenCalledWith('test-cache.json')
+    expect(readFileSync).toHaveBeenCalledWith('test-cache.json', 'utf8')
     expect(getModsMock).toHaveBeenCalledWith({ modIds: [1] })
-    expect(fse.writeJsonSync).toHaveBeenCalled()
+    expect(writeFileSync).toHaveBeenCalled()
   })
 
   it('should return mods from cache if valid', async () => {
     const cachedMod = { id: 1, name: 'Mod 1', __lastUpdated: Date.now() }
-    vi.mocked(fse.readJsonSync).mockReturnValue({ 1: cachedMod })
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ 1: cachedMod }))
 
     const mods = await fetchMods([1], 'fake-api-key')
 
@@ -63,7 +61,7 @@ describe('fetchMods', () => {
 
   it('should refetch mods from CF if cache is expired', async () => {
     const expiredMod = { id: 1, name: 'Mod 1', __lastUpdated: Date.now() - (100 * 60 * 60 * 1000) } // 100 hours ago
-    vi.mocked(fse.readJsonSync).mockReturnValue({ 1: expiredMod })
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ 1: expiredMod }))
     getModsMock.mockResolvedValue({
       data: {
         data: [{ id: 1, name: 'Mod 1 (Updated)' }],
@@ -79,7 +77,7 @@ describe('fetchMods', () => {
 
   it('should handle mixed cached and non-cached mods', async () => {
     const cachedMod = { id: 1, name: 'Mod 1', __lastUpdated: Date.now() }
-    vi.mocked(fse.readJsonSync).mockReturnValue({ 1: cachedMod })
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ 1: cachedMod }))
     getModsMock.mockResolvedValue({
       data: {
         data: [{ id: 2, name: 'Mod 2' }],
@@ -95,7 +93,7 @@ describe('fetchMods', () => {
   })
 
   it('should throw error if CF fetch fails', async () => {
-    vi.mocked(fse.readJsonSync).mockImplementation(() => {
+    vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('File not found')
     })
     getModsMock.mockResolvedValue({
@@ -111,7 +109,7 @@ describe('fetchMods', () => {
     // @ts-expect-error - forcing undefined to test fallback
     setCachePath(undefined)
 
-    vi.mocked(fse.readJsonSync).mockImplementation(() => {
+    vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('File not found')
     })
     getModsMock.mockResolvedValue({ data: { data: [{ id: 1, name: 'Mod 1' }] } })
@@ -119,18 +117,18 @@ describe('fetchMods', () => {
     // Test with process.env
     process.env.MCTOOLS_CF_CACHE = 'env-cache.json'
     await fetchMods([1], 'fake-api-key')
-    expect(fse.readJsonSync).toHaveBeenCalledWith('env-cache.json')
+    expect(readFileSync).toHaveBeenCalledWith('env-cache.json', 'utf8')
 
     // Test with default
     delete process.env.MCTOOLS_CF_CACHE
     await fetchMods([1], 'fake-api-key')
-    expect(fse.readJsonSync).toHaveBeenCalledWith(expect.stringContaining('curseforge-mods.json'))
+    expect(readFileSync).toHaveBeenCalledWith(expect.stringContaining('curseforge-mods.json'), 'utf8')
   })
 
   it('should log to stdout if doLogging is true', async () => {
     const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
 
-    vi.mocked(fse.readJsonSync).mockReturnValue({})
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({}))
     getModsMock.mockResolvedValue({ data: { data: [] } })
 
     try {
@@ -144,7 +142,7 @@ describe('fetchMods', () => {
 
   it('should handle cached mod without __lastUpdated', async () => {
     const cachedModWithoutDate = { id: 1, name: 'Mod 1' } // Missing __lastUpdated
-    vi.mocked(fse.readJsonSync).mockReturnValue({ 1: cachedModWithoutDate })
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ 1: cachedModWithoutDate }))
     getModsMock.mockResolvedValue({
       data: {
         data: [{ id: 1, name: 'Mod 1 (Updated)' }],
@@ -167,7 +165,7 @@ describe('fetchMod', () => {
   })
 
   it('should fetch a single mod', async () => {
-    vi.mocked(fse.readJsonSync).mockImplementation(() => {
+    vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('File not found')
     })
     getModsMock.mockResolvedValue({

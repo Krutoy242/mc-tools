@@ -21,14 +21,10 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "bin": {
     "mctools-tcon": "./src/cli.ts"
   },
@@ -36,19 +32,18 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "tsdown",
     "coverage": "vitest run --coverage",
     "test": "vitest run"
   },
   "dependencies": {
+    "citty": "^0.1.6",
     "csv-parse": "^5.3.8",
-    "fast-glob": "^3.2.12",
     "table": "^6.8.1",
-    "yargs": "^17.7.1"
+    "tinyglobby": "^0.2.14"
   },
   "devDependencies": {
-    "@mctools/utils": "workspace:*",
-    "@types/yargs": "^17.0.24"
+    "@mctools/utils": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

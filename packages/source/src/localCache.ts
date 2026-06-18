@@ -1,8 +1,8 @@
 import type { Logger } from './types.js'
 import fs from 'node:fs/promises'
 import chalk from 'chalk'
-import glob from 'fast-glob'
 import { basename, join } from 'pathe'
+import { glob } from 'tinyglobby'
 import * as YAML from 'yaml'
 import { getLatestCommitDate } from './git.js'
 
@@ -26,7 +26,7 @@ export async function updateIndexCache(modSources: string, indexPath: string, lo
 
   const metaFiles = await glob(
     ['*/src/main/resources/mcmod.info', '*/resources/mcmod.info', '*/mcmod.info'],
-    { cwd: modSources, suppressErrors: true }
+    { cwd: modSources }
   )
   for (const metaFile of metaFiles) {
     try {
@@ -42,7 +42,7 @@ export async function updateIndexCache(modSources: string, indexPath: string, lo
     catch { /* ignore unparseable mcmod.info */ }
   }
 
-  const propFiles = await glob('*/gradle.properties', { cwd: modSources, suppressErrors: true })
+  const propFiles = await glob('*/gradle.properties', { cwd: modSources })
   for (const propFile of propFiles) {
     try {
       const match = (await fs.readFile(join(modSources, propFile), 'utf8')).match(/(?:^|\n)\s*modId\s*=\s*(\S+)/)
@@ -82,7 +82,7 @@ export async function resolveModId(folderPath: string): Promise<string | null> {
   }
 
   try {
-    const javaFiles = await glob('src/main/java/**/*.java', { cwd: folderPath, suppressErrors: true })
+    const javaFiles = await glob('src/main/java/**/*.java', { cwd: folderPath })
     for (const javaFile of javaFiles.slice(0, 20)) {
       const match = (await fs.readFile(join(folderPath, javaFile), 'utf8')).match(/@Mod\s*\(\s*(?:modid\s*=\s*)?"([^"]+)"/)
       if (match) return match[1]

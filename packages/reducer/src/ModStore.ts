@@ -4,9 +4,9 @@ import type { MCInstance } from './minecraftinstance.js'
 import type { ModdedAddon } from './Mod.js'
 import { readFile } from 'node:fs/promises'
 import { naturalSort } from '@mctools/utils/natural-sort'
-import fast_glob from 'fast-glob'
 import levenshtein from 'fast-levenshtein'
 import { join, resolve } from 'pathe'
+import { glob, globSync } from 'tinyglobby'
 
 import { DependencyLevel, Mod, purify } from './Mod.js'
 
@@ -219,12 +219,12 @@ function flatTree(tree: Branch): [string, string][] {
 async function fetchInModsDirAsync(modsPath: string, patterns: string[]): Promise<string[]> {
   const all: string[] = []
   for (const p of patterns) {
-    const found = await fast_glob(p, { dot: true, cwd: resolve(modsPath) })
+    const found = await glob(p, { dot: true, cwd: resolve(modsPath) })
     all.push(...found)
   }
   if (!all.length) {
     // Re-check with the canonical pattern: the dir might exist but have no jars.
-    const baseline = await fast_glob('*.jar?(.disabled)', { dot: true, cwd: resolve(modsPath) })
+    const baseline = await glob('*.jar?(.disabled)', { dot: true, cwd: resolve(modsPath) })
     if (!baseline.length)
       throw new Error(`${modsPath} doesn't have mods in it (files ending with .jar and/or .disabled)`)
   }
@@ -234,7 +234,7 @@ async function fetchInModsDirAsync(modsPath: string, patterns: string[]): Promis
 /** Kept as a sync helper for the smoke test, mirrors the async version above. */
 export function getFetchInModsDir(mods: string): (globPattern: string) => string[] {
   function fetchInModsDir(globPattern: string): string[] {
-    return fast_glob.sync(globPattern, { dot: true, cwd: resolve(mods) })
+    return globSync(globPattern, { dot: true, cwd: resolve(mods) })
   }
   if (!fetchInModsDir('*.jar?(.disabled)').length)
     throw new Error(`${mods} doesn't have mods in it (files ends with .jar and/or .disabled)`)

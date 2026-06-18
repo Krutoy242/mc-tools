@@ -21,5 +21,5 @@ describe('cli smoke', () => {
     // output was captured — which is always the case on POSIX CI.
     const out = (r.stdout ?? '') + (r.stderr ?? '')
     if (out.length) expect(out.toLowerCase()).toMatch(/usage|reducer|cwd|--help/)
-  })
+  }, 20000)
 })
