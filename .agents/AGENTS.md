@@ -37,7 +37,8 @@ development and maintenance. TypeScript, ESM-only, pnpm workspaces.
   (`defineMctoolsConfig`) — the single source of truth shared with the
   Enigmatica2Expert-Extended modpack repo (one config, one style)
 - **CI/CD**: GitHub Actions — `ci.yml` (build + test + lint on Ubuntu &
-  Windows) and `release.yml` (`semantic-release` + `semantic-release-monorepo`)
+  Windows) and `release.yml` (`semantic-release` with a dependency-aware
+  per-package filter wired in `release.config.js`)
 
 ## Conventions
 
@@ -50,4 +51,7 @@ development and maintenance. TypeScript, ESM-only, pnpm workspaces.
 - **Releases are commit-driven**: only `fix:`/`feat:` (Conventional Commits)
   bump versions; `build:`/`ci:`/`chore:` do not. Per-package git tags use the
   `@scope/name-vX.Y.Z` format.
+- **Releases are dependency-aware**: a package is published only when a commit
+  touches its own folder or one of its (transitive) `workspace:` dependencies —
+  so a change in `@mctools/utils` republishes every consumer that bundles it.
 - **Line endings are LF** (`.gitattributes`); tests assume LF fixtures.

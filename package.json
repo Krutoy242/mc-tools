@@ -55,7 +55,7 @@
     "lint-staged": "^15.5.2",
     "sanitize-filename": "^1.6.4",
     "semantic-release": "^24.2.9",
-    "semantic-release-monorepo": "^8.0.2",
+    "semantic-release-plugin-decorators": "^4.0.0",
     "tinyglobby": "^0.2.14",
     "ts-deepmerge": "^7.0.3",
     "tsdown": "^0.22.3",
