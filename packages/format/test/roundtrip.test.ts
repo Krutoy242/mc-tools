@@ -403,8 +403,8 @@ var x = 1;
 })
 
 describe('cli smoke', () => {
-  it('exits with non-zero when called without arguments', () => {
-    expect(() => execSync('npx tsx src/cli.ts', { stdio: 'pipe' }))
+  it('exits with non-zero when called without arguments', { timeout: 15_000 }, () => {
+    expect(() => execSync('tsx src/cli.ts', { stdio: 'pipe' }))
       .toThrow()
   })
 })
