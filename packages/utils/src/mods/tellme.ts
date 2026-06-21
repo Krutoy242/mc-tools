@@ -8,7 +8,7 @@ export function getCSV(filename: string) {
 }
 
 export function getItemNames() {
-  const csv = getCSV(globSync('config/tellme/items-csv*.csv')[0])
+  const csv = getCSV(globSync('config/tellme/items-csv*.csv').at(-1)!)
   return csv.reduce(
     (result, o) => {
       (result[o['Registry name']] ??= {})[o['Meta/dmg']] = o['Display name']
