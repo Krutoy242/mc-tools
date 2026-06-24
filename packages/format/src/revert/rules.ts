@@ -154,10 +154,13 @@ export const RULES: Rule[] = [
 
   // --- Loops ---------------------------------------------------------------
   ['FOR_TO',    /for \(let (?<v>[^=\s]+)\s*=\s*(?<from>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\s*<\s*(?<to>[^;\s]+(?:\s+[^;\s]+)*)\s*;\s*\k<v>\+\+\)\s*\{/g,    ({ v, from, to }) => {
-    // Wrap only when `from` has a depth-0 binary op — `min(-1, 1)` looks
-    // operator-laden but its `-`/`,` are inside the call's own parens, so a
-    // bracket-aware walk keeps the original unparenthesised form.
-    return `for ${v} in ${hasTopLevelBinaryOp(from) ? `(${from})` : from} .. ${to} {`
+    // Wrap when `from` has a depth-0 binary op, AND when it starts with
+    // unary `-`. In ZS the `..` int-range operator binds tighter than `-`,
+    // so `-a .. b` would be parsed as `-(a .. b)`. `hasTopLevelBinaryOp`
+    // only catches binary operators; unary `-` at the start is invisible to
+    // it. A trailing `-` in a binary op at depth 0 already triggers the
+    // earlier branch, so this second check is narrow.
+    return `for ${v} in ${hasTopLevelBinaryOp(from) || from.startsWith('-') ? `(${from})` : from} .. ${to} {`
   }],
   ['FOR_IN_PAIR',    /for \(const \[(?<v>[^\]]+)\] of (?<from>[\s\S]+?)\.entries\(\)\/\*\*\/\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
   ['FOR_IN',    /for \(const (?<v>\S+) of (?<from>[\s\S]+?)\)\s*\{/g,    ({ v, from }) => `for ${v} in ${stripOuterParens(from.trim())} {`],
