@@ -3,6 +3,32 @@ import { distance } from 'fastest-levenshtein'
 import { basename } from 'pathe'
 import { parseDzs } from './dzs.ts'
 
+const REGEX_META = /[()|*+?[^{$]/
+
+export function isRegexQuery(query: string): boolean {
+  return /^\/.+\/[a-z]*$/i.test(query) || REGEX_META.test(query)
+}
+
+export function resolveRegex(raw: string, sources: Source[]): Match[] {
+  let pattern = raw
+  let flags = 'i'
+  const wrapped = raw.match(/^\/(.+)\/([a-z]*)$/)
+  if (wrapped) {
+    pattern = wrapped[1]
+    if (wrapped[2]) flags = wrapped[2]
+  }
+  const regex = new RegExp(pattern, flags)
+  const results: Match[] = []
+  for (const source of sources) {
+    for (const file of source.files) {
+      const path = file.replace(/\.dzs$/, '')
+      if (regex.test(path))
+        results.push({ source, file })
+    }
+  }
+  return results
+}
+
 export interface Match {
   source: Source
   file  : string
@@ -62,15 +88,13 @@ function matchClass(source: Source, locator: string): string[] {
 }
 
 async function preferDefinitions(source: Source, files: string[]): Promise<string[]> {
-  if (files.length <= 1)
-    return files
   const kept: string[] = []
   for (const f of files) {
     const { isExpansion } = await parseDzs(source, f)
     if (!isExpansion)
       kept.push(f)
   }
-  return kept.length ? kept : files
+  return kept
 }
 
 async function searchSources(sources: Source[], locator: string): Promise<Match[]> {

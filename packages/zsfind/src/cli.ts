@@ -7,8 +7,8 @@ import chalk from 'chalk'
 import { defineCommand, runMain } from 'citty'
 import consola from 'consola'
 import { resolve } from 'pathe'
-import { expandTypes, findMembers, parseDzs } from './dzs.ts'
-import { resolveQuery, suggest } from './resolve.ts'
+import { expandTypes, findMembers, isExpansionFile, parseDzs } from './dzs.ts'
+import { isRegexQuery, resolveQuery, resolveRegex, suggest } from './resolve.ts'
 import { loadSources } from './sources.ts'
 
 const MAX_FILE_LINES = 200
@@ -21,7 +21,11 @@ function header(text: string) {
 }
 
 function classLabel(m: Match): string {
-  return `${m.source.label}: ${m.file}`
+  return m.source.native ? `native.${classPath(m.file)}` : classPath(m.file)
+}
+
+function classPath(file: string): string {
+  return file.replace(/\.dzs$/, '').replace(/\//g, '.')
 }
 
 async function printClass(match: Match) {
@@ -85,6 +89,31 @@ async function pickInteractive(query: string, matches: Match[]): Promise<Match |
 }
 
 async function handleQuery(query: string, sources: Source[], enqueue: (q: string) => void) {
+  if (isRegexQuery(query)) {
+    const allMatches = resolveRegex(query, sources)
+    if (allMatches.length === 0) {
+      consola.error(`"${query}" not found.`)
+      return
+    }
+    if (allMatches.length > 25) {
+      consola.warn(`Found ${allMatches.length} matches, narrow your query.`)
+      return
+    }
+    const matches: Match[] = []
+    for (const m of allMatches) {
+      if (!await isExpansionFile(m.source, m.file))
+        matches.push(m)
+    }
+    if (matches.length === 0) {
+      consola.error(`"${query}" not found.`)
+      return
+    }
+    header(`Regex: ${matches.length} matches, pick one:`)
+    for (const m of matches)
+      console.log(`  ${chalk.cyan(classLabel(m))}`)
+    return
+  }
+
   const { matches, member, lastSeg } = await resolveQuery(query, sources)
 
   if (matches.length === 0) {
@@ -93,7 +122,7 @@ async function handleQuery(query: string, sources: Source[], enqueue: (q: string
     if (hints.length) {
       consola.info('Did you mean:')
       for (const h of hints)
-        console.log(`  ${chalk.cyan(h.base)} ${chalk.dim(`(${h.source.label}: ${h.file})`)}`)
+        console.log(`  ${chalk.cyan(h.base)} ${chalk.dim(`(${h.source.native ? 'native.' : ''}${classPath(h.file)})`)}`)
     }
     return
   }
@@ -132,6 +161,7 @@ const main = defineCommand({
       + '  \u2022 a short name              IItemStack   EntityPlayer\n'
       + '  \u2022 a partial path            crafttweaker.item.IItemStack   net/minecraft/item/ItemStack\n'
       + '  \u2022 a member (field/method)   IItemStack.withTag   EntityPlayer.gameProfile\n'
+      + '  \u2022 a regex pattern            IItem(Stack|Definition)   .*Player\n'
       + '  \u2022 many at once              IItemStack.withTag IData.asString IBlockState',
   },
   args: {

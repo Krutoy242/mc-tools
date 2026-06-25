@@ -2,6 +2,19 @@ import type { Source } from './sources.ts'
 import fs from 'fs-extra'
 import { basename, join } from 'pathe'
 
+const expansionCache = new Map<string, boolean>()
+
+export async function isExpansionFile(source: Source, file: string): Promise<boolean> {
+  const key = `${source.id}:${file}`
+  let val = expansionCache.get(key)
+  if (val === undefined) {
+    const { isExpansion } = await parseDzs(source, file)
+    expansionCache.set(key, isExpansion)
+    val = isExpansion
+  }
+  return val
+}
+
 export interface ParsedDzs {
   source       : Source
   file         : string
