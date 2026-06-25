@@ -1,6 +1,7 @@
 import type { Ctx, InstanceAddon, MinecraftInstance } from './types.js'
 import { fetchMod, fetchMods } from '@mctools/curseforge'
 import chalk from 'chalk'
+import { distance } from 'fastest-levenshtein'
 import { join } from 'pathe'
 import { cloneRepo, execAsync, verifySourceFolder } from './git.js'
 import { addonAuthor, findAddon } from './instance.js'
@@ -259,10 +260,37 @@ export async function findRepoViaGemini(addon: InstanceAddon, ctx: Ctx): Promise
 export async function findRepoAndClone(query: string, instance: MinecraftInstance, ctx: Ctx): Promise<string | null> {
   const addon = findAddon(instance, query)
   if (!addon) {
-    ctx.log(chalk.yellow(`Mod matching '${query}' not found in minecraftinstance.json.`))
+    const q = query.toLowerCase()
+    const scored = instance.installedAddons
+      .map(a => ({
+        addon: a,
+        dist : Math.min(
+          distance(q, a.name.toLowerCase()),
+          distance(q, a.addonID.toString()),
+          distance(q, a.fileNameOnDisk.toLowerCase().replace(/\.jar$/, ''))
+        ),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 5)
+
+    if (scored.length >= 1) {
+      ctx.log(chalk.yellow(`Mod matching '${query}' not found. Did you mean:`))
+      for (const s of scored) {
+        ctx.log(chalk.yellow(`  ${s.addon.name} (AddonID: ${s.addon.addonID})`))
+      }
+    }
+    else {
+      ctx.log(chalk.yellow(`Mod matching '${query}' not found in minecraftinstance.json.`))
+    }
     return null
   }
   ctx.log(chalk.green(`Found mod: ${addon.name} (AddonID: ${addon.addonID})`))
+
+  const ql = query.toLowerCase()
+  const nl = addon.name.toLowerCase()
+  if (ql !== nl && !nl.includes(ql) && !ql.includes(nl) && ql !== addon.addonID.toString()) {
+    ctx.log(chalk.yellow('Mod ID and folder name may differ (likely cause: fork)'))
+  }
 
   const repoUrl = await getRepoUrl(addon, ctx)
   if (!repoUrl) {
