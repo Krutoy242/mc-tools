@@ -108,7 +108,7 @@ export async function fetchIntermediateFileChangelogs(
   maxFiles = 15,
   concurrency = 15,
   includeExtraBefore?: boolean
-): Promise<{ changelogs: FileChangelog[], extraBefore?: FileChangelog }> {
+): Promise<{ changelogs: FileChangelog[], extraBefore?: FileChangelog, totalCount: number }> {
   const client = getClient(cfApiKey)
   const startFiles = performance.now()
 
@@ -120,7 +120,7 @@ export async function fetchIntermediateFileChangelogs(
   // Load page 0 first to get total count and first batch of files
   const page0 = await client.getModFiles({ modId, ...gameVersion ? { gameVersion } : {}, index: 0, pageSize })
   const files0 = page0.data?.data ?? []
-  if (!files0.length) return { changelogs: [] }
+  if (!files0.length) return { changelogs: [], totalCount: 0 }
   allFiles.push(...files0)
 
   const totalCount = (page0.data as unknown as { pagination?: { totalCount?: number } })?.pagination?.totalCount ?? files0.length
@@ -137,7 +137,7 @@ export async function fetchIntermediateFileChangelogs(
     }
   }
 
-  if (!allFiles.length) return { changelogs: [] }
+  if (!allFiles.length) return { changelogs: [], totalCount: 0 }
 
   // Sort by date descending (newest first; files without valid dates go to the end)
   allFiles.sort((a, b) => {
@@ -150,7 +150,7 @@ export async function fetchIntermediateFileChangelogs(
 
   const oldFile = allFiles.find(f => f.id === oldFileId)
   const newFile = allFiles.find(f => f.id === newFileId)
-  if (!oldFile || !newFile) return { changelogs: [] }
+  if (!oldFile || !newFile) return { changelogs: [], totalCount: 0 }
 
   const oldDate = new Date(oldFile.fileDate).getTime()
   const newDate = new Date(newFile.fileDate).getTime()
@@ -161,7 +161,10 @@ export async function fetchIntermediateFileChangelogs(
     return t > oldDate && t <= newDate
   })
 
-  if (!intermediateFiles.length) return { changelogs: [] }
+  if (!intermediateFiles.length) return { changelogs: [], totalCount: 0 }
+
+  // True number of files between the two versions, before the display cap.
+  const intermediateTotal = intermediateFiles.length
 
   // Cap to maxFiles most recent to avoid drowning in daily updates
   if (intermediateFiles.length > maxFiles) {
@@ -226,5 +229,5 @@ export async function fetchIntermediateFileChangelogs(
   }
 
   if (doLogging) process.stdout.write(` (${fmtMs(performance.now() - startChangelogs)})\n`)
-  return { changelogs: result, extraBefore }
+  return { changelogs: result, extraBefore, totalCount: intermediateTotal }
 }

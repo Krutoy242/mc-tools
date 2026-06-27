@@ -14,7 +14,11 @@ export function registerHelpers(): void {
   Handlebars.registerHelper('stripNewlines', (str: string) => String(str).replace(/[\r\n]+/g, ' '))
 }
 
+/** Resolve the template source string, falling back to the bundled default. */
+export function resolveTemplateSource(template?: string): string {
+  return template ?? readFileSync(relative('../default.hbs'), 'utf8')
+}
+
 export function compileTemplate(template?: string): HandlebarsTemplateDelegate {
-  const source = template ?? readFileSync(relative('../default.hbs'), 'utf8')
-  return Handlebars.compile(source)
+  return Handlebars.compile(resolveTemplateSource(template))
 }

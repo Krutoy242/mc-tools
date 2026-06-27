@@ -44,8 +44,10 @@ export interface ModListOpts {
 export type Cf2Addon = Awaited<ReturnType<typeof fetchMods>>[number]
 
 export type EnrichedAddon = InstalledAddon & {
-  cf2Addon? : Cf2Addon
-  changelog?: string
+  cf2Addon?       : Cf2Addon
+  changelog?      : string
+  /** Version-delta marker for the template's changelog section: `↑`×N or `↓`×N. */
+  changelogArrows?: string
 }
 
 export type EnrichedDiff = AddonDifference & {

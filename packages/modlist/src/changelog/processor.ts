@@ -75,24 +75,50 @@ function extractVersionFromFilename(filename: string): string | undefined {
   return matches ? matches[matches.length - 1] : undefined
 }
 
+export interface ModChangelogResult {
+  /** Rendered changelog HTML (empty when nothing was found). */
+  content: string
+  /** Direction marker: `↑`×N for an upgrade, `↓`×N for a downgrade. N = files between versions. */
+  arrows : string
+}
+
 export async function buildModChangelog(
   update: AddonDifference,
   key: string,
   gameVersion: string,
   verbose?: boolean,
   oldChangelogHtml?: string
-): Promise<string> {
+): Promise<ModChangelogResult> {
   const modId = update.now.addonID
-  const oldFileId = update.was.installedFile.id
   const newFileId = update.now.installedFile.id
+
+  // Detect downgrade by upload date: when the freshly installed file is older
+  // than the previous one, versions were rolled back.
+  const oldDate = new Date(update.was.installedFile.fileDate).getTime()
+  const newDate = new Date(update.now.installedFile.fileDate).getTime()
+  const isDowngrade = Number.isFinite(oldDate) && Number.isFinite(newDate) && newDate < oldDate
+
+  // Intermediate files are always fetched from the lower to the higher version,
+  // so for a downgrade the "low" baseline is the now-installed (`now`) file.
+  const lowFile = isDowngrade ? update.now : update.was
+  const highFile = isDowngrade ? update.was : update.now
+  const baselineFileId = lowFile.installedFile.id
+
+  // Thin arrows up to 10 files; beyond that a single heavy arrow + `xN`.
+  const arrowChar = isDowngrade ? '↓' : '↑'
+  const thickArrow = isDowngrade ? '⬇' : '⬆'
+  const arrowsFor = (count: number): string => {
+    const n = Math.max(1, count)
+    return n > 10 ? `${thickArrow}x${n}` : arrowChar.repeat(n)
+  }
 
   const t0 = performance.now()
 
   // Fetch all intermediate file changelogs
-  const { changelogs: fileChangelogs, extraBefore } = await fetchIntermediateFileChangelogs(
+  const { changelogs: fileChangelogs, extraBefore, totalCount } = await fetchIntermediateFileChangelogs(
     modId,
-    oldFileId,
-    newFileId,
+    baselineFileId,
+    highFile.installedFile.id,
     key,
     verbose,
     gameVersion,
@@ -105,7 +131,7 @@ export async function buildModChangelog(
     if (verbose) process.stdout.write(`[${modId}] No intermediate changelogs (${formatDuration(performance.now() - t0)})\n`)
     // Fallback: when old file is from a different project (e.g. fork/replacement),
     // fetch the new file changelog directly
-    if (oldFileId !== newFileId) {
+    if (baselineFileId !== highFile.installedFile.id) {
       const newChangelogMap = await fetchChangelogs([{ modId, fileId: newFileId }], key)
       const newChangelog = newChangelogMap.get(newFileId)
       if (newChangelog) {
@@ -115,11 +141,11 @@ export async function buildModChangelog(
           if (cleaned.length > MAX_COMBINED_LENGTH) {
             cleaned = truncateToLength(cleaned, MAX_COMBINED_LENGTH)
           }
-          return cleaned
+          return { content: cleaned, arrows: arrowsFor(1) }
         }
       }
     }
-    return ''
+    return { content: '', arrows: '' }
   }
 
   // Phase 1: Normalize all changelogs (sanitize + markdown conversion + cleanup)
@@ -142,8 +168,8 @@ export async function buildModChangelog(
       if (isPlaceholderChangelog(item.content)) {
         const resolved = await resolveExternalChangelog(
           item.content,
-          update.was.installedFile.fileDate,
-          update.now.installedFile.fileDate
+          lowFile.installedFile.fileDate,
+          highFile.installedFile.fileDate
         )
         if (resolved) {
           return { ...item, content: resolved }
@@ -189,19 +215,21 @@ export async function buildModChangelog(
   // Phase 3: Fetch old changelog for overlap detection
   const tOld = performance.now()
   let oldMd = ''
-  if (oldChangelogHtml !== undefined) {
+  // The pre-fetched `oldChangelogHtml` belongs to `was`; for a downgrade the
+  // overlap baseline is the lower (`now`) file, so fetch it explicitly instead.
+  if (oldChangelogHtml !== undefined && !isDowngrade) {
     oldMd = normalizeChangelog(oldChangelogHtml)
   }
   else {
-    const oldChangelogMap = await fetchChangelogs([{ modId, fileId: oldFileId }], key)
-    oldMd = normalizeChangelog(oldChangelogMap.get(oldFileId) ?? '')
+    const oldChangelogMap = await fetchChangelogs([{ modId, fileId: baselineFileId }], key)
+    oldMd = normalizeChangelog(oldChangelogMap.get(baselineFileId) ?? '')
   }
 
   if (oldMd && isPlaceholderChangelog(oldMd)) {
     const resolved = await resolveExternalChangelog(
       oldMd,
-      update.was.installedFile.fileDate,
-      update.now.installedFile.fileDate
+      lowFile.installedFile.fileDate,
+      highFile.installedFile.fileDate
     )
     if (resolved) oldMd = cleanChangelogHtml(resolved)
   }
@@ -209,7 +237,7 @@ export async function buildModChangelog(
 
   // Phase 4: Build processed changelog list
   const allVersions: Array<{ versionName: string, content: string, linkout?: string, mdLinkUrl?: string }> = [
-    { versionName: update.was.installedFile.fileName.replace(/\.jar$/, ''), content: oldMd },
+    { versionName: lowFile.installedFile.fileName.replace(/\.jar$/, ''), content: oldMd },
     ...resolvedChangelogs.map(item => ({
       versionName: item.fileName.replace(/\.jar$/, ''),
       content    : item.content,
@@ -258,12 +286,16 @@ export async function buildModChangelog(
     processed.push({ versionName: item.versionName, content, isLink: false })
   }
 
-  // Phase 7: Format output
-  if (!processed.length) return ''
+  // Phase 7: Format output (arrow count = true files between versions, not the capped list)
+  const arrows = arrowsFor(totalCount)
+  if (!processed.length) return { content: '', arrows: '' }
+
+  // For a downgrade, emit versions in reverse (oldest first) order.
+  if (isDowngrade) processed.reverse()
 
   // Single version: just return content
   if (processed.length === 1 && !processed[0].isLink) {
-    return processed[0].content.replace(/\r?\n/g, ' ').trim()
+    return { content: processed[0].content.replace(/\r?\n/g, ' ').trim(), arrows }
   }
 
   const parts: string[] = []
@@ -297,5 +329,5 @@ export async function buildModChangelog(
 
   if (verbose) process.stdout.write(`[${modId}] Changelog built (${formatDuration(performance.now() - t0)})\n`)
 
-  return result.replace(/\r?\n/g, ' ').trim()
+  return { content: result.replace(/\r?\n/g, ' ').trim(), arrows }
 }

@@ -12,7 +12,7 @@ import type { AddonDifference, EnrichedAddon, EnrichedDiff, ModListOpts } from '
 import { fetchChangelogs, fetchMods, modListDiff, modListUnion } from '@mctools/curseforge'
 import { buildModChangelog } from './changelog/processor.js'
 import { createSortFn } from './sort.js'
-import { compileTemplate, registerHelpers } from './template.js'
+import { compileTemplate, registerHelpers, resolveTemplateSource } from './template.js'
 import { formatDuration, runConcurrent } from './utils/misc.js'
 
 export type { ModListOpts } from './types.js'
@@ -63,6 +63,11 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
 
   log(` done (${formatDuration(performance.now() - tDiff)})\n`)
 
+  // Changelogs trigger a flood of CurseForge requests, so only fetch them when
+  // the template actually renders a `changelog` field.
+  const templateSource = resolveTemplateSource(opts.template)
+  const usesChangelog = /\bchangelog\b/i.test(templateSource)
+
   const cursedMap = new Map<number, Awaited<ReturnType<typeof fetchMods>>[number]>()
   if (opts.key) {
     log('Asking Curseforge API for mods ... ')
@@ -73,8 +78,8 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
     cursedUnion.forEach(o => cursedMap.set(o.id, o))
   }
 
-  const modChangelogs = new Map<number, string>()
-  if (opts.key && opts.old && opts.changelog !== false && diff.updated?.length) {
+  const modChangelogs = new Map<number, { content: string, arrows?: string }>()
+  if (usesChangelog && opts.key && opts.old && opts.changelog !== false && diff.updated?.length) {
     log('Asking Curseforge API for changelogs ...\n')
 
     // Batch-fetch old file changelogs to avoid N individual requests
@@ -126,7 +131,7 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
             if (looksLikeMarkdown(normalized)) normalized = markdownToHtml(normalized)
             const cleaned = stripGarbagePreamble(cleanChangelogHtml(normalized))
             if (!isEmptyChangelog(cleaned)) {
-              modChangelogs.set(added.addonID, cleaned.replace(/\r?\n/g, ' ').trim())
+              modChangelogs.set(added.addonID, { content: cleaned.replace(/\r?\n/g, ' ').trim() })
             }
           }
           log(`  [added ${idx + 1}/${diff.added!.length}] Mod ${added.addonID} changelog built (${formatDuration(performance.now() - tMod)})\n`)
@@ -140,8 +145,8 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
 
   const sort = createSortFn(opts.sort ?? 'addonID')
 
-  const enrichAddon = (o: InstalledAddon, changelog?: string): EnrichedAddon =>
-    ({ ...o, cf2Addon: cursedMap.get(o.addonID), changelog })
+  const enrichAddon = (o: InstalledAddon, changelog?: { content: string, arrows?: string }): EnrichedAddon =>
+    ({ ...o, cf2Addon: cursedMap.get(o.addonID), changelog: changelog?.content, changelogArrows: changelog?.arrows })
 
   const enrichDiff = (o: AddonDifference): EnrichedDiff => ({
     now: enrichAddon(o.now, modChangelogs.get(o.now.addonID)),
@@ -162,7 +167,7 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
   }
 
   registerHelpers()
-  const builder = compileTemplate(opts.template)
+  const builder = compileTemplate(templateSource)
 
   return builder(enriched)
 }
