@@ -1,6 +1,9 @@
 import { Box, Text } from 'ink'
 import React from 'react'
+import { humanSize } from '../../core/format.js'
 import { useTheme } from '../ThemeContext.js'
+
+export { humanSize }
 
 interface SizeBarProps {
   /** Current value (e.g. mod size in bytes). */
@@ -19,14 +22,6 @@ interface SizeBarProps {
 
 const FRACTIONS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉']
 const FULL = '█'
-
-export function humanSize(bytes: number | undefined): string {
-  if (bytes === undefined) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
-}
 
 /**
  * Horizontal block bar with 1/8-cell fractional fill.

@@ -1,6 +1,7 @@
 import type { InstanceAddon, MinecraftInstance } from './types.js'
 import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
+import { matchAddons } from '@mctools/utils/mod-resolve'
 import { join } from 'pathe'
 import { glob } from 'tinyglobby'
 import { readJarMcmodInfo } from './jar.js'
@@ -17,14 +18,12 @@ export async function loadInstance(mcDir: string): Promise<MinecraftInstance | n
   }
 }
 
-/** Match an addon by exact id, or substring of name / on-disk filename. */
+/**
+ * Match an addon by id, name, or jar filename via the shared
+ * `@mctools/utils/mod-resolve` ranker (best match wins).
+ */
 export function findAddon(instance: MinecraftInstance, query: string): InstanceAddon | undefined {
-  const q = query.toLowerCase()
-  return instance.installedAddons.find(a =>
-    a.addonID.toString() === q
-    || a.name.toLowerCase().includes(q)
-    || a.fileNameOnDisk.toLowerCase().includes(q)
-  )
+  return matchAddons(instance.installedAddons, query)[0]?.addon
 }
 
 /** Resolve the primary author name of an addon, if any. */

@@ -1,0 +1,6 @@
+# Use the portable command launcher with a process name that never matches,
+# so getPid() resolves to "not running" without touching the real system.
+launcher:
+  kind: command
+  processName: mctools-reducer-no-such-process.exe
+  launch: node -e ""

@@ -1,0 +1,5 @@
+[12:00:00] [main/INFO]: Loading mods
+[12:00:01] [main/INFO]: MixinService something was successfully booted
+[12:00:02] [main/WARN]: Enqueued coremod CrashAssistantEntrypoint
+[12:00:03] [main/INFO]: BOOT_DONE world loaded
+[12:00:03] [main/INFO]: BUG_SIGNATURE reproduced in this run

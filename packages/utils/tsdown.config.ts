@@ -10,6 +10,7 @@ export default defineConfig({
     'src/lang.ts',
     'src/mods/ftbquests.ts',
     'src/mods/tellme.ts',
+    'src/mods/resolve.ts',
   ],
   unbundle: true,
   dts     : true,

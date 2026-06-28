@@ -18,7 +18,7 @@ development and maintenance. TypeScript, ESM-only, pnpm workspaces.
 | `@mctools/tcon` | npm | Tweak Tinker Construct materials with CSV tables |
 | `@mctools/format` | npm | Format `.zs` (ZenScript) via the ESLint TypeScript pipeline |
 | `@mctools/eslint-plugin-zs` | npm | Lint/auto-format `.zs` via `@mctools/format`; also exports the shared flat config (`/config`) |
-| `@mctools/reducer` | npm | Partially disable Minecraft mods (Ink TUI) |
+| `@mctools/reducer` | npm | Toggle Minecraft mods + restart/monitor the game. Interactive Ink TUI **and** non-interactive CLI: `restart`, `enable`/`disable`/`only`/`except`, `find`, `kill`, `status`, and automated `binary` search driven by a `conditions.{ts,mjs,js}` file. Pluggable launcher (PrismLauncher default). React never loads in CLI mode. |
 | `@mctools/utils` | **never** | Shared utilities — bundled-only: `private`, inlined into consumers, never published |
 | `@mctools/extension` | VS Code Marketplace (`vsce`) | "MC Tools: Modpack Dev Assistant" — `private` on npm |
 

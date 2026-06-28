@@ -1,0 +1,19 @@
+{
+  "name": "Reducer Test Pack",
+  "installedAddons": [
+    { "addonID": 100, "name": "Core Lib", "installedFile": { "id": 1, "fileNameOnDisk": "core.jar", "fileLength": 50000, "dependencies": [] } },
+    { "addonID": 201, "name": "Alpha", "installedFile": { "id": 2, "fileNameOnDisk": "alpha.jar", "fileLength": 120000, "dependencies": [{ "addonId": 100, "type": 3 }] } },
+    { "addonID": 202, "name": "Beta", "installedFile": { "id": 3, "fileNameOnDisk": "beta.jar", "fileLength": 90000, "dependencies": [{ "addonId": 100, "type": 3 }] } },
+    { "addonID": 203, "name": "Gamma", "installedFile": { "id": 4, "fileNameOnDisk": "gamma.jar", "fileLength": 75000, "dependencies": [{ "addonId": 100, "type": 3 }] } },
+    { "addonID": 204, "name": "Delta", "installedFile": { "id": 5, "fileNameOnDisk": "delta.jar", "fileLength": 60000, "dependencies": [{ "addonId": 100, "type": 3 }] } },
+    { "addonID": 301, "name": "Chain3 A", "installedFile": { "id": 6, "fileNameOnDisk": "c3a.jar", "fileLength": 30000, "dependencies": [] } },
+    { "addonID": 302, "name": "Chain3 B", "installedFile": { "id": 7, "fileNameOnDisk": "c3b.jar", "fileLength": 31000, "dependencies": [{ "addonId": 301, "type": 3 }] } },
+    { "addonID": 303, "name": "Chain3 C", "installedFile": { "id": 8, "fileNameOnDisk": "c3c.jar", "fileLength": 32000, "dependencies": [{ "addonId": 302, "type": 3 }] } },
+    { "addonID": 401, "name": "Chain4 A", "installedFile": { "id": 9, "fileNameOnDisk": "c4a.jar", "fileLength": 40000, "dependencies": [] } },
+    { "addonID": 402, "name": "Chain4 B", "installedFile": { "id": 10, "fileNameOnDisk": "c4b.jar", "fileLength": 41000, "dependencies": [{ "addonId": 401, "type": 3 }] } },
+    { "addonID": 403, "name": "Chain4 C", "installedFile": { "id": 11, "fileNameOnDisk": "c4c.jar", "fileLength": 42000, "dependencies": [{ "addonId": 402, "type": 3 }] } },
+    { "addonID": 404, "name": "Chain4 D", "installedFile": { "id": 12, "fileNameOnDisk": "c4d.jar", "fileLength": 43000, "dependencies": [{ "addonId": 403, "type": 3 }] } },
+    { "addonID": 501, "name": "Twin", "installedFile": { "id": 13, "fileNameOnDisk": "twin1.jar", "fileLength": 10000, "dependencies": [] } },
+    { "addonID": 502, "name": "Twin", "installedFile": { "id": 14, "fileNameOnDisk": "twin2.jar", "fileLength": 11000, "dependencies": [] } }
+  ]
+}

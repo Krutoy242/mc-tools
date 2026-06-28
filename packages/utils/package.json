@@ -42,6 +42,10 @@
     "./tellme": {
       "types": "./dist/mods/tellme.d.mts",
       "import": "./dist/mods/tellme.mjs"
+    },
+    "./mod-resolve": {
+      "types": "./dist/mods/resolve.d.mts",
+      "import": "./dist/mods/resolve.mjs"
     }
   },
   "files": [

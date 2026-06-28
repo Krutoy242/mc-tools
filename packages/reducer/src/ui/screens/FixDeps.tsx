@@ -7,7 +7,7 @@ import { fetchMods } from '@mctools/curseforge'
 import levenshtein from 'fast-levenshtein'
 import { Box, Text, useInput } from 'ink'
 import React, { useEffect, useMemo, useState } from 'react'
-import { writeForkToConfig } from '../../config.js'
+import { writeDependencyToConfig, writeForkToConfig } from '../../config.js'
 import { loadJarMcmodInfo } from '../../jarMeta.js'
 import { Mod as ModClass } from '../../Mod.js'
 import { Panel } from '../layout/Panel.js'
@@ -162,24 +162,31 @@ export function FixDeps({ mcPath, mods, warnings, cache, onDone }: FixDepsProps)
       }
       if (key.return) {
         const pick = candidates[pickFocus]
-        if (!pick || !focusedMissing?.addonId || !pick.mod.addon) {
-          setInfo('cannot save fork — missing addon id')
+        if (!pick || !focusedMissing) {
+          setInfo('no candidate selected')
           return
         }
         setBusy(true)
+        const target = focusedMissing
         void (async () => {
           try {
-            // Pass the *base* mod name so writeForkToConfig can attach it as
-            // an inline `# Tinker's Construct`-style comment (item 3).
-            const baseName = focusedMissing.cfInfo?.name ?? focusedMissing.customName
-            const path = await writeForkToConfig(
-              mcPath,
-              focusedMissing.addonId!,
-              pick.mod.addon!.addonID,
-              baseName
-            )
-            setInfo(`saved fork ${pick.mod.displayName} → ${path}`)
-            setMissing(prev => prev.filter(m => m !== focusedMissing))
+            let path: string
+            if (target.addonId && pick.mod.addon) {
+              // CurseForge dependency → register the picked mod as a fork. Pass
+              // the *base* mod name for the inline `# Tinker's Construct` comment.
+              const baseName = target.cfInfo?.name ?? target.customName
+              path = await writeForkToConfig(mcPath, target.addonId, pick.mod.addon.addonID, baseName)
+              setInfo(`saved fork ${pick.mod.displayName} → ${path}`)
+            }
+            else {
+              // Custom (name/regex) dependency — forks are addon-id keyed, so a
+              // name-based dep can't be a fork. Record the picked mod as a
+              // satisfying dependency of the parent instead (fixes the previous
+              // "cannot save fork — missing addon id" dead-end).
+              path = await writeDependencyToConfig(mcPath, target.parent.displayName, pick.mod.displayName)
+              setInfo(`saved dependency ${target.parent.displayName} → ${pick.mod.displayName} → ${path}`)
+            }
+            setMissing(prev => prev.filter(m => m !== target))
             setMissingFocus(0)
             setPickFocus(0)
           }
@@ -272,9 +279,8 @@ function renderMissing(
                     <Text color={i === missingFocus ? t.accent : t.fgMuted}>{i === missingFocus ? '❯ ' : '  '}</Text>
                     <Text color={i === missingFocus ? t.fg : t.fgDim}>
                       {m.parent.displayName}
-                      {' '}
-                      →
-                      {m.cfInfo?.name ?? (m.addonId ? `id ${m.addonId}` : m.customName ?? '?')}
+                      {' → '}
+                      {m.cfInfo?.name ?? (m.addonId ? `id ${m.addonId}` : depLabel(m.customName) ?? '?')}
                     </Text>
                   </Box>
                 )}
@@ -305,7 +311,7 @@ function renderMissing(
                 <Text color={t.fgDim}>missing</Text>
                 <Text color={t.warning}>
                   {'  '}
-                  {focused.cfInfo?.name ?? focused.customName ?? `id ${focused.addonId ?? '?'}`}
+                  {focused.cfInfo?.name ?? depLabel(focused.customName) ?? `id ${focused.addonId ?? '?'}`}
                 </Text>
                 {focused.cfInfo?.summary
                   ? <Text color={t.fgMuted}>
@@ -521,6 +527,16 @@ function similarityScore(target: string, candidate: string): number {
   score -= levenshtein.get(t, c) * 0.5
   score -= Math.abs(t.length - c.length) * 0.05
   return score
+}
+
+/**
+ * Humanize a custom dependency identifier for display. Config deps are stored as
+ * name regexes (e.g. `^Ender IO$`); the raw anchors looked like broken
+ * formatting, so strip leading `^`, trailing `$` and surrounding quotes.
+ */
+function depLabel(s: string | undefined): string | undefined {
+  if (s == null) return undefined
+  return s.replace(/^\^/, '').replace(/\$$/, '').replace(/^['"]|['"]$/g, '').trim() || s
 }
 
 function buildMissing(warnings: WarningEntry[]): MissingItem[] {

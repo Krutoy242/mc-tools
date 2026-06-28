@@ -24,10 +24,28 @@ const BranchSchema: z.ZodType<Branch> = z.lazy(() =>
   )
 )
 
+/**
+ * Optional launcher override. Defaults to the bundled PrismLauncher (Windows).
+ * Set `kind: 'command'` to drive any launcher via shell commands so the
+ * published package isn't hard-wired to PrismLauncher.
+ */
+export const LauncherConfigSchema = z.object({
+  kind        : z.enum(['prism', 'command']).default('prism'),
+  /** Shell command used to (re)launch the game, for `kind: 'command'`. */
+  launch      : z.string().optional(),
+  /** Executable name to scan for the running game (default `javaw.exe`). */
+  processName : z.string().optional(),
+  /** Regex tested against process command lines to identify the game (default: the mc dir). */
+  processMatch: z.string().optional(),
+})
+
+export type LauncherConfig = z.infer<typeof LauncherConfigSchema>
+
 export const ReducerConfigSchema = z.object({
   dependencies: BranchSchema.default({}),
   dependents  : BranchSchema.default({}),
   forks       : z.record(z.string(), z.array(z.number())).default({}),
+  launcher    : LauncherConfigSchema.default({ kind: 'prism' }),
 })
 
 export type ReducerConfig = z.infer<typeof ReducerConfigSchema>
@@ -140,6 +158,60 @@ export async function writeForkToConfig(
     if (pair && pair.value && typeof pair.value === 'object') {
       (pair.value as YAML.Node).comment = originalName
     }
+  }
+
+  await writeFile(filePath, doc.toString(), 'utf8')
+  return filePath
+}
+
+/**
+ * Append a custom dependency `parent → dep` to the user's
+ * `<mcPath>/reducer.config.yml`. Used by Fix Deps when the missing dependency is
+ * a custom (name/regex) entry rather than a CurseForge addon: forks are keyed by
+ * addon id, so a name-based dependency can't be a fork — instead we record the
+ * picked mod's exact name as a satisfying dependency. Preserves existing keys,
+ * comments and any deps already listed under `parent`.
+ */
+export async function writeDependencyToConfig(
+  mcPath    : string,
+  parentName: string,
+  depName   : string
+): Promise<string> {
+  const filePath = join(mcPath, 'reducer.config.yml')
+  let raw = ''
+  try {
+    raw = await readFile(filePath, 'utf8')
+  }
+  catch { /* file missing — start fresh */ }
+
+  const doc = raw ? YAML.parseDocument(raw) : new YAML.Document()
+  if (!doc.contents || !YAML.isMap(doc.contents)) doc.contents = new YAML.YAMLMap()
+  const root = doc.contents as YAML.YAMLMap
+
+  let depsNode: YAML.YAMLMap
+  const existing = root.get('dependencies', true)
+  if (existing && YAML.isMap(existing)) {
+    depsNode = existing
+  }
+  else {
+    depsNode = new YAML.YAMLMap()
+    root.set('dependencies', depsNode)
+  }
+
+  const current = depsNode.get(parentName, true)
+  if (current && YAML.isSeq(current)) {
+    const has = current.items.some(i => (YAML.isScalar(i) ? i.value : i) === depName)
+    if (!has) current.add(depName)
+  }
+  else if (current && YAML.isScalar(current)) {
+    const seq = new YAML.YAMLSeq()
+    seq.flow = true
+    seq.add(current.value)
+    if (current.value !== depName) seq.add(depName)
+    depsNode.set(parentName, seq)
+  }
+  else {
+    depsNode.set(parentName, depName)
   }
 
   await writeFile(filePath, doc.toString(), 'utf8')
