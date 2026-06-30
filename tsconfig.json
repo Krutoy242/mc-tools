@@ -22,6 +22,7 @@
       "@mctools/source": ["./packages/source/src/index.ts"]
     },
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,

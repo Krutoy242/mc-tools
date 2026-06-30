@@ -2,6 +2,7 @@ import type CFV2 from 'curseforge-v2'
 import type { ChangelogEntry, FileChangelog } from './types.js'
 import process from 'node:process'
 import { getClient } from './client.js'
+import { asFileID } from './minecraftinstance.js'
 
 /**
  * Execute async tasks with a concurrency limit.
@@ -220,7 +221,7 @@ export async function fetchIntermediateFileChangelogs(
       }
 
       extraBefore = {
-        fileId   : extraFile.id,
+        fileId   : asFileID(extraFile.id),
         fileName : extraFile.fileName,
         fileDate : extraFile.fileDate,
         changelog: extraChangelog,

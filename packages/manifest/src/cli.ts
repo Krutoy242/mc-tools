@@ -44,7 +44,7 @@ const main = defineCommand({
       description: 'Override Minecraft version (default: autodetect from minecraftinstance.json/debug.log)',
     },
     'project-id': {
-      type       : 'number',
+      type       : 'string',
       description: 'Override CurseForge project ID (default: read from existing manifest.json)',
     },
     'pack-version': {
@@ -68,7 +68,7 @@ const main = defineCommand({
       catch { /* use key value as-is */ }
     }
     else {
-      key = process.env.CF_API_KEY
+      key = process.env.CF_API_KEY as string || ''
     }
 
     if (!key) {
@@ -85,7 +85,7 @@ const main = defineCommand({
       key,
       name          : args.name,
       mcVersion     : args['mc-version'],
-      projectID     : args['project-id'],
+      projectID     : Number(args['project-id']) || undefined,
       packVersion   : args['pack-version'],
       postfix       : args.postfix,
       verbose       : args.verbose,

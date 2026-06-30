@@ -72,7 +72,7 @@ const main = defineCommand({
       }
       catch { key = args.key }
     }
-    key ??= process.env.CF_API_KEY
+    key ??= process.env.CF_API_KEY as string
 
     if (!key) {
       console.error(chalk.red`Provide Curse Forge API key with ` + chalk.yellow`--key` + chalk.red` cli option or with ` + chalk.yellow`CF_API_KEY` + chalk.red` environment variable`)

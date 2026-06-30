@@ -1,7 +1,8 @@
 import type { Linter } from 'eslint'
 
-import antfu from '@antfu/eslint-config'
+import type { PluginContext } from './rules/index.js'
 
+import antfu from '@antfu/eslint-config'
 import { defineConfig as defineZsConfig } from './index.js'
 import { ruleFactories } from './rules/index.js'
 
@@ -191,7 +192,7 @@ export async function defineMctoolsConfig(
         '@mctools/zs': {
           meta : { name: '@mctools/eslint-plugin-zs', version: '0.0.0' },
           rules: {
-            'no-redundant-return-cast': ruleFactories['no-redundant-return-cast']({}),
+            'no-redundant-return-cast': ruleFactories['no-redundant-return-cast']({} as PluginContext),
           },
         },
       },
@@ -203,8 +204,8 @@ export async function defineMctoolsConfig(
     ...tsConfigWithZs,
     ...defineZsConfig({ tsConfig: zsTsConfig }),
     // Real *.zs.ts files emitted by the mctools-format CLI.
-    { files: ['**/*.zs.ts'], ...zsOverrides },
-  ]
+    { files: ['**/*.zs.ts'], ...zsOverrides } as Linter.Config,
+  ] satisfies Linter.Config[]
 }
 
 export default defineMctoolsConfig
