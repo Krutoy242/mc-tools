@@ -8,6 +8,7 @@ import { validateConditions } from '../binary/validate.js'
 import { readCraftTweakerErrors, resolveLauncher, restartAndMonitor } from '../launcher/index.js'
 import {
   clearSession,
+  readSession,
   snapshotMods,
   writeSession,
 } from '../session/lock.js'
@@ -41,13 +42,31 @@ function printRoster(mods: Mod[]): void {
   out(summarizeRoster(mods))
 }
 
+/** Report an interrupted/drifted prior session; returns true if the caller must abort. */
+function reportGuardBlock(guard: ReturnType<typeof guardSession>): boolean {
+  if (guard.mode === 'interrupted') {
+    consola.error('a previous reducer operation was interrupted. Resume with --continue or discard with --new.')
+    return true
+  }
+  if (guard.mode === 'drift') {
+    consola.error('the modpack changed since the interrupted session — resuming is unsafe.')
+    if (guard.drift.missing.length) consola.error(`  renamed/removed: ${guard.drift.missing.join(', ')}`)
+    if (guard.drift.added.length) consola.error(`  added: ${guard.drift.added.join(', ')}`)
+    consola.error('  start over with --new.')
+    return true
+  }
+  return false
+}
+
 export interface ActionInput {
-  mcPath : string
-  kind   : ActionKind
-  queries: string[]
-  dry    : boolean
+  mcPath   : string
+  kind     : ActionKind
+  queries  : string[]
+  dry      : boolean
+  continue?: boolean
+  new?     : boolean
   /** Print the ⚠ "prefer a combined command" advice (standalone verbs). */
-  advise?: boolean
+  advise?  : boolean
 }
 
 /** disable / enable / only / except (and `full` via restart). */
@@ -55,11 +74,8 @@ export async function runAction(input: ActionInput): Promise<number> {
   const { mcPath, kind, queries, dry } = input
   const runtime = await loadRuntime(mcPath)
 
-  const guard = guardSession(mcPath, runtime.mods, {})
-  if (guard.mode === 'interrupted') {
-    consola.error('a previous reducer operation was interrupted. Resume with --continue or discard with --new.')
-    return 1
-  }
+  const guard = guardSession(mcPath, runtime.mods, { continue: input.continue, new: input.new })
+  if (reportGuardBlock(guard)) return 1
 
   let targets: Mod[] = []
   if (kind !== 'full') {
@@ -93,24 +109,20 @@ export async function runAction(input: ActionInput): Promise<number> {
 }
 
 export interface RestartInput {
-  mcPath : string
-  dry    : boolean
-  full   : boolean
-  disable: string[]
-  enable : string[]
-  only   : string[]
-  except : string[]
+  mcPath   : string
+  dry      : boolean
+  full     : boolean
+  disable  : string[]
+  enable   : string[]
+  only     : string[]
+  except   : string[]
+  continue?: boolean
+  new?     : boolean
 }
 
 export async function runRestart(input: RestartInput): Promise<number> {
   const { mcPath, dry } = input
   const runtime = await loadRuntime(mcPath)
-
-  const guard = guardSession(mcPath, runtime.mods, {})
-  if (guard.mode === 'interrupted') {
-    consola.error('a previous reducer operation was interrupted. Resume with --continue or discard with --new.')
-    return 1
-  }
 
   const modes = ([
     ['disable', input.disable],
@@ -153,34 +165,50 @@ export async function runRestart(input: RestartInput): Promise<number> {
     return 1
   }
 
-  writeSession(mcPath, {
-    phase   : 'applying',
-    snapshot: snapshotMods(runtime.mods),
-    plan    : { toEnable: plan.toEnable.map(m => m.fileNameNoExt), toDisable: plan.toDisable.map(m => m.fileNameNoExt) },
-  })
+  // A plain reboot renames no jars, so it needs no session lock — locking it was
+  // the cause of the "interrupted session" deadlock when a slow boot got killed.
+  // Only guard the (millisecond) jar-rename window; release the lock before the
+  // long boot so a killed monitor can never poison the session.
+  const mutates = plan.toEnable.length > 0 || plan.toDisable.length > 0
 
-  const res = await applyPlan(plan, dry)
-  logPlan(plan, dry)
-  for (const f of res.failed) consola.error(`failed: ${f.mod.fileNameNoExt} — ${f.error}`)
-  if (res.failed.length) {
-    consola.error('aborting restart — free the locked file(s) and rerun with --continue.')
-    return 1
+  if (mutates) {
+    const guard = guardSession(mcPath, runtime.mods, { continue: input.continue, new: input.new })
+    if (reportGuardBlock(guard)) return 1
+
+    writeSession(mcPath, {
+      phase   : 'applying',
+      snapshot: snapshotMods(runtime.mods),
+      plan    : { toEnable: plan.toEnable.map(m => m.fileNameNoExt), toDisable: plan.toDisable.map(m => m.fileNameNoExt) },
+    })
+
+    const res = await applyPlan(plan, dry)
+    logPlan(plan, dry)
+    for (const f of res.failed) consola.error(`failed: ${f.mod.fileNameNoExt} — ${f.error}`)
+    if (res.failed.length) {
+      consola.error('aborting restart — free the locked file(s) and rerun with --continue.')
+      return 1 // session kept for --continue
+    }
+    clearSession(mcPath) // jars consistent — no lock held across the boot
+  }
+  else {
+    // No mutation: a stale interrupted session (from an earlier aborted mod change)
+    // shouldn't block a plain reboot. --new clears it; otherwise just warn.
+    const prev = readSession(mcPath)
+    if (input.new) clearSession(mcPath)
+    else if (prev && prev.phase !== 'idle') consola.warn('note: an earlier mod-set change was left interrupted (`reducer restart --new` clears that record). Rebooting current state.')
   }
 
   printRoster(runtime.mods)
 
   if (dry) {
     consola.info('dry run — Minecraft not restarted (assumed).')
-    clearSession(mcPath)
     return 0
   }
 
-  // ----- real restart + monitor -----
+  // ----- real restart + monitor (no session lock held) -----
   const launcher = resolveLauncher(mcPath, runtime.config.launcher)
-  writeSession(mcPath, { phase: 'restarting', snapshot: snapshotMods(runtime.mods) })
   consola.start(`restarting via ${launcher.name} …`)
   const result = await restartAndMonitor(mcPath, launcher, { log: m => consola.log(m) })
-  clearSession(mcPath)
 
   if (result.outcome === 'crash') {
     consola.error('Minecraft crashed:')
@@ -192,10 +220,17 @@ export async function runRestart(input: RestartInput): Promise<number> {
     return 1
   }
   if (result.outcome === 'timeout') {
-    consola.warn('monitor ceiling reached before the game went idle.')
+    // Boot never reached the ready line within the ceiling. Explain what that means.
+    consola.warn('monitor ceiling reached: the game did not log a "loaded/joined" line in time — it may still be booting, hung, or too slow. Raise REDUCER_MONITOR_MAX_MS if the pack just needs longer.')
+  }
+  else if (result.reached === 'menu') {
+    consola.success('Minecraft loaded (reached main menu; auto-join did not enter a world — commands needing a world may not work yet).')
+  }
+  else if (result.reached === 'quiet') {
+    consola.success('Minecraft loaded (log went quiet; no world-join line seen).')
   }
   else {
-    consola.success('Minecraft reached idle (loaded).')
+    consola.success('Minecraft loaded and ready for commands (world joined).')
   }
 
   const ct = await readCraftTweakerErrors(mcPath)

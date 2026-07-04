@@ -1,16 +1,41 @@
 import type { Launcher, MonitorResult } from './types.js'
 import { Buffer } from 'node:buffer'
 import fs from 'node:fs/promises'
+import process from 'node:process'
 import { StringDecoder } from 'node:string_decoder'
 import { join } from 'pathe'
 
 const TICK_MS = 1000
 const HEALTH_MS = 3000
 const DEFAULT_STALL_MS = 30_000
-const DEFAULT_MAX_MS = 300_000
+// Full-pack boots can take well over 5 min; a short ceiling was the main cause of
+// false "timeout" reports. Overridable via REDUCER_MONITOR_MAX_MS.
+const DEFAULT_MAX_MS = 900_000
 const DEFAULT_LAUNCH_MS = 120_000
+// Definitive "ready for commands" signal: auto-join enters a world → "joined the
+// game". Far more reliable than "log went quiet", which never happens in-world
+// (continuous tick spam). Overridable via REDUCER_MONITOR_READY.
+const DEFAULT_READY = /joined the game/i
+// Fallback for packs with auto-join OFF: reaching the main menu also means loaded.
+// Only counts as ready if no world-join follows within MENU_GRACE_MS.
+const MENU_RE = /Forge Mod Loader has successfully loaded/i
+const MENU_GRACE_MS = 20_000
 
 const sleep = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function envInt(name: string, fallback: number): number {
+  const v = Number(process.env[name])
+  return Number.isFinite(v) && v > 0 ? v : fallback
+}
+function envRe(name: string, fallback: RegExp): RegExp {
+  const v = process.env[name]
+  try {
+    return v ? new RegExp(v, 'i') : fallback
+  }
+  catch {
+    return fallback
+  }
+}
 
 export function dbgLogPath(mcDir: string): string {
   return join(mcDir, 'logs', 'debug.log')
@@ -137,6 +162,8 @@ export interface MonitorOptions {
   stallMs? : number
   maxMs?   : number
   launchMs?: number
+  /** Line that means "loaded & ready"; matching it ends monitoring as `idle`. */
+  readyRe? : RegExp
   /** Diagnostic sink (stderr). */
   log?     : (msg: string) => void
 }
@@ -151,9 +178,10 @@ export async function restartAndMonitor(
   launcher: Launcher,
   opts    : MonitorOptions = {}
 ): Promise<MonitorResult> {
-  const stallMs = opts.stallMs ?? DEFAULT_STALL_MS
-  const maxMs = opts.maxMs ?? DEFAULT_MAX_MS
+  const stallMs = opts.stallMs ?? envInt('REDUCER_MONITOR_STALL_MS', DEFAULT_STALL_MS)
+  const maxMs = opts.maxMs ?? envInt('REDUCER_MONITOR_MAX_MS', DEFAULT_MAX_MS)
   const launchMs = opts.launchMs ?? DEFAULT_LAUNCH_MS
+  const readyRe = opts.readyRe ?? envRe('REDUCER_MONITOR_READY', DEFAULT_READY)
   const log = opts.log ?? (() => {})
 
   const dbg = dbgLogPath(mcDir)
@@ -181,6 +209,7 @@ export async function restartAndMonitor(
   let pid: number | null = null
   let lastChange = launchTs
   let lastHealth = launchTs
+  let menuAt = 0 // when the main menu was reached (0 = not yet)
   let crashed = false
   let crashSummary: string | undefined
 
@@ -194,6 +223,11 @@ export async function restartAndMonitor(
     if (newDebug.length) {
       debugLog.push(...newDebug)
       lastChange = now
+      // The ready line is authoritative: in-world log spam never goes "quiet", so
+      // the stall heuristic below would otherwise run to the ceiling on a healthy boot.
+      const text = newDebug.join('\n')
+      if (readyRe.test(text)) return { outcome: 'idle', reached: 'joined', pid: pid ?? await launcher.getPid() ?? undefined }
+      if (!menuAt && MENU_RE.test(text)) menuAt = now
     }
     const newCt = await readNewLines(ct, ctTail)
     if (newCt.length) craftTweakerLog.push(...newCt)
@@ -211,13 +245,18 @@ export async function restartAndMonitor(
 
     if (crashed) return { outcome: 'crash', pid: pid ?? undefined, crashSummary }
 
+    // Auto-join OFF: main menu reached and no world-join followed → ready at the menu.
+    if (menuAt && now - menuAt >= MENU_GRACE_MS) {
+      return { outcome: 'idle', reached: 'menu', pid: pid ?? await launcher.getPid() ?? undefined }
+    }
+
     if (now - lastHealth >= HEALTH_MS) {
       lastHealth = now
       if (pid && !await launcher.getPid()) {
         return { outcome: 'exit', pid }
       }
       if (now - lastChange >= stallMs && pid) {
-        return { outcome: 'idle', pid }
+        return { outcome: 'idle', reached: 'quiet', pid }
       }
     }
 

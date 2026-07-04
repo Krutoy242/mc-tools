@@ -101,11 +101,13 @@ const restartCmd = defineCommand({
   args: {
     ...cwdArg,
     ...dryArg,
-    full   : { type: 'boolean', alias: 'F', description: 'Enable ALL mods before restarting' },
-    disable: { type: 'string', alias: 'd', description: 'Disable these mods (+dependents); rest untouched' },
-    enable : { type: 'string', alias: 'e', description: 'Enable these mods (+dependencies); rest untouched' },
-    only   : { type: 'string', alias: 'o', description: 'Enable only these (+deps); disable everything else' },
-    except : { type: 'string', alias: 'x', description: 'Disable these (+dependents); enable everything else' },
+    full    : { type: 'boolean', alias: 'F', description: 'Enable ALL mods before restarting' },
+    disable : { type: 'string', alias: 'd', description: 'Disable these mods (+dependents); rest untouched' },
+    enable  : { type: 'string', alias: 'e', description: 'Enable these mods (+dependencies); rest untouched' },
+    only    : { type: 'string', alias: 'o', description: 'Enable only these (+deps); disable everything else' },
+    except  : { type: 'string', alias: 'x', description: 'Disable these (+dependents); enable everything else' },
+    continue: { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
+    new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
   },
   async run({ args }) {
     const mcPath = mcPathOf(args)
@@ -135,12 +137,14 @@ const restartCmd = defineCommand({
 
     process.exitCode = await runRestart({
       mcPath,
-      dry : Boolean(args.dry),
-      full: Boolean(args.full),
+      dry     : Boolean(args.dry),
+      full    : Boolean(args.full),
       disable,
       enable,
       only,
       except,
+      continue: Boolean(args.continue),
+      new     : Boolean(args.new),
     })
   },
 })
@@ -148,14 +152,21 @@ const restartCmd = defineCommand({
 function verbCmd(kind: 'disable' | 'enable' | 'only' | 'except', desc: string) {
   return defineCommand({
     meta: { name: kind, description: desc },
-    args: { ...cwdArg, ...dryArg },
+    args: {
+      ...cwdArg,
+      ...dryArg,
+      continue: { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
+      new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
+    },
     async run({ args }) {
       process.exitCode = await runAction({
-        mcPath : mcPathOf(args),
+        mcPath  : mcPathOf(args),
         kind,
-        queries: positionals(args),
-        dry    : Boolean(args.dry),
-        advise : true,
+        queries : positionals(args),
+        dry     : Boolean(args.dry),
+        continue: Boolean(args.continue),
+        new     : Boolean(args.new),
+        advise  : true,
       })
     },
   })
