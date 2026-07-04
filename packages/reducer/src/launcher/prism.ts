@@ -103,6 +103,51 @@ async function detectInstance(dataDir: string, mcDir: string): Promise<string | 
   return null
 }
 
+/**
+ * Relative path (from the instance's `.minecraft` dir) of the *generated*
+ * auto-join marker script. `scripts/mixin/probezs/shared.zs`'s
+ * `Op.tryAutoJoinWorld()` reads `AutoJoinMarker.world` (rewritten fresh by
+ * this function before every launch) once, at the HEAD of the main-menu
+ * GUI's `initGui` (see `scripts/mixin/probezs/gui.zs` /
+ * `gui_custommainmenu.zs`), and calls `launchIntegratedServer` directly —
+ * GUI init always runs on the main client thread, so there's no
+ * cross-thread marshaling problem, and no dependency on PrismLauncher's own
+ * (Custom-Main-Menu-defeated) `--world` flag.
+ *
+ * A generated `.zs` file is used instead of a plain marker file because
+ * ZenUtils blacklists file I/O from ZenScript's native access (even inside
+ * mixin-loader scripts) — but `.zs` source itself is freely re-read by the
+ * script loader on every boot, sidestepping that sandbox entirely.
+ */
+const AUTOJOIN_MARKER_REL = ['scripts', 'mixin', 'probezs', 'autojoin_marker.zs']
+
+function autoJoinMarkerSource(world: string | null): string {
+  // Escape for a single-quoted ZenScript string literal.
+  const escaped = (world ?? '').replace(/\\/g, '\\\\').replace(/'/g, '\\\'')
+  return `#modloaded probezs
+#loader mixin
+#priority 4000
+
+// ── Auto-join marker (generated) ────────────────────────────
+// Rewritten by mc-tools/packages/reducer/src/launcher/prism.ts's
+// writeAutoJoinMarker() immediately before every launch — do not hand-edit
+// \`world\`, it is overwritten on every launch. Empty string means "don't
+// auto-join anything".
+zenClass AutoJoinMarker {
+  static world as string = '${escaped}';
+}
+`
+}
+
+/**
+ * Regenerate the auto-join marker script so the GUI mixin knows which
+ *  save, if any, to load once the main menu appears.
+ */
+async function writeAutoJoinMarker(mcDir: string, world: string | null): Promise<void> {
+  const markerPath = join(mcDir, ...AUTOJOIN_MARKER_REL)
+  await fs.writeFile(markerPath, autoJoinMarkerSource(world), 'utf-8')
+}
+
 /** Most recent world by `level.dat` mtime (dir mtime is unreliable on Windows). */
 async function detectLatestWorld(mcDir: string): Promise<string | null> {
   let entries
@@ -167,7 +212,11 @@ export class PrismLauncher implements Launcher {
 
   async launch(): Promise<void> {
     const instanceId = await this.resolveInstance()
-    const world = await detectLatestWorld(this.mcDir)
+    // E2EE_FORCE_WORLD overrides world detection — used by tests that must
+    // target a specific save (e.g. "TEST_WORLD") without changing the
+    // default "latest played" behavior real users get.
+    const world = process.env.E2EE_FORCE_WORLD || await detectLatestWorld(this.mcDir)
+    await writeAutoJoinMarker(this.mcDir, world)
     const isSsh = process.env.SSH_CLIENT || process.env.SSH_CONNECTION || process.env.SSH_TTY
     if (isSsh) {
       const taskName = `PrismLaunch_${Date.now()}`
