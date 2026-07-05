@@ -108,7 +108,13 @@ export function stripDebris(zs: string): string {
   const fence = MARKERS.debrisFence
   return zs
     .replace(new RegExp(`\\n*\\/\\/ ${fence}[\\s\\S]+?\\/\\/ ${fence}\\n*`, 'g'), '')
-    .replace(/'((?:[^'\\]|\\.)*\\'(?:[^'\\]|\\.)*)'/g, (_m, r: string) => `"${r.replace(/\\'/g, '\'')}"`)
+    .replace(/'((?:[^'\\]|\\.)*\\'(?:[^'\\]|\\.)*)'/g, (_m, r: string) => {
+      const unescaped = r.replace(/\\'/g, '\'')
+      if (unescaped.includes('"')) {
+        return `'${r}'`
+      }
+      return `"${unescaped}"`
+    })
 }
 
 /** @deprecated use {@link tsToZs}. Kept for backwards compatibility. */
