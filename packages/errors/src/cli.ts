@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
 
+import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -47,7 +48,7 @@ export const main = defineCommand({
   },
 })
 
-const isMain = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+const isMain = process.argv[1] && realpathSync(resolve(fileURLToPath(import.meta.url))) === realpathSync(resolve(process.argv[1]))
 if (isMain) {
   runMain(main).catch((err: unknown) => {
     process.stderr.write(`${(err as Error).message}\n`)

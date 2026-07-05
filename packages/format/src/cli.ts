@@ -18,7 +18,7 @@ p=mc-tools/packages/format && pnpm --dir $p exec scripts/build-parser.mjs && pnp
 
 */
 
-import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs'
 import { relative, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 
@@ -152,7 +152,7 @@ export const main = defineCommand({
   },
 })
 
-const isMain = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+const isMain = process.argv[1] && realpathSync(resolve(fileURLToPath(import.meta.url))) === realpathSync(resolve(process.argv[1]))
 if (isMain) {
   void runMain(main)
 }
