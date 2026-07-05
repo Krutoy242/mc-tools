@@ -3,6 +3,7 @@
 import type { ArgsDef } from 'citty'
 import { statSync } from 'node:fs'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { assertPath } from '@mctools/utils/args'
 import { defineCommand, runMain } from 'citty'
 import { resolve } from 'pathe'
@@ -333,4 +334,9 @@ async function launchTui(mcPath: string): Promise<void> {
   await main(mcPath)
 }
 
-void runMain(mainCli, { rawArgs: preprocessArgv(process.argv.slice(2)) })
+export const main = mainCli
+
+const isMain = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+if (isMain) {
+  void runMain(main, { rawArgs: preprocessArgv(process.argv.slice(2)) })
+}

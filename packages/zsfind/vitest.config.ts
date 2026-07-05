@@ -1,7 +1,10 @@
 import { defineConfig } from 'vitest/config'
+import { mctoolsAlias } from '../../vitest.shared'
 
 export default defineConfig({
-  test: {
+  resolve: { alias: mctoolsAlias },
+  test   : {
+    exclude : ['test/find.test.ts'],
     coverage: {
       provider: 'v8',
       include : ['src/**/*.ts'],

@@ -1,17 +1,14 @@
-import { execSync } from 'node:child_process'
 import { readFileSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { expect, it } from 'vitest'
+import { runCommand } from 'citty'
 
-function exec(params: string) {
-  return execSync(
-    `tsx src/cli.ts ${params}`
-  ).toString().trim()
-}
+import { expect, it, vi } from 'vitest'
+
+import { main } from '../src/cli.js'
 
 it('run app no arguments', async () => {
-  expect(() => exec('')).toThrowError()
+  await expect(runCommand(main, { rawArgs: [] })).rejects.toThrow()
 })
 
 // SKIPPED: this integration test reads `test/stats/Traits.csv` as an input
@@ -22,12 +19,20 @@ it('run app no arguments', async () => {
 // commit a `test/stats/Traits.csv` fixture, stop deleting it, and refresh the
 // snapshot.
 it.skip('run app with all args', async () => {
-  expect(exec(
-    '--default=test/def_tweakersconstruct.cfg'
-    + ' --tweaks=test'
-    + ' --mc=test'
-    + ' --save=test/stats'
-  )).toMatchInlineSnapshot(`
+  const chunks: string[] = []
+  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+    chunks.push(String(chunk))
+    return true
+  })
+
+  await runCommand(main, {
+    rawArgs: '--default=test/def_tweakersconstruct.cfg --tweaks=test --mc=test --save=test/stats'.split(' '),
+  })
+
+  spy.mockRestore()
+
+  const stdout = chunks.join('')
+  expect(stdout).toMatchInlineSnapshot(`
     "[1/2] Loading configs
     [2/2] Applying tweaks..done"
   `)

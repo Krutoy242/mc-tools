@@ -2,7 +2,7 @@ import { defineMctoolsConfig } from '@mctools/eslint-plugin-zs/config'
 
 // Single source of truth lives in `@mctools/eslint-plugin-zs/config`, shared
 // with the Enigmatica2Expert-Extended modpack repo — one config, one style.
-export default await defineMctoolsConfig({
+const baseConfig = await defineMctoolsConfig({
   tsconfigPath: 'tsconfig.json',
   ignores     : [
     '**/dist/**',
@@ -20,3 +20,10 @@ export default await defineMctoolsConfig({
     'scripts/tcon-textures.ts',
   ],
 })
+
+// vitest/config defineConfig returns ViteUserConfig which has any-typed
+// internal properties that trigger ts/no-unsafe-assignment.
+export default [
+  ...baseConfig,
+  { files: ['**/vitest.config.ts', 'vitest.shared.ts'], rules: { 'ts/no-unsafe-assignment': 'off' } },
+]

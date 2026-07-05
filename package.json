@@ -34,7 +34,7 @@
   "scripts": {
     "build": "pnpm run build:readme && pnpm -r run build",
     "build:readme": "tsx scripts/build/readme.ts",
-    "test": "pnpm -r run test",
+    "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "release:all": "pnpm -r --workspace-concurrency=1 --filter=!@mctools/utils --filter=!@mctools/extension exec -- semantic-release",

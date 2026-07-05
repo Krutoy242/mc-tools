@@ -1,24 +1,24 @@
 import type { CompiledConfig } from '../src/index.js'
-import { Buffer } from 'node:buffer'
-import { execSync } from 'node:child_process'
-
 import { readFile } from 'node:fs/promises'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { runCommand } from 'citty'
+
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { parse as parseYaml } from 'yaml'
+
+import { main } from '../src/cli.js'
 import { compileConfig, findErrors, parseConfig } from '../src/index.js'
 
-interface ExecError {
-  stdout?: Buffer | string | null
-  status?: number | null
-}
+const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 let defaultConfig: CompiledConfig
 let sampleLog: string
 
 beforeAll(async () => {
-  defaultConfig = compileConfig(parseConfig(parseYaml(await readFile('src/config.yml', 'utf8'))))
-  sampleLog = await readFile('test/debug.log', 'utf8')
+  defaultConfig = compileConfig(parseConfig(parseYaml(await readFile(resolve(pkgRoot, 'src/config.yml'), 'utf8'))))
+  sampleLog = await readFile(resolve(pkgRoot, 'test/debug.log'), 'utf8')
 })
 
 describe('findErrors (pure)', () => {
@@ -159,18 +159,19 @@ describe('findErrors (pure)', () => {
 })
 
 describe('cli smoke', () => {
-  it('runs end-to-end and exits with code 1 when errors are found', () => {
-    let stdout = ''
-    let status = 0
-    try {
-      stdout = execSync('npx tsx src/cli.ts --log=test/debug.log').toString()
-    }
-    catch (e) {
-      const err = e as ExecError
-      stdout = Buffer.isBuffer(err.stdout) ? err.stdout.toString() : String(err.stdout ?? '')
-      status = err.status ?? 0
-    }
+  it('runs end-to-end and exits with code 1 when errors are found', async () => {
+    const chunks: string[] = []
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      chunks.push(String(chunk))
+      return true
+    })
+
+    await runCommand(main, { rawArgs: [`--log=${resolve(pkgRoot, 'test/debug.log')}`] })
+
+    spy.mockRestore()
+
+    const stdout = chunks.join('')
     expect(stdout).toContain('Found 3 errors')
-    expect(status).toBe(1)
-  }, 15000)
+    expect(process.exitCode).toBe(1)
+  })
 })

@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -13,6 +14,8 @@ import {
   tryLoadSeaAsset,
   writeOutput,
 } from '../src/runner.js'
+
+const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 let tmp: string
 
@@ -160,8 +163,8 @@ describe('run (integration)', () => {
   it('returns 1 when errors are found', async () => {
     const spy = silenceStdout()
     const code = await run({
-      log   : 'test/debug.log',
-      config: 'src/config.yml',
+      log   : resolve(pkgRoot, 'test/debug.log'),
+      config: resolve(pkgRoot, 'src/config.yml'),
       output: undefined,
     })
     spy.mockRestore()
@@ -173,7 +176,7 @@ describe('run (integration)', () => {
     await writeFile(cfg, 'match: DEFINITELY_NEVER_MATCHES_XYZ\nignore: ""\nreplace: []\n')
     const spy = silenceStdout()
     const code = await run({
-      log   : 'test/debug.log',
+      log   : resolve(pkgRoot, 'test/debug.log'),
       config: cfg,
       output: undefined,
     })
@@ -184,7 +187,7 @@ describe('run (integration)', () => {
   it('uses isDefault path when args.config equals DEFAULT_CONFIG', async () => {
     const spy = silenceStdout()
     const code = await run({
-      log   : 'test/debug.log',
+      log   : resolve(pkgRoot, 'test/debug.log'),
       config: DEFAULT_CONFIG,
       output: undefined,
     })

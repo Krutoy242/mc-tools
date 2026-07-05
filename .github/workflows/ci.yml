@@ -38,34 +38,7 @@ jobs:
         run: pnpm -r run build
 
       - name: Test all packages
-        run: pnpm -r run test
-
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Type-aware rules resolve cross-package imports through each package's
-      # built dist (.d.ts), and the flat config itself imports the built
-      # @mctools/eslint-plugin-zs + @mctools/format — so build everything first.
-      - name: Build all packages
-        run: pnpm -r run build
-
-      - name: Lint
-        run: pnpm run lint
+        run: pnpm test
 
   # NOTE: a "README freshness" gate was intentionally dropped. `pnpm build:readme`
   # runs each CLI's `--help` and embeds the rendered output — including

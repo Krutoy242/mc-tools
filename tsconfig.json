@@ -32,6 +32,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["packages/*/src/**/*", "packages/*/*.ts", "packages/*/test/**/*", "scripts/**/*"],
+  "include": ["packages/*/src/**/*", "packages/*/*.ts", "packages/*/test/**/*", "scripts/**/*", "vitest.config.ts", "vitest.shared.ts"],
   "exclude": ["**/node_modules", "**/dist"]
 }

@@ -6,6 +6,7 @@ import type { MatTraits } from './traits.js'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, parse, resolve } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { assertPath } from '@mctools/utils/args'
 import { defineCommand, runMain } from 'citty'
 import { parse as csvParseSync } from 'csv-parse/sync'
@@ -39,7 +40,7 @@ function parseTweaks(tweaksPath: string) {
   })
 }
 
-const main = defineCommand({
+export const main = defineCommand({
   meta: {
     name       : '@mctools/tcon',
     description: 'Tweaks Tinker Constructs\' materials with csv tables',
@@ -147,4 +148,7 @@ const main = defineCommand({
   },
 })
 
-void runMain(main)
+const isMain = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+if (isMain) {
+  void runMain(main)
+}

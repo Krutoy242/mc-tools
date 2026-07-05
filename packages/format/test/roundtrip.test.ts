@@ -1,8 +1,11 @@
-import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+import { runCommand } from 'citty'
+
 import { describe, expect, it } from 'vitest'
+
+import { main } from '../src/cli.js'
 
 import { revert, zsToTs } from '../src/index.js'
 
@@ -403,8 +406,7 @@ var x = 1;
 })
 
 describe('cli smoke', () => {
-  it('exits with non-zero when called without arguments', { timeout: 15_000 }, () => {
-    expect(() => execSync('tsx src/cli.ts', { stdio: 'pipe' }))
-      .toThrow()
+  it('exits with non-zero when called without arguments', async () => {
+    await expect(runCommand(main, { rawArgs: [] })).rejects.toThrow()
   })
 })

@@ -19,10 +19,11 @@ p=mc-tools/packages/format && pnpm --dir $p exec scripts/build-parser.mjs && pnp
 */
 
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { relative } from 'node:path'
+import { relative, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { defineCommand, runMain } from 'citty'
 import { consola } from 'consola'
 import { colors } from 'consola/utils'
@@ -35,7 +36,7 @@ import { revert } from './index.js'
 
 const { description, name, version } = pkg
 
-const main = defineCommand({
+export const main = defineCommand({
   meta: { name, version, description },
   args: {
     files: {
@@ -151,4 +152,7 @@ const main = defineCommand({
   },
 })
 
-void runMain(main)
+const isMain = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+if (isMain) {
+  void runMain(main)
+}

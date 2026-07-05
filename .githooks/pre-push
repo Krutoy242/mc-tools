@@ -1,37 +1,29 @@
 #!/bin/sh
 # Repo-local pre-push gate. Activated via `core.hooksPath=.githooks`
-# (set by the `prepare` npm script). Runs the SAME checks GitHub Actions
-# runs (.github/workflows/ci.yml + release.yml) so a push can only fail on
-# GitHub for reasons that are impossible to reproduce locally (secrets, the
-# npm publish itself). Everything else is caught here, before the push.
+# (set by the `prepare` npm script).
 #
-# Mirrors, in order:
-#   ci.yml  build-test : install --frozen-lockfile -> build -> test
-#   ci.yml  lint       : (build) -> lint
-#   release.yml        : install --frozen-lockfile -> build -> test
+# This is a FAST gate: it runs only the tests affected by the pushed commits
+# (vitest --changed vs @{upstream}); the FULL build+test suite runs in GitHub
+# Actions CI. Lint runs on pre-commit (lint-staged).
 #
-# Emergency bypass (use sparingly): git push --no-verify
+# Emergency bypass: git push --no-verify
 set -e
 
-echo "pre-push: running CI gate locally (build + test + lint)…"
+echo 'pre-push: fast gate (affected tests)…'
 
 # 1. Lockfile integrity — CI installs with --frozen-lockfile, which FAILS if
-#    package.json and pnpm-lock.yaml disagree (this is exactly what the missing
-#    `zx` dep tripped). Idempotent + fast when already in sync.
-echo "pre-push: [1/4] pnpm install --frozen-lockfile"
+#    package.json and pnpm-lock.yaml disagree. Idempotent + fast when already in sync.
+echo 'pre-push: pnpm install --frozen-lockfile'
 pnpm install --frozen-lockfile
 
-# 2. Build every package. Type-aware lint rules also resolve cross-package
-#    imports through each package's built dist, so build must precede lint.
-echo "pre-push: [2/4] pnpm -r run build"
-pnpm -r run build
+# 2. Run only tests affected by the commits being pushed.
+base=$(git rev-parse --verify --quiet @{upstream} 2>/dev/null || true)
+if [ -n "$base" ]; then
+  echo "pre-push: running tests affected since $base"
+  pnpm exec vitest run --changed "$base"
+else
+  echo 'pre-push: no upstream tracking branch — running full suite'
+  pnpm test
+fi
 
-# 3. Test every package.
-echo "pre-push: [3/4] pnpm -r run test"
-pnpm -r run test
-
-# 4. Lint the whole repo.
-echo "pre-push: [4/4] pnpm run lint"
-pnpm run lint
-
-echo "pre-push: ✔ all CI checks passed — pushing."
+echo 'pre-push: ✔ fast gate passed — pushing.'
