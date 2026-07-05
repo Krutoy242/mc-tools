@@ -118,7 +118,7 @@ describe('fetchIntermediateFileChangelogs', () => {
 
     const result = await fetchIntermediateFileChangelogs(1, 100, 200, 'fake-api-key')
 
-    expect(result).toEqual({ changelogs: [] })
+    expect(result).toEqual({ changelogs: [], totalCount: 0 })
   })
 
   it('should return changelogs between two file versions', async () => {
@@ -171,7 +171,7 @@ describe('fetchIntermediateFileChangelogs', () => {
 
     const result = await fetchIntermediateFileChangelogs(1, 100, 999, 'fake-api-key')
 
-    expect(result).toEqual({ changelogs: [] })
+    expect(result).toEqual({ changelogs: [], totalCount: 0 })
   })
 
   it('should handle pagination', async () => {
