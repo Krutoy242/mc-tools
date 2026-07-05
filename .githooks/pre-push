@@ -1,0 +1,37 @@
+#!/bin/sh
+# Repo-local pre-push gate. Activated via `core.hooksPath=.githooks`
+# (set by the `prepare` npm script). Runs the SAME checks GitHub Actions
+# runs (.github/workflows/ci.yml + release.yml) so a push can only fail on
+# GitHub for reasons that are impossible to reproduce locally (secrets, the
+# npm publish itself). Everything else is caught here, before the push.
+#
+# Mirrors, in order:
+#   ci.yml  build-test : install --frozen-lockfile -> build -> test
+#   ci.yml  lint       : (build) -> lint
+#   release.yml        : install --frozen-lockfile -> build -> test
+#
+# Emergency bypass (use sparingly): git push --no-verify
+set -e
+
+echo "pre-push: running CI gate locally (build + test + lint)…"
+
+# 1. Lockfile integrity — CI installs with --frozen-lockfile, which FAILS if
+#    package.json and pnpm-lock.yaml disagree (this is exactly what the missing
+#    `zx` dep tripped). Idempotent + fast when already in sync.
+echo "pre-push: [1/4] pnpm install --frozen-lockfile"
+pnpm install --frozen-lockfile
+
+# 2. Build every package. Type-aware lint rules also resolve cross-package
+#    imports through each package's built dist, so build must precede lint.
+echo "pre-push: [2/4] pnpm -r run build"
+pnpm -r run build
+
+# 3. Test every package.
+echo "pre-push: [3/4] pnpm -r run test"
+pnpm -r run test
+
+# 4. Lint the whole repo.
+echo "pre-push: [4/4] pnpm run lint"
+pnpm run lint
+
+echo "pre-push: ✔ all CI checks passed — pushing."

@@ -3,11 +3,21 @@
   "type": "module",
   "version": "0.1.0",
   "description": "Look up ZenScript class definitions, fields and method signatures from CraftTweaker dumps",
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "mctools-zsfind": "./dist/cli.mjs"
+    }
+  },
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Krutoy242/mc-tools.git",
     "directory": "packages/zsfind"
   },
+  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
     "automation",
     "minecraft",
@@ -16,8 +26,22 @@
     "zenscript",
     "cli"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
   "bin": {
     "mctools-zsfind": "./src/cli.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "coverage": "vitest run --coverage",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@clack/prompts": "^0.10.1",
@@ -33,29 +57,5 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "zx": "^8.5.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "bin": {
-      "mctools-zsfind": "./dist/cli.mjs"
-    }
-  },
-  "author": "Krutoy242 <Krutoy242@gmail.com>",
-  "license": "MIT",
-  "homepage": "https://github.com/Krutoy242/mc-tools",
-  "bugs": "https://github.com/Krutoy242/mc-tools/issues",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsdown",
-    "coverage": "vitest run --coverage",
-    "test": "vitest run --passWithNoTests"
   }
 }

@@ -11,5 +11,12 @@ export default await defineMctoolsConfig({
     '**/README.md',
     'packages/format/src/parser-generated.mjs',
     'packages/*/scripts/**',
+    // Runtime caches written by the curseforge tests. Gitignored, so they never
+    // exist in CI's clean checkout — ignore them here too so local lint matches.
+    'packages/curseforge/*-cache.json',
+    // Personal one-off utility: imports the parent modpack repo (../../dev/*)
+    // and hardcodes an E:/ path, so it cannot type-resolve in a standalone
+    // submodule checkout (CI). Not shippable package code.
+    'scripts/tcon-textures.ts',
   ],
 })
