@@ -137,7 +137,7 @@ export async function runAutoBinary(opts: AutoOptions): Promise<AutoResult> {
       let captured: boolean | undefined
       const res = await restartAndMonitor(mcDir, launcher, {
         maxMs  : PER_TEST_MS,
-        stallMs: UNRESPONSIVE_MS,
+        quietMs: UNRESPONSIVE_MS,
         log,
         onTick : (tick) => {
           const ctx = toCtx(tick)

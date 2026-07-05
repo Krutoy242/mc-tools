@@ -25,8 +25,8 @@ export type MonitorOutcome
 
 export interface MonitorResult {
   outcome      : MonitorOutcome
-  /** For an `idle` outcome: how readiness was detected. */
-  reached?     : 'joined' | 'menu' | 'quiet'
+  /** For an `idle` outcome: which readiness layer fired (pack line / port / menu). */
+  reached?     : 'pattern' | 'port' | 'menu'
   pid?         : number
   crashSummary?: string
 }

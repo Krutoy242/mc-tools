@@ -4,8 +4,8 @@ import process from 'node:process'
 import { CommandLauncher } from './command.js'
 import { PrismLauncher } from './prism.js'
 
-export type { MonitorOptions, MonitorTick } from './monitor.js'
-export { readCraftTweakerErrors, restartAndMonitor } from './monitor.js'
+export type { MonitorOptions, MonitorTick, ReadySignals, ReadyVerdict } from './monitor.js'
+export { probeReadyNow, readCraftTweakerErrors, restartAndMonitor, scanLogErrors, tcpOpen } from './monitor.js'
 export type { Launcher, MonitorOutcome, MonitorResult } from './types.js'
 
 /**

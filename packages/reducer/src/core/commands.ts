@@ -5,7 +5,7 @@ import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
-import { readCraftTweakerErrors, resolveLauncher, restartAndMonitor } from '../launcher/index.js'
+import { probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors } from '../launcher/index.js'
 import {
   clearSession,
   readSession,
@@ -22,6 +22,36 @@ import { summarizeDiagnostics, summarizeRoster, summarizeWeight } from './summar
 /** Primary, parseable output → stdout. Diagnostics go through consola (stderr). */
 function out(line: string): void {
   process.stdout.write(`${line}\n`)
+}
+
+const sleep = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function fmtSec(ms: number): string {
+  const s = Math.round(ms / 1000)
+  return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s` : `${s}s`
+}
+
+function trimLine(s: string, max = 100): string {
+  const t = s.replace(/\s+/g, ' ').trim()
+  return t.length > max ? `${t.slice(0, max)}…` : t
+}
+
+/** Readiness config → monitor signals (all mod-agnostic, layers optional). */
+function readySignals(cfg: { ready: { logPattern?: string, tcpPort?: number, quietMs: number, maxMs: number } }) {
+  return {
+    readyPattern: cfg.ready.logPattern ? new RegExp(cfg.ready.logPattern, 'i') : undefined,
+    readyPort   : cfg.ready.tcpPort,
+    quietMs     : cfg.ready.quietMs,
+    maxMs       : cfg.ready.maxMs,
+  }
+}
+
+/** The subset (pattern/port) used by the state-only `probeReadyNow`. */
+function probeSignals(cfg: { ready: { logPattern?: string, tcpPort?: number } }) {
+  return {
+    pattern: cfg.ready.logPattern ? new RegExp(cfg.ready.logPattern, 'i') : undefined,
+    port   : cfg.ready.tcpPort,
+  }
 }
 
 function reportResolveFailures(failures: ReturnType<typeof resolveMods>['failures']): boolean {
@@ -118,6 +148,10 @@ export interface RestartInput {
   except   : string[]
   continue?: boolean
   new?     : boolean
+  /** Launch and return immediately; poll readiness with `reducer ready`. */
+  detach?  : boolean
+  /** Treat post-load log ERROR/FATAL as failure (exit 1) instead of a warning. */
+  strict?  : boolean
 }
 
 export async function runRestart(input: RestartInput): Promise<number> {
@@ -205,43 +239,89 @@ export async function runRestart(input: RestartInput): Promise<number> {
     return 0
   }
 
-  // ----- real restart + monitor (no session lock held) -----
   const launcher = resolveLauncher(mcPath, runtime.config.launcher)
-  consola.start(`restarting via ${launcher.name} …`)
-  const result = await restartAndMonitor(mcPath, launcher, { log: m => consola.log(m) })
+  const signals = readySignals(runtime.config)
 
+  // ----- detached restart: launch and return fast, caller polls `reducer ready` -----
+  if (input.detach) {
+    consola.start(`restarting via ${launcher.name} … (detached)`)
+    const existing = await launcher.getPid()
+    if (existing) {
+      await launcher.kill(existing)
+      consola.log(`killed existing ${launcher.name} PID ${existing}`)
+    }
+    await sleep(3000) // let the OS release file handles before relaunch
+    await launcher.launch()
+    consola.success(`launched via ${launcher.name}. Poll with \`reducer ready\` (or \`reducer ready --wait\`).`)
+    return 0
+  }
+
+  // ----- blocking restart + monitor (no session lock held) -----
+  consola.start(`restarting via ${launcher.name} …`)
+  const result = await restartAndMonitor(mcPath, launcher, {
+    ...signals,
+    log       : m => consola.log(m),
+    onProgress: ({ elapsed, lastLine }) => consola.log(`  booting ${fmtSec(elapsed)} · ${trimLine(lastLine)}`),
+  })
+
+  // ── Block 1: did it load? (liveness — the exit code follows this) ──
   if (result.outcome === 'crash') {
-    consola.error('Minecraft crashed:')
+    consola.error('LOAD ✗ Minecraft crashed:')
     if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
     return 1
   }
   if (result.outcome === 'exit') {
-    consola.error('Minecraft process exited unexpectedly (no crash report).')
+    consola.error('LOAD ✗ Minecraft process exited unexpectedly (no crash report).')
     return 1
   }
   if (result.outcome === 'timeout') {
-    // Boot never reached the ready line within the ceiling. Explain what that means.
-    consola.warn('monitor ceiling reached: the game did not log a "loaded/joined" line in time — it may still be booting, hung, or too slow. Raise REDUCER_MONITOR_MAX_MS if the pack just needs longer.')
-  }
-  else if (result.reached === 'menu') {
-    consola.success('Minecraft loaded (reached main menu; auto-join did not enter a world — commands needing a world may not work yet).')
-  }
-  else if (result.reached === 'quiet') {
-    consola.success('Minecraft loaded (log went quiet; no world-join line seen).')
-  }
-  else {
-    consola.success('Minecraft loaded and ready for commands (world joined).')
-  }
-
-  const ct = await readCraftTweakerErrors(mcPath)
-  if (ct.count > 0) {
-    consola.warn(`${ct.count} ERROR/FATAL lines in crafttweaker.log:`)
-    for (const l of ct.lines.slice(0, 50)) out(l)
-    if (ct.lines.length > 50) out(`…and ${ct.lines.length - 50} more`)
+    consola.warn(`LOAD ✗ monitor ceiling (${fmtSec(signals.maxMs)}) reached with no ready signal — still booting, hung, or too slow. Raise ready.maxMs / REDUCER_MONITOR_MAX_MS if the pack just needs longer.`)
     return 1
   }
-  consola.success('no ERROR/FATAL in crafttweaker.log')
+  const how = result.reached === 'pattern'
+    ? 'ready line seen — in world'
+    : result.reached === 'port'
+      ? 'ready port open'
+      : 'reached main menu (no world auto-joined)'
+  consola.success(`LOAD ✔ Minecraft loaded (${how}).`)
+
+  // ── Block 2: are the scripts clean? (warning-only unless --strict) ──
+  const scanned = runtime.config.scan
+  const scan = await scanLogErrors(mcPath, scanned)
+  if (scan.count > 0) {
+    consola.warn(`SCRIPTS ⚠ ${scan.count} ERROR/FATAL line(s) in ${scanned.join(', ')}${input.strict ? '' : ' (warning — pass --strict to fail on these)'}:`)
+    for (const l of scan.lines.slice(0, 50)) out(l)
+    if (scan.lines.length > 50) out(`…and ${scan.lines.length - 50} more`)
+    return input.strict ? 1 : 0
+  }
+  consola.success(`SCRIPTS ✔ no ERROR/FATAL in ${scanned.join(', ') || '(nothing configured to scan)'}.`)
   return 0
+}
+
+export interface ReadyInput {
+  mcPath : string
+  wait   : boolean
+  timeout: number
+}
+
+/** Answer "is the game loaded & ready for commands right now?" — mod-agnostic. */
+export async function runReady(input: ReadyInput): Promise<number> {
+  const runtime = await loadRuntime(input.mcPath)
+  const launcher = resolveLauncher(input.mcPath, runtime.config.launcher)
+  const signals = probeSignals(runtime.config)
+  const deadline = Date.now() + (input.wait ? input.timeout : 0)
+  for (;;) {
+    const v = await probeReadyNow(input.mcPath, signals, launcher)
+    if (v.ready) {
+      consola.success(`ready ✔ ${v.reason}`)
+      return 0
+    }
+    if (!input.wait || Date.now() >= deadline) {
+      consola.warn(`not ready ✗ ${v.reason}`)
+      return 1
+    }
+    await sleep(2000)
+  }
 }
 
 export async function runKill(mcPath: string, dry: boolean): Promise<number> {
@@ -282,6 +362,10 @@ export async function runFind(input: FindInput): Promise<number> {
 /** Print the non-interactive equivalents of the dashboard panels. */
 export async function runStatus(mcPath: string): Promise<number> {
   const runtime = await loadRuntime(mcPath)
+  // Lead with liveness so "what's happening right now" is the first line.
+  const launcher = resolveLauncher(mcPath, runtime.config.launcher)
+  const v = await probeReadyNow(mcPath, probeSignals(runtime.config), launcher)
+  out(`GAME  ${v.ready ? 'ready' : 'not ready'} — ${v.reason}`)
   out(summarizeRoster(runtime.mods))
   for (const l of summarizeDiagnostics(runtime.warnings)) out(l)
   for (const l of summarizeWeight(runtime.mods)) out(l)

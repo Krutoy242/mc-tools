@@ -8,12 +8,15 @@ import { defineCommand, runMain } from 'citty'
 import { resolve } from 'pathe'
 
 import pkg from '../package.json' with { type: 'json' }
-import { runAction, runBinary, runFind, runKill, runRestart, runStatus } from './core/commands.js'
+import { runBinary, runFind, runKill, runReady, runRestart, runStatus } from './core/commands.js'
 import { clearSession, readSession } from './session/lock.js'
 
 const { description, name, version } = pkg
 
-const SUBCOMMANDS = new Set(['restart', 'disable', 'enable', 'only', 'except', 'kill', 'find', 'status', 'binary'])
+// CLI is the robot surface. Humans do fine-grained toggling in the interactive
+// TUI (bare `reducer`); the standalone disable/enable/only/except verbs are
+// deliberately not exposed here — agents always want the combined `restart --…`.
+const SUBCOMMANDS = new Set(['restart', 'ready', 'kill', 'find', 'status', 'binary'])
 
 /** Flags that consume the following token as their value (for argv scanning). */
 const VALUE_FLAGS = new Set(['-m', '--cwd', '-t', '--trusted', '-i', '--ignored'])
@@ -108,6 +111,8 @@ const restartCmd = defineCommand({
     except  : { type: 'string', alias: 'x', description: 'Disable these (+dependents); enable everything else' },
     continue: { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
     new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
+    detach  : { type: 'boolean', alias: 'D', description: 'Launch and return immediately; poll with `reducer ready`' },
+    strict  : { type: 'boolean', alias: 's', description: 'Fail (exit 1) on post-load log ERROR/FATAL instead of warning' },
   },
   async run({ args }) {
     const mcPath = mcPathOf(args)
@@ -145,32 +150,27 @@ const restartCmd = defineCommand({
       except,
       continue: Boolean(args.continue),
       new     : Boolean(args.new),
+      detach  : Boolean(args.detach),
+      strict  : Boolean(args.strict),
     })
   },
 })
 
-function verbCmd(kind: 'disable' | 'enable' | 'only' | 'except', desc: string) {
-  return defineCommand({
-    meta: { name: kind, description: desc },
-    args: {
-      ...cwdArg,
-      ...dryArg,
-      continue: { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
-      new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
-    },
-    async run({ args }) {
-      process.exitCode = await runAction({
-        mcPath  : mcPathOf(args),
-        kind,
-        queries : positionals(args),
-        dry     : Boolean(args.dry),
-        continue: Boolean(args.continue),
-        new     : Boolean(args.new),
-        advise  : true,
-      })
-    },
-  })
-}
+const readyCmd = defineCommand({
+  meta: { name: 'ready', description: 'Is the game loaded & ready for commands right now? (mod-agnostic)' },
+  args: {
+    ...cwdArg,
+    wait   : { type: 'boolean', alias: 'w', description: 'Block until ready (or --timeout) instead of answering once' },
+    timeout: { type: 'string', alias: 'T', default: '600000', description: 'Max ms to wait with --wait (default 600000)' },
+  },
+  async run({ args }) {
+    process.exitCode = await runReady({
+      mcPath : mcPathOf(args),
+      wait   : Boolean(args.wait),
+      timeout: Number(args.timeout) || 600_000,
+    })
+  },
+})
 
 const killCmd = defineCommand({
   meta: { name: 'kill', description: 'Kill the running Minecraft process for this instance' },
@@ -241,26 +241,25 @@ const binaryCmd = defineCommand({
 
 const HELP_EXAMPLES = [
   '',
-  'EXAMPLES',
-  '  reducer                                  open the interactive TUI',
-  '  reducer restart                          reboot MC, keep the current mod set',
+  'AGENT LOOP (the common path)',
+  '  reducer restart --detach                 reboot (change mods first if you like), return at once',
+  '  reducer ready --wait                      block until the game is loaded & ready for commands',
+  '  reducer restart --only "Mod A"           block-reboot with only Mod A (+deps); reports LOAD + SCRIPTS',
+  '',
+  'MORE',
+  '  reducer                                  open the interactive TUI (for humans)',
   '  reducer restart --full                   reboot with every mod enabled',
-  '  reducer restart --disable "Mod A" "Mod B"  disable mods (+dependents), then reboot',
-  '  reducer restart --only "Mod A"           enable only Mod A (+deps), disable the rest',
-  '  reducer restart --except "Mod A"         disable Mod A (+dependents), enable the rest',
   '  reducer restart --disable A --enable B   combined; refuses self-excluding requests',
-  '  reducer disable "Mod A"                  change mods WITHOUT rebooting (⚠ prefer restart --disable)',
+  '  reducer ready                            answer once: is it ready right now? (exit 0/1)',
+  '  reducer status                           liveness + roster / diagnostics / weight',
   '  reducer find jei thaum 1234              resolve queries → ./mods/<jar> paths',
-  '  reducer find --dependencies "Mod A"      ...also list the dependency closure',
   '  reducer kill                             kill the running game',
-  '  reducer status                           print roster / diagnostics / weight',
   '  reducer ./conditions.ts                  automated binary search (see below)',
-  '  reducer --dry ./conditions.ts            simulate the search; report a culprit',
-  '  reducer ./conditions.ts -t "Lib" -i "Mod"  trusted (kept off) / ignored (kept on)',
   '  reducer --continue / --new               resume / discard an interrupted session',
   '',
-  'Add --dry/-y to any mutating command to log intended changes as "assumed"',
-  'without touching files or processes.',
+  'Readiness is mod-agnostic: a pack declares extra signals (ready.logPattern /',
+  'ready.tcpPort) in reducer.config.yml; without them a bare Forge launch is still',
+  'detected via "FML loaded + log quiet". Add --dry/-y to log changes as "assumed".',
 ].join('\n')
 
 const mainCli = defineCommand({
@@ -276,10 +275,7 @@ const mainCli = defineCommand({
   },
   subCommands: {
     restart: restartCmd,
-    disable: verbCmd('disable', 'Disable mods without restarting (prefer `restart --disable`)'),
-    enable : verbCmd('enable', 'Enable mods without restarting (prefer `restart --enable`)'),
-    only   : verbCmd('only', 'Keep only these mods enabled, no restart (prefer `restart --only`)'),
-    except : verbCmd('except', 'Disable only these mods, no restart (prefer `restart --except`)'),
+    ready  : readyCmd,
     kill   : killCmd,
     find   : findCmd,
     status : statusCmd,

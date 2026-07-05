@@ -1,3 +1,13 @@
+# How this pack signals "loaded & ready for commands". All keys optional; the
+# tool falls back to the universal "FML loaded + log quiet" signal without them.
+ready:
+  logPattern: joined the game   # ProbeZS auto-join enters a world when ready
+  tcpPort: 6489                 # ProbeZS RMI bridge starts listening when ready
+
+# Logs scanned for ERROR/FATAL after load (warning-only; skipped if the file is absent).
+scan:
+  - crafttweaker.log
+
 # Mandatory dependencies
 # Could exact mod name or regexp test (of the file or mod name)
 # Could be single string, array of strings or a tree

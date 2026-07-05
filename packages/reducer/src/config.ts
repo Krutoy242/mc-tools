@@ -41,11 +41,34 @@ export const LauncherConfigSchema = z.object({
 
 export type LauncherConfig = z.infer<typeof LauncherConfigSchema>
 
+/**
+ * How this pack signals "finished loading". All layers are optional and mod-
+ * agnostic: the tool core only knows universal Forge/process signals; a pack
+ * declares its own extra signals here (e.g. a ProbeZS auto-join line, an RMI
+ * port). Absent layers are simply skipped — a bare Forge launch still works via
+ * the universal "FML loaded + log quiet" fallback.
+ */
+export const ReadyConfigSchema = z.object({
+  /** Pack-specific "fully ready" log line (regex), e.g. a world-join message. */
+  logPattern: z.string().optional(),
+  /** A port that starts accepting connections once the pack is ready (optional). */
+  tcpPort   : z.number().int().positive().optional(),
+  /** Universal fallback: "loaded" if the log stays quiet this long after FML. */
+  quietMs   : z.number().int().positive().default(8000),
+  /** Absolute ceiling before giving up on a boot. */
+  maxMs     : z.number().int().positive().default(900_000),
+})
+
+export type ReadyConfig = z.infer<typeof ReadyConfigSchema>
+
 export const ReducerConfigSchema = z.object({
   dependencies: BranchSchema.default({}),
   dependents  : BranchSchema.default({}),
   forks       : z.record(z.string(), z.array(z.number())).default({}),
   launcher    : LauncherConfigSchema.default({ kind: 'prism' }),
+  ready       : ReadyConfigSchema.default({ quietMs: 8000, maxMs: 900_000 }),
+  /** Logs scanned for ERROR/FATAL after load (skipped if absent). Warning-only. */
+  scan        : z.array(z.string()).default(['crafttweaker.log']),
 })
 
 export type ReducerConfig = z.infer<typeof ReducerConfigSchema>

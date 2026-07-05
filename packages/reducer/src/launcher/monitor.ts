@@ -1,25 +1,23 @@
 import type { Launcher, MonitorResult } from './types.js'
 import { Buffer } from 'node:buffer'
 import fs from 'node:fs/promises'
+import net from 'node:net'
 import process from 'node:process'
 import { StringDecoder } from 'node:string_decoder'
 import { join } from 'pathe'
 
 const TICK_MS = 1000
 const HEALTH_MS = 3000
-const DEFAULT_STALL_MS = 30_000
 // Full-pack boots can take well over 5 min; a short ceiling was the main cause of
 // false "timeout" reports. Overridable via REDUCER_MONITOR_MAX_MS.
 const DEFAULT_MAX_MS = 900_000
+const DEFAULT_QUIET_MS = 8000
 const DEFAULT_LAUNCH_MS = 120_000
-// Definitive "ready for commands" signal: auto-join enters a world → "joined the
-// game". Far more reliable than "log went quiet", which never happens in-world
-// (continuous tick spam). Overridable via REDUCER_MONITOR_READY.
-const DEFAULT_READY = /joined the game/i
-// Fallback for packs with auto-join OFF: reaching the main menu also means loaded.
-// Only counts as ready if no world-join follows within MENU_GRACE_MS.
-const MENU_RE = /Forge Mod Loader has successfully loaded/i
-const MENU_GRACE_MS = 20_000
+const PORT_PROBE_MS = 2000 // don't hammer the socket every tick
+// Universal Forge signal, present in EVERY Forge launch even with zero extra mods.
+// Marks "mods finished loading / main menu imminent" — the mod-agnostic anchor for
+// the readiness fallbacks. NOT a mod-specific line.
+const FML_LOADED = /Forge Mod Loader has successfully loaded/i
 
 const sleep = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -27,14 +25,20 @@ function envInt(name: string, fallback: number): number {
   const v = Number(process.env[name])
   return Number.isFinite(v) && v > 0 ? v : fallback
 }
-function envRe(name: string, fallback: RegExp): RegExp {
-  const v = process.env[name]
-  try {
-    return v ? new RegExp(v, 'i') : fallback
-  }
-  catch {
-    return fallback
-  }
+
+/** True if something accepts a TCP connection on `port` (mod-agnostic liveness probe). */
+export async function tcpOpen(port: number, host = '127.0.0.1', timeoutMs = 800): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host })
+    const done = (ok: boolean) => {
+      socket.destroy()
+      resolve(ok)
+    }
+    socket.setTimeout(timeoutMs)
+    socket.once('connect', () => done(true))
+    socket.once('timeout', () => done(false))
+    socket.once('error', () => done(false))
+  })
 }
 
 export function dbgLogPath(mcDir: string): string {
@@ -99,18 +103,81 @@ async function sizeOf(p: string): Promise<number> {
 }
 
 export async function readCraftTweakerErrors(mcDir: string): Promise<{ lines: string[], count: number }> {
+  return scanLogErrors(mcDir, ['crafttweaker.log'])
+}
+
+/**
+ * Scan the given log files (relative to `mcDir`) for ERROR/FATAL lines. Missing
+ * files are silently skipped, so a pack without e.g. CraftTweaker just yields
+ * nothing — the scan list is mod-agnostic and warning-only.
+ */
+export async function scanLogErrors(mcDir: string, files: string[]): Promise<{ lines: string[], count: number }> {
+  const lines: string[] = []
+  for (const rel of files) {
+    try {
+      const content = await fs.readFile(join(mcDir, rel), 'utf-8')
+      for (const line of content.split('\n')) {
+        if (/\b(?:ERROR|FATAL)\b/.test(line)) {
+          const t = line.trim()
+          if (t) lines.push(t)
+        }
+      }
+    }
+    catch { /* file absent — skip */ }
+  }
+  return { lines, count: lines.length }
+}
+
+/** Read the last `bytes` of a file as UTF-8 (best-effort, '' on any error). */
+async function tailText(filePath: string, bytes: number): Promise<string> {
   try {
-    const content = await fs.readFile(ctLogPath(mcDir), 'utf-8')
-    const lines = content
-      .split('\n')
-      .filter(line => /\b(?:ERROR|FATAL)\b/.test(line))
-      .map(line => line.trim())
-      .filter(Boolean)
-    return { lines, count: lines.length }
+    const size = (await fs.stat(filePath)).size
+    const start = Math.max(0, size - bytes)
+    const len = size - start
+    if (len <= 0) return ''
+    const buffer = Buffer.alloc(len)
+    const fd = await fs.open(filePath, 'r')
+    try {
+      await fd.read(buffer, 0, len, start)
+    }
+    finally {
+      await fd.close()
+    }
+    return buffer.toString('utf8')
   }
   catch {
-    return { lines: [], count: 0 }
+    return ''
   }
+}
+
+/** Config-derived readiness signals a pack can declare (all optional). */
+export interface ReadySignals {
+  /** Pack "fully ready" line, e.g. a world-join message. */
+  pattern?: RegExp
+  /** Port that accepts connections once ready. */
+  port?   : number
+}
+
+export interface ReadyVerdict {
+  ready : boolean
+  /** How readiness was (or was not) decided. */
+  reason: string
+}
+
+/**
+ * Judge whether the game is loaded & ready *right now*, from current state only
+ * (no launch). Cascade, most-authoritative first; every mod-specific layer is
+ * optional and skipped when unconfigured/unmet, falling back to the universal
+ * "process alive + FML loaded" signal.
+ */
+export async function probeReadyNow(mcDir: string, signals: ReadySignals, launcher: Launcher): Promise<ReadyVerdict> {
+  const pid = await launcher.getPid()
+  if (!pid) return { ready: false, reason: 'game is not running' }
+  if (signals.port && await tcpOpen(signals.port)) return { ready: true, reason: `port ${signals.port} is accepting connections` }
+  const tail = await tailText(dbgLogPath(mcDir), 256 * 1024)
+  if (signals.pattern && signals.pattern.test(tail)) return { ready: true, reason: 'ready line present in debug.log' }
+  if (FML_LOADED.test(tail)) return { ready: true, reason: 'mods loaded (FML), at main menu' }
+  return { ready: false, reason: 'still loading (no FML-loaded line yet)' }
 }
 
 async function findNewestCrashReport(mcDir: string, afterTs: number): Promise<string | null> {
@@ -158,15 +225,22 @@ export interface MonitorTick {
 
 export interface MonitorOptions {
   /** Called every tick (~1s). Return `'stop'` to end monitoring early. */
-  onTick?  : (tick: MonitorTick) => 'stop' | void | Promise<'stop' | void>
-  stallMs? : number
-  maxMs?   : number
-  launchMs?: number
-  /** Line that means "loaded & ready"; matching it ends monitoring as `idle`. */
-  readyRe? : RegExp
+  onTick?      : (tick: MonitorTick) => 'stop' | void | Promise<'stop' | void>
+  /** Heartbeat (~every few s) so a long boot shows progress instead of silence. */
+  onProgress?  : (info: { elapsed: number, lastLine: string }) => void
+  /** Layer 1: pack "fully ready" line — matching it ends monitoring immediately. */
+  readyPattern?: RegExp
+  /** Layer 2: pack port that starts accepting connections once ready. */
+  readyPort?   : number
+  /** Layer 3: universal fallback — "loaded" if the log is quiet this long after FML. */
+  quietMs?     : number
+  maxMs?       : number
+  launchMs?    : number
   /** Diagnostic sink (stderr). */
-  log?     : (msg: string) => void
+  log?         : (msg: string) => void
 }
+
+const PROGRESS_MS = 5000
 
 /**
  * Kill any running instance, launch a fresh one, and tail the logs until the
@@ -178,10 +252,11 @@ export async function restartAndMonitor(
   launcher: Launcher,
   opts    : MonitorOptions = {}
 ): Promise<MonitorResult> {
-  const stallMs = opts.stallMs ?? envInt('REDUCER_MONITOR_STALL_MS', DEFAULT_STALL_MS)
+  const quietMs = opts.quietMs ?? envInt('REDUCER_MONITOR_QUIET_MS', DEFAULT_QUIET_MS)
   const maxMs = opts.maxMs ?? envInt('REDUCER_MONITOR_MAX_MS', DEFAULT_MAX_MS)
   const launchMs = opts.launchMs ?? DEFAULT_LAUNCH_MS
-  const readyRe = opts.readyRe ?? envRe('REDUCER_MONITOR_READY', DEFAULT_READY)
+  const readyPattern = opts.readyPattern
+  const readyPort = opts.readyPort
   const log = opts.log ?? (() => {})
 
   const dbg = dbgLogPath(mcDir)
@@ -209,9 +284,13 @@ export async function restartAndMonitor(
   let pid: number | null = null
   let lastChange = launchTs
   let lastHealth = launchTs
-  let menuAt = 0 // when the main menu was reached (0 = not yet)
+  let lastProgress = launchTs
+  let lastPortProbe = 0
+  let fmlAt = 0 // when FML finished loading mods (0 = not yet)
   let crashed = false
   let crashSummary: string | undefined
+
+  const resolvePid = async () => pid ?? await launcher.getPid() ?? undefined
 
   for (;;) {
     await sleep(TICK_MS)
@@ -223,11 +302,11 @@ export async function restartAndMonitor(
     if (newDebug.length) {
       debugLog.push(...newDebug)
       lastChange = now
-      // The ready line is authoritative: in-world log spam never goes "quiet", so
-      // the stall heuristic below would otherwise run to the ceiling on a healthy boot.
       const text = newDebug.join('\n')
-      if (readyRe.test(text)) return { outcome: 'idle', reached: 'joined', pid: pid ?? await launcher.getPid() ?? undefined }
-      if (!menuAt && MENU_RE.test(text)) menuAt = now
+      // Layer 1: pack-declared ready line is authoritative (e.g. a world-join),
+      // and in-world log spam never goes "quiet" so the fallbacks can't fire.
+      if (readyPattern && readyPattern.test(text)) return { outcome: 'idle', reached: 'pattern', pid: await resolvePid() }
+      if (!fmlAt && FML_LOADED.test(text)) fmlAt = now
     }
     const newCt = await readNewLines(ct, ctTail)
     if (newCt.length) craftTweakerLog.push(...newCt)
@@ -238,6 +317,11 @@ export async function restartAndMonitor(
       crashSummary = await readCrashSummary(crash)
     }
 
+    if (opts.onProgress && now - lastProgress >= PROGRESS_MS) {
+      lastProgress = now
+      opts.onProgress({ elapsed: now - launchTs, lastLine: debugLog[debugLog.length - 1] ?? '' })
+    }
+
     if (opts.onTick) {
       const directive = await opts.onTick({ debugLog, craftTweakerLog, elapsed: now - launchTs, crashed })
       if (directive === 'stop') return { outcome: 'stopped', pid: pid ?? undefined, crashSummary }
@@ -245,18 +329,22 @@ export async function restartAndMonitor(
 
     if (crashed) return { outcome: 'crash', pid: pid ?? undefined, crashSummary }
 
-    // Auto-join OFF: main menu reached and no world-join followed → ready at the menu.
-    if (menuAt && now - menuAt >= MENU_GRACE_MS) {
-      return { outcome: 'idle', reached: 'menu', pid: pid ?? await launcher.getPid() ?? undefined }
+    // Layer 2: a pack-declared port started accepting connections (mods finished first).
+    if (readyPort && fmlAt && now - lastPortProbe >= PORT_PROBE_MS) {
+      lastPortProbe = now
+      if (await tcpOpen(readyPort)) return { outcome: 'idle', reached: 'port', pid: await resolvePid() }
+    }
+
+    // Layer 3 (universal): FML loaded and the log has been quiet since — main menu,
+    // no world was auto-joined. Works for a bare Forge launch with zero mods.
+    if (fmlAt && now - lastChange >= quietMs) {
+      return { outcome: 'idle', reached: 'menu', pid: await resolvePid() }
     }
 
     if (now - lastHealth >= HEALTH_MS) {
       lastHealth = now
       if (pid && !await launcher.getPid()) {
         return { outcome: 'exit', pid }
-      }
-      if (now - lastChange >= stallMs && pid) {
-        return { outcome: 'idle', reached: 'quiet', pid }
       }
     }
 
