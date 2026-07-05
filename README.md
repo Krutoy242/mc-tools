@@ -29,6 +29,7 @@ return fast_glob
 * [@mctools/reducer](packages/reducer) - Partially disable minecraft mods
 * [@mctools/source](packages/source) - Locate, clone or decompile Minecraft mod source code
 * [@mctools/tcon](packages/tcon) - Tweaks Tinker Constructs' materials with csv tables
+* [@mctools/zsfind](packages/zsfind) - Look up ZenScript class definitions, fields and method signatures from CraftTweaker dumps
 <!-- eval:end -->
 
 ## Monorepo structure
