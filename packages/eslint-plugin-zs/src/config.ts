@@ -170,6 +170,10 @@ export async function defineMctoolsConfig(
     languageOptions: { parserOptions: { program: null, project: false, projectService: false } },
     rules          : {
       ...typeAwareTsRulesOff,
+      // ZS has no .includes() — disable every plugin that offers prefer-includes
+      'prefer-includes'           : 'off',
+      'unicorn/prefer-includes'   : 'off',
+      'e18e/prefer-includes'      : 'off',
       'style/comma-spacing'       : 'off',
       'style/key-spacing'         : 'off',
       'style/no-multi-spaces'     : 'off',
