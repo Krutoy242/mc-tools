@@ -7,12 +7,28 @@
 export interface Launcher {
   /** Short name for diagnostics, e.g. `prismlauncher`. */
   readonly name: string
+  /** One-line "what is being booted", e.g. `E2EE · MC 1.12.2 · Forge 14.23.5.2860`. */
+  describe?    : () => Promise<string>
   /** PID of the running game process for this instance, or `null` if stopped. */
   getPid       : () => Promise<number | null>
   /** Launch the game detached; resolves once the launch was issued. */
   launch       : () => Promise<void>
   /** Kill the game (graceful close, then force) and any sidecar watchdogs. */
   kill         : (pid: number) => Promise<void>
+}
+
+/**
+ * `describe()` if the launcher offers one, else its bare name — so a log line
+ * always says *which* instance/loader booted, never crashing on a launcher that
+ * can't tell (a `command` one, say).
+ */
+export async function describeLauncher(launcher: Launcher): Promise<string> {
+  try {
+    return await launcher.describe?.() ?? launcher.name
+  }
+  catch {
+    return launcher.name
+  }
 }
 
 /** Outcome of a monitored launch. */

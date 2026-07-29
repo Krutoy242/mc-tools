@@ -5,7 +5,7 @@ import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
-import { probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors } from '../launcher/index.js'
+import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors } from '../launcher/index.js'
 import {
   clearSession,
   readSession,
@@ -252,7 +252,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
     }
     await sleep(3000) // let the OS release file handles before relaunch
     await launcher.launch()
-    consola.success(`launched via ${launcher.name}. Poll with \`reducer ready\` (or \`reducer ready --wait\`).`)
+    consola.success(`launched via ${launcher.name}: ${await describeLauncher(launcher)}. Poll with \`reducer ready\` (or \`reducer ready --wait\`).`)
     return 0
   }
 

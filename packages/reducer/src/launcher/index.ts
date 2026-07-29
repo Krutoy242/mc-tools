@@ -7,6 +7,7 @@ import { PrismLauncher } from './prism.js'
 export type { MonitorOptions, MonitorTick, ReadySignals, ReadyVerdict } from './monitor.js'
 export { probeReadyNow, readCraftTweakerErrors, restartAndMonitor, scanLogErrors, tcpOpen } from './monitor.js'
 export type { Launcher, MonitorOutcome, MonitorResult } from './types.js'
+export { describeLauncher } from './types.js'
 
 /**
  * Build the {@link Launcher} for this modpack. `REDUCER_LAUNCHER=command|prism`

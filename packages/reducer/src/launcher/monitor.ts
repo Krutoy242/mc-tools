@@ -5,6 +5,7 @@ import net from 'node:net'
 import process from 'node:process'
 import { StringDecoder } from 'node:string_decoder'
 import { join } from 'pathe'
+import { describeLauncher } from './types.js'
 
 const TICK_MS = 1000
 const HEALTH_MS = 3000
@@ -274,7 +275,7 @@ export async function restartAndMonitor(
 
   await launcher.launch()
   const launchTs = Date.now()
-  log(`launched via ${launcher.name}`)
+  log(`launched via ${launcher.name}: ${await describeLauncher(launcher)}`)
 
   const debugTail = createTail(initialDbg)
   const ctTail = createTail(initialCt)

@@ -23,8 +23,34 @@ function samePath(a: string, b: string): boolean {
   return pathKey(a) === pathKey(b)
 }
 
-async function getPrismDataDir(): Promise<string> {
-  if (process.env.PRISMLAUNCHER_DATA_DIR) return normalize(process.env.PRISMLAUNCHER_DATA_DIR)
+/** Comparable form of a whole command line (slashes + case only, no normalize). */
+function cmdKey(cmd: string): string {
+  const s = cmd.replace(/\\/g, '/')
+  return IS_WIN ? s.toLowerCase() : s
+}
+
+/** A resolved PrismLauncher instance and the roots it was found under. */
+interface ResolvedInstance {
+  /** Instance id — the folder name, what `--launch` takes. */
+  id      : string
+  /** Absolute path of the instance folder. */
+  dir     : string
+  dataDir : string
+  /** All instance roots of `dataDir`, used to attribute running processes. */
+  roots   : string[]
+  /** `lastLaunchTime` from `instance.cfg` (epoch ms, 0 if never launched). */
+  launched: number
+}
+
+/**
+ * Every plausible PrismLauncher data dir, in priority order — *all* of them, so
+ * the caller can pick the one that actually holds this pack instead of blindly
+ * taking the first that exists (a stale AppData profile has a completely
+ * different `InstanceDir` and would silently launch a different pack).
+ */
+async function getPrismDataDirs(): Promise<string[]> {
+  if (process.env.PRISMLAUNCHER_DATA_DIR) return [normalize(process.env.PRISMLAUNCHER_DATA_DIR)]
+  const dirs: string[] = []
   const programFiles = [
     'D:\\Program Files\\PrismLauncher',
     'C:\\Program Files\\PrismLauncher',
@@ -33,7 +59,7 @@ async function getPrismDataDir(): Promise<string> {
   for (const c of programFiles) {
     try {
       await fs.access(join(c, 'portable.txt'), fsConstants.R_OK)
-      return normalize(c)
+      dirs.push(normalize(c))
     }
     catch { /* not portable here */ }
   }
@@ -41,11 +67,13 @@ async function getPrismDataDir(): Promise<string> {
   const appData = envPaths('prismlauncher', { suffix: '' }).data
   try {
     await fs.access(appData, fsConstants.R_OK)
-    return normalize(appData)
+    dirs.push(normalize(appData))
   }
-  catch {
+  catch { /* no roaming profile */ }
+  if (!dirs.length) {
     throw new Error('Cannot find PrismLauncher data dir. Set PRISMLAUNCHER_DATA_DIR or install PrismLauncher.')
   }
+  return dirs
 }
 
 async function getInstanceDirs(dataDir: string): Promise<string[]> {
@@ -64,41 +92,106 @@ async function getInstanceDirs(dataDir: string): Promise<string[]> {
   return dirs
 }
 
-async function findInstanceInDir(rootDir: string, mcDir: string): Promise<string | null> {
+/**
+ * Game dir an instance folder runs, or `null` if it has none. Both the Prism
+ * (`.minecraft`) and MultiMC (`minecraft`) layouts are accepted, as symlink,
+ * NTFS junction or plain directory — an instance using the dotless name used to
+ * be invisible here, which silently handed the launch to a *different* instance
+ * pointing at the same pack.
+ */
+async function instanceGameDir(instancePath: string): Promise<string | null> {
+  for (const name of ['.minecraft', 'minecraft']) {
+    const linkPath = join(instancePath, name)
+    try {
+      const stats = await fs.lstat(linkPath)
+      if (stats.isSymbolicLink()) {
+        const target = await fs.readlink(linkPath)
+        return isAbsolute(target) ? target : resolve(instancePath, target)
+      }
+      if (stats.isDirectory()) return linkPath
+    }
+    catch { /* not this layout */ }
+  }
+  return null
+}
+
+/** Every instance under `rootDir` whose game dir is `mcDir` (not just the first). */
+async function findInstancesInDir(rootDir: string, mcDir: string): Promise<string[]> {
   let entries
   try {
     entries = await fs.readdir(rootDir, { withFileTypes: true })
   }
   catch {
-    return null
+    return []
   }
+  const found: string[] = []
   for (const entry of entries) {
     if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
-    const instancePath = join(rootDir, entry.name)
-    const mcLinkPath = join(instancePath, '.minecraft')
-    let realPath: string | null = null
-    try {
-      const stats = await fs.lstat(mcLinkPath)
-      if (stats.isSymbolicLink()) {
-        const target = await fs.readlink(mcLinkPath)
-        realPath = isAbsolute(target) ? target : resolve(instancePath, target)
-      }
-      else if (stats.isDirectory()) {
-        realPath = mcLinkPath
-      }
-    }
-    catch {
-      continue
-    }
-    if (realPath && samePath(realPath, mcDir)) return entry.name
+    const gameDir = await instanceGameDir(join(rootDir, entry.name))
+    if (gameDir && samePath(gameDir, mcDir)) found.push(entry.name)
   }
-  return null
+  return found
 }
 
-async function detectInstance(dataDir: string, mcDir: string): Promise<string | null> {
-  for (const rootDir of await getInstanceDirs(dataDir)) {
-    const id = await findInstanceInDir(rootDir, mcDir)
-    if (id) return id
+/** `lastLaunchTime` of an instance (epoch ms); 0 when unknown/never launched. */
+async function lastLaunchTime(instanceDir: string): Promise<number> {
+  try {
+    const cfg = await fs.readFile(join(instanceDir, 'instance.cfg'), 'utf-8')
+    return Number(cfg.match(/^lastLaunchTime=(\d+)$/m)?.[1]) || 0
+  }
+  catch {
+    return 0
+  }
+}
+
+const LOADER_NAMES: Record<string, string> = {
+  'com.mumfrey.liteloader'    : 'LiteLoader',
+  'net.fabricmc.fabric-loader': 'Fabric',
+  'net.minecraftforge'        : 'Forge',
+  'net.neoforged'             : 'NeoForge',
+  'org.quiltmc.quilt-loader'  : 'Quilt',
+}
+
+/**
+ * One-line "what am I actually booting" summary from `mmc-pack.json`, e.g.
+ * `MC 1.12.2 · Forge 14.23.5.2860`. Two instances can point at the same pack
+ * with wildly different loaders/Java, so this goes into the launch log.
+ */
+async function packSummary(instanceDir: string): Promise<string | null> {
+  interface Component { uid?: string, version?: string, cachedName?: string, cachedVersion?: string, dependencyOnly?: boolean }
+  let components: Component[]
+  try {
+    const pack = JSON.parse(await fs.readFile(join(instanceDir, 'mmc-pack.json'), 'utf-8')) as { components?: Component[] }
+    components = pack.components ?? []
+  }
+  catch {
+    return null
+  }
+  const parts: string[] = []
+  for (const c of components) {
+    if (!c.uid || c.dependencyOnly || c.uid.startsWith('org.lwjgl')) continue
+    const version = c.version ?? c.cachedVersion ?? ''
+    if (c.uid === 'net.minecraft') parts.unshift(`MC ${version}`)
+    else parts.push(`${LOADER_NAMES[c.uid] ?? c.cachedName ?? c.uid} ${version}`.trim())
+  }
+  return parts.join(' · ') || null
+}
+
+/**
+ * Instance id a running process belongs to, or `null` if it can't be
+ * attributed. PrismLauncher puts the instance's own `natives` dir on the JVM
+ * command line, so a process under a known instance root is attributable with
+ * certainty — and one attributed to *another* instance must never be treated as
+ * ours (it is a different game the user is playing).
+ */
+function instanceIdInCmd(cmd: string, roots: string[]): string | null {
+  const key = cmdKey(cmd)
+  for (const root of roots) {
+    const prefix = `${pathKey(root)}/`
+    const at = key.indexOf(prefix)
+    if (at < 0) continue
+    const seg = key.slice(at + prefix.length).split(/[/"\s]/)[0]
+    if (seg) return seg
   }
   return null
 }
@@ -177,41 +270,84 @@ async function detectLatestWorld(mcDir: string): Promise<string | null> {
 }
 
 /**
- * Windows + PrismLauncher launcher. Detects the instance whose `.minecraft`
- * resolves to `mcDir`, launches the newest world with `--alive`, and finds the
- * game `javaw` by command-line cwd match (plus its crash-assistant watchdog).
+ * Windows + PrismLauncher launcher. Picks the most recently launched instance
+ * whose game dir resolves to `mcDir`, launches the newest world with `--alive`,
+ * and finds the game `javaw` by command-line cwd match (plus its crash-assistant
+ * watchdog).
  */
 export class PrismLauncher implements Launcher {
   readonly name = 'prismlauncher'
-  private instanceId?: string
+  private instance?: ResolvedInstance
 
   constructor(private readonly mcDir: string) {}
 
-  private async resolveInstance(): Promise<string> {
-    if (this.instanceId) return this.instanceId
-    const dataDir = await getPrismDataDir()
-    const id = await detectInstance(dataDir, this.mcDir)
-    if (!id) {
-      throw new Error('No PrismLauncher instance maps to this directory. Run from inside the .minecraft folder.')
+  /**
+   * The instance to drive: of all instances whose game dir is `mcDir`, the one
+   * the user launched most recently (`lastLaunchTime` in `instance.cfg`). Several
+   * instances routinely point at one pack (a Java-8 and a Java-25 copy, say);
+   * "last launched" follows whichever the user actually switched to, instead of
+   * depending on readdir order — and renaming pack or instance changes nothing.
+   */
+  private async resolveInstance(): Promise<ResolvedInstance> {
+    if (this.instance) return this.instance
+    const searched: string[] = []
+    const matches: ResolvedInstance[] = []
+
+    for (const dataDir of await getPrismDataDirs()) {
+      const roots = [...new Set(await getInstanceDirs(dataDir))]
+      searched.push(...roots)
+      for (const root of roots) {
+        for (const id of await findInstancesInDir(root, this.mcDir)) {
+          const dir = join(root, id)
+          matches.push({ dataDir, dir, id, launched: await lastLaunchTime(dir), roots })
+        }
+      }
     }
-    this.instanceId = id
-    return id
+
+    if (!matches.length) {
+      throw new Error(`No PrismLauncher instance maps to ${this.mcDir}. Searched:\n  ${searched.join('\n  ')}`)
+    }
+    matches.sort((a, b) => b.launched - a.launched)
+    this.instance = matches[0]
+    return this.instance
   }
 
+  /** `E2EE · MC 1.12.2 · Forge 14.23.5.2860` — one line, for the launch log. */
+  async describe(): Promise<string> {
+    const inst = await this.resolveInstance()
+    const summary = await packSummary(inst.dir)
+    return summary ? `${inst.id} · ${summary}` : inst.id
+  }
+
+  /**
+   * PID of *our* game. Processes attributable to another instance are skipped
+   * outright — the old "first javaw with EntryPoint" fallback happily returned
+   * someone else's game, so `kill` could shoot down an unrelated session. The
+   * lone-unattributable process is still accepted (non-Prism-standard command
+   * lines), but only when it is the only candidate.
+   */
   async getPid(): Promise<number | null> {
-    const list = await listProcesses('javaw.exe')
-    const needle = pathKey(this.mcDir)
-    let fallback: number | null = null
+    const inst = await this.resolveInstance()
+    const list = (await listProcesses('javaw.exe')).filter(p => p.cmd.includes('EntryPoint'))
+    const mcKey = pathKey(this.mcDir)
+    const dirKey = pathKey(inst.dir)
+    const idKey = IS_WIN ? inst.id.toLowerCase() : inst.id
+    const unattributed: number[] = []
     for (const proc of list) {
-      if (!proc.cmd.includes('EntryPoint')) continue
-      fallback ??= proc.pid
-      if (pathKey(proc.cmd).includes(needle)) return proc.pid
+      const cmd = cmdKey(proc.cmd)
+      const owner = instanceIdInCmd(proc.cmd, inst.roots)
+      if (owner !== null) {
+        if (owner === idKey) return proc.pid
+        continue // definitely another instance — leave it alone
+      }
+      if (cmd.includes(dirKey) || cmd.includes(mcKey)) return proc.pid
+      unattributed.push(proc.pid)
     }
-    return fallback
+    return unattributed.length === 1 ? unattributed[0] : null
   }
 
   async launch(): Promise<void> {
-    const instanceId = await this.resolveInstance()
+    const { id: instanceId } = await this.resolveInstance()
     // E2EE_FORCE_WORLD overrides world detection — used by tests that must
     // target a specific save (e.g. "TEST_WORLD") without changing the
     // default "latest played" behavior real users get.
