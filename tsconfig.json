@@ -14,6 +14,7 @@
       "@mctools/utils/ftbquests": ["./packages/utils/src/mods/ftbquests.ts"],
       "@mctools/utils/tellme": ["./packages/utils/src/mods/tellme.ts"],
       "@mctools/utils/mod-resolve": ["./packages/utils/src/mods/resolve.ts"],
+      "@mctools/utils/reccomplex": ["./packages/utils/src/mods/reccomplex.ts"],
       "@mctools/curseforge": ["./packages/curseforge/src/index.ts"],
       "@mctools/curseforge/minecraftinstance": ["./packages/curseforge/src/minecraftinstance.ts"],
       "@mctools/errors": ["./packages/errors/src/index.ts"],

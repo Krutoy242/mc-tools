@@ -11,6 +11,7 @@ export default defineConfig({
     'src/mods/ftbquests.ts',
     'src/mods/tellme.ts',
     'src/mods/resolve.ts',
+    'src/mods/reccomplex.ts',
   ],
   unbundle: true,
   dts     : true,

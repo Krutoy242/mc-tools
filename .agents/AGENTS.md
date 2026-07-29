@@ -69,8 +69,24 @@ them by symbol search.
 Dependency-free helpers: `naturalSort`, `assertPath` (CLI path validation),
 `Lang` (lang-file read/write), `matchAddons`/`purifyFileName` (fuzzy mod-name
 resolution, exposed as the `mod-resolve` subpath), plus FTB Quests SNBT, TellMe
-CSV and Recurrent Complex `.rcst` structure readers. Built unbundled so every subpath export stays individually
-importable.
+CSV and Recurrent Complex `.rcst` readers. Built unbundled so every subpath
+export stays individually importable.
+
+The `reccomplex` subpath reads and writes Recurrent Complex structures
+(`.rcst` = zip of `structure.json` + gzipped `worldData.nbt`): `readRcst` /
+`writeRcst` / `parseRcst` / `serializeRcst`, the block accessors `getBlock`,
+`setBlock`, `positionsOf`, `replaceBlock`, `paletteIndex`, `index`, `tilePos`,
+and the pre-1.11 rename tables `LEGACY_TILE_ENTITY_IDS`, `LEGACY_ENTITY_IDS`,
+`modernEntityId`. Blocks are a palette plus one MSB-first bit-packed index and
+one metadata byte per position, ordered `x + width * (y + height * z)`.
+
+**Invariant:** `.rcst` round-trips byte-for-byte — `serializeRcst(parseRcst(b))`
+must equal `b`, so an edit script only changes what it meant to change. The zip
+container is handled in-package over `node:zlib`; nothing shells out to `7z`.
+
+**Invariant:** every third-party parser (`csv-parse`, `ftbq-nbt`,
+`prismarine-nbt`) is an *optional* peer dependency imported only by its own
+subpath — importing `@mctools/utils` itself stays dependency-free.
 
 **Invariant:** `@mctools/utils` is `private` and never published. Consumers list
 it under `devDependencies` only and inline it at build time, so published

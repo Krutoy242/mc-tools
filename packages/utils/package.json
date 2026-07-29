@@ -46,6 +46,10 @@
     "./mod-resolve": {
       "types": "./dist/mods/resolve.d.mts",
       "import": "./dist/mods/resolve.mjs"
+    },
+    "./reccomplex": {
+      "types": "./dist/mods/reccomplex.d.mts",
+      "import": "./dist/mods/reccomplex.mjs"
     }
   },
   "files": [
@@ -58,13 +62,17 @@
   },
   "peerDependencies": {
     "csv-parse": "^5.0.0",
-    "ftbq-nbt": "^1.4.1"
+    "ftbq-nbt": "^1.4.1",
+    "prismarine-nbt": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "csv-parse": {
       "optional": true
     },
     "ftbq-nbt": {
+      "optional": true
+    },
+    "prismarine-nbt": {
       "optional": true
     }
   },
@@ -74,6 +82,7 @@
   },
   "devDependencies": {
     "csv-parse": "^5.3.8",
-    "ftbq-nbt": "^1.4.1"
+    "ftbq-nbt": "^1.4.1",
+    "prismarine-nbt": "^2.8.0"
   }
 }

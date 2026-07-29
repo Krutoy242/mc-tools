@@ -14,6 +14,7 @@ export const mctoolsAlias = [
   { find: /^@mctools\/utils\/mod-resolve$/,  replacement: `${pkgs}/utils/src/mods/resolve.ts` },
   { find: /^@mctools\/utils\/ftbquests$/,    replacement: `${pkgs}/utils/src/mods/ftbquests.ts` },
   { find: /^@mctools\/utils\/tellme$/,       replacement: `${pkgs}/utils/src/mods/tellme.ts` },
+  { find: /^@mctools\/utils\/reccomplex$/,   replacement: `${pkgs}/utils/src/mods/reccomplex.ts` },
   // ── generic rules ──
   { find: /^@mctools\/([^/]+)\/(.+)$/, replacement: `${pkgs}/$1/src/$2` },
   { find: /^@mctools\/([^/]+)$/, replacement: `${pkgs}/$1/src/index.ts` },
