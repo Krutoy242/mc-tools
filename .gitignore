@@ -8,3 +8,10 @@ packages/*/dist
 packages/*/lib
 packages/curseforge/*-cache.json
 .cache
+
+# Per-agent entry points pointing at the canonical .agents/AGENTS.md.
+# Not tracked: every AI tool wants its own file name, and that list is endless.
+/AGENTS.md
+/CLAUDE.md
+/GEMINI.md
+/opencode.json
