@@ -1,8 +1,8 @@
 import type { Ctx } from './types.js'
 import chalk from 'chalk'
-import { join } from 'pathe'
 import { glob } from 'tinyglobby'
 import { execAsync, verifySourceFolder } from './git.js'
+import { sourcePath } from './paths.js'
 
 /**
  * Decompile `jarPath` into `modSources/<name>-decompiled` using a local
@@ -10,7 +10,7 @@ import { execAsync, verifySourceFolder } from './git.js'
  * `modSources`). Returns the output folder on success.
  */
 export async function decompileMod(jarPath: string, displayName: string, ctx: Ctx): Promise<string | null> {
-  const outDir = join(ctx.modSources, `${displayName.replace(/[^\w-]/g, '')}-decompiled`)
+  const outDir = await sourcePath(ctx.modSources, `${displayName.replace(/[^\w-]/g, '')}-decompiled`)
   ctx.log(chalk.blue(`Decompiling ${jarPath} → ${outDir}...`))
 
   const cfrJars = await glob('cfr*.jar', { cwd: ctx.mcDir, absolute: true })

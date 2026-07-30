@@ -10,6 +10,7 @@ import { syncToInstalledVersion, verifySourceFolder } from './git.js'
 import { findAddon, findModJar, getInstalledMod, loadInstance } from './instance.js'
 import { getIndexCache, resolveModId, sortCandidates, updateIndexCache } from './localCache.js'
 import { makeLogger } from './log.js'
+import { sourcePath } from './paths.js'
 import {
   findRepoAndClone,
   findRepoFromJar,
@@ -58,7 +59,7 @@ export function resolveContext(options: FindModSourceOptions = {}): Ctx {
 async function findLocalCandidates(query: string, ctx: Ctx): Promise<string[]> {
   const candidates: string[] = []
 
-  const directPath = join(ctx.modSources, query)
+  const directPath = await sourcePath(ctx.modSources, query)
   if (existsSync(directPath)) {
     if (await verifySourceFolder(directPath, ctx.log)) candidates.push(directPath)
   }

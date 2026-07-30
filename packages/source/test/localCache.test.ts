@@ -4,6 +4,7 @@ import { join } from 'pathe'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { verifySourceFolder } from '../src/git.js'
 import { resolveModId, updateIndexCache } from '../src/localCache.js'
+import { sourcePath } from '../src/paths.js'
 
 /** A `mcmod.info` templated at build time, as Cleanroom/RFG mods ship it. */
 const TEMPLATED_MCMOD = JSON.stringify([{ modid: `$\{mod_id}`, name: `$\{mod_name}` }])
@@ -63,6 +64,16 @@ describe('resolveModId', () => {
 
   it('returns null for a folder declaring nothing', async () => {
     expect(await resolveModId(join(root, 'EmptyRepo'))).toBeNull()
+  })
+})
+
+describe('sourcePath', () => {
+  it('spells an existing folder the way the filesystem does', async () => {
+    expect(await sourcePath(root, 'hadenoughitems')).toBe(join(root, 'HadEnoughItems'))
+  })
+
+  it('falls back to the query for a folder that does not exist', async () => {
+    expect(await sourcePath(root, 'Nope')).toBe(join(root, 'Nope'))
   })
 })
 

@@ -3,10 +3,10 @@ import type { Ctx, InstanceAddon, MinecraftInstance } from './types.js'
 import { fetchMod, fetchMods } from '@mctools/curseforge'
 import chalk from 'chalk'
 import { distance } from 'fastest-levenshtein'
-import { join } from 'pathe'
 import { cloneRepo, execAsync, verifySourceFolder } from './git.js'
 import { addonAuthor, findAddon } from './instance.js'
 import { readJarManifest, readJarMcmodInfo } from './jar.js'
+import { sourcePath } from './paths.js'
 
 const GIT_HOST = /github\.com|gitlab\.com/
 
@@ -16,7 +16,7 @@ function stripUrl(url: string): string {
 
 /** Clone `repoUrl` into a folder named after `name` and verify it. */
 async function cloneAndVerify(repoUrl: string, name: string, ctx: Ctx): Promise<string | null> {
-  const targetDir = join(ctx.modSources, name.replace(/[^\w-]/g, ''))
+  const targetDir = await sourcePath(ctx.modSources, name.replace(/[^\w-]/g, ''))
   // Later strategies keep proposing the same folder; report its failure once.
   if (ctx.rejected.has(targetDir)) {
     ctx.log(chalk.gray(`Skipping ${targetDir}, already rejected in this run.`))
