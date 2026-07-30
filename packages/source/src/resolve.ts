@@ -1,3 +1,4 @@
+import type { ModJar } from './instance.js'
 import type { Ctx, InstanceAddon, MinecraftInstance } from './types.js'
 import { fetchMod, fetchMods } from '@mctools/curseforge'
 import chalk from 'chalk'
@@ -16,10 +17,16 @@ function stripUrl(url: string): string {
 /** Clone `repoUrl` into a folder named after `name` and verify it. */
 async function cloneAndVerify(repoUrl: string, name: string, ctx: Ctx): Promise<string | null> {
   const targetDir = join(ctx.modSources, name.replace(/[^\w-]/g, ''))
+  // Later strategies keep proposing the same folder; report its failure once.
+  if (ctx.rejected.has(targetDir)) {
+    ctx.log(chalk.gray(`Skipping ${targetDir}, already rejected in this run.`))
+    return null
+  }
   try {
     await cloneRepo(repoUrl, targetDir, ctx.log)
     if (await verifySourceFolder(targetDir, ctx.log)) return targetDir
-    ctx.log(chalk.red('Cloned repository does not have enough .java files.'))
+    ctx.rejected.add(targetDir)
+    ctx.log(chalk.red('Cloned repository does not have enough source files.'))
   }
   catch (e) {
     ctx.log(chalk.red(`Failed to clone ${repoUrl}: ${e instanceof Error ? e.message : String(e)}`))
@@ -257,8 +264,13 @@ export async function findRepoViaGemini(addon: InstanceAddon, ctx: Ctx): Promise
 }
 
 /** Resolve and clone a repo for `query` using instance + CF metadata. */
-export async function findRepoAndClone(query: string, instance: MinecraftInstance, ctx: Ctx): Promise<string | null> {
-  const addon = findAddon(instance, query)
+export async function findRepoAndClone(
+  query: string,
+  instance: MinecraftInstance,
+  ctx: Ctx,
+  jar?: ModJar | null
+): Promise<string | null> {
+  const addon = findAddon(instance, query, jar)
   if (!addon) {
     const q = query.toLowerCase()
     const scored = instance.installedAddons
@@ -286,10 +298,12 @@ export async function findRepoAndClone(query: string, instance: MinecraftInstanc
   }
   ctx.log(chalk.green(`Found mod: ${addon.name} (AddonID: ${addon.addonID})`))
 
-  const ql = query.toLowerCase()
+  // Naming the modid makes a fork obvious: `jei` ships as `Had Enough Items`.
+  const modid = jar?.modid ?? query
+  const ml = modid.toLowerCase()
   const nl = addon.name.toLowerCase()
-  if (ql !== nl && !nl.includes(ql) && !ql.includes(nl) && ql !== addon.addonID.toString()) {
-    ctx.log(chalk.yellow('Mod ID and folder name may differ (likely cause: fork)'))
+  if (ml !== nl && !nl.includes(ml) && !ml.includes(nl) && ml !== addon.addonID.toString()) {
+    ctx.log(chalk.yellow(`Mod id '${modid}' and CurseForge name '${addon.name}' differ (likely cause: fork).`))
   }
 
   const repoUrl = await getRepoUrl(addon, ctx)

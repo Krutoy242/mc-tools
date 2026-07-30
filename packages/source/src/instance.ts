@@ -1,3 +1,4 @@
+import type { MatchReason } from '@mctools/utils/mod-resolve'
 import type { InstanceAddon, MinecraftInstance } from './types.js'
 import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
@@ -21,9 +22,20 @@ export async function loadInstance(mcDir: string): Promise<MinecraftInstance | n
 
 /**
  * Match an addon by id, name, or jar filename via the shared
- * `@mctools/utils/mod-resolve` ranker (best match wins).
+ * `@mctools/utils/mod-resolve` ranker (best match wins). Pass the jar
+ * {@link findModJar} settled on to keep every later step on the same mod —
+ * the ranker alone answers `jei` with `JEI Bees`, not `Had Enough Items`.
  */
-export function findAddon(instance: MinecraftInstance, query: string): InstanceAddon | undefined {
+export function findAddon(
+  instance: MinecraftInstance,
+  query: string,
+  jar?: ModJar | null
+): InstanceAddon | undefined {
+  if (jar) {
+    const fileName = jar.jarPath.split('/').pop()
+    const owner = instance.installedAddons.find(a => a.fileNameOnDisk === fileName)
+    if (owner) return owner
+  }
   return matchAddons(instance.installedAddons, query)[0]?.addon
 }
 
@@ -33,33 +45,76 @@ export function addonAuthor(addon: InstanceAddon): string | undefined {
 }
 
 /**
- * Locate the `.jar` file for `query` inside `mcDir/mods`. First tries a direct
- * match in `minecraftinstance.json` (name/id/filename), then falls back to
- * scanning every jar's `mcmod.info` for a matching `modid`.
+ * Match reasons that identify an addon precisely. `minecraftinstance.json`
+ * carries no `modid`, so a query that is one can only ever match an addon as a
+ * name/file fragment — which must not outrank a jar declaring that very modid.
+ */
+const EXACT_REASONS = new Set<MatchReason>(['id', 'name-exact', 'file-exact', 'name-canon', 'file-canon'])
+
+/** How many jars are opened at once while hunting for a modid. */
+const JAR_SCAN_CONCURRENCY = 16
+
+/** The jar backing a query, plus the `modid` it turned out to declare. */
+export interface ModJar {
+  jarPath    : string
+  displayName: string
+  /** `modid` from the jar's `mcmod.info`; absent when it declares none. */
+  modid?     : string
+}
+
+/** `modid` a jar declares, ignoring unsubstituted build placeholders. */
+async function jarModId(jarPath: string): Promise<string | undefined> {
+  const entries = await readJarMcmodInfo(jarPath)
+  return entries.find(e => e.modid && !e.modid.includes('$'))?.modid
+}
+
+/** Scan every jar in `modsDir` for one whose `mcmod.info` declares `modid`. */
+async function findJarByModId(modid: string, modsDir: string): Promise<ModJar | null> {
+  const q = modid.toLowerCase()
+  const jars = await glob('*.jar', { cwd: modsDir })
+
+  for (let i = 0; i < jars.length; i += JAR_SCAN_CONCURRENCY) {
+    const batch = await Promise.all(jars.slice(i, i + JAR_SCAN_CONCURRENCY).map(async (file) => {
+      const jarPath = join(modsDir, file)
+      const entries = await readJarMcmodInfo(jarPath)
+      const entry = entries.find(e => e.modid?.toLowerCase() === q)
+      if (!entry) return null
+      return {
+        jarPath,
+        displayName: entry.name || entries[0]?.name || file.replace(/\.jar$/, ''),
+        modid      : entry.modid,
+      }
+    }))
+    const hit = batch.find(Boolean)
+    if (hit) return hit
+  }
+  return null
+}
+
+/**
+ * Locate the `.jar` file for `query` inside `mcDir/mods`. An exact
+ * `minecraftinstance.json` match (id / verbatim name / verbatim filename) wins
+ * outright; otherwise a jar declaring `query` as its `modid` is preferred over
+ * a mere name fragment, which would happily answer `jei` with `JEI Bees`.
  */
 export async function findModJar(
   query: string,
   mcDir: string,
   instance: MinecraftInstance | null
-): Promise<{ jarPath: string, displayName: string } | null> {
+): Promise<ModJar | null> {
   const modsDir = join(mcDir, 'mods')
-  const q = query.toLowerCase()
+  const match = instance ? matchAddons(instance.installedAddons, query)[0] : undefined
+  const isExact = Boolean(match && EXACT_REASONS.has(match.reason))
 
-  if (instance) {
-    const addon = findAddon(instance, query)
-    if (addon && existsSync(join(modsDir, addon.fileNameOnDisk))) {
-      return { jarPath: join(modsDir, addon.fileNameOnDisk), displayName: addon.name }
-    }
+  if (!isExact) {
+    const byModId = await findJarByModId(query, modsDir)
+    if (byModId) return byModId
   }
 
-  // Fallback: scan jars for a matching modid.
-  const jars = await glob('*.jar', { cwd: modsDir })
-  for (const file of jars) {
-    const jarPath = join(modsDir, file)
-    const entries = await readJarMcmodInfo(jarPath)
-    if (entries.some(e => e.modid?.toLowerCase() === q)) {
-      return { jarPath, displayName: entries[0]?.name || file.replace(/\.jar$/, '') }
-    }
+  const addon = match?.addon
+  if (addon && existsSync(join(modsDir, addon.fileNameOnDisk))) {
+    const jarPath = join(modsDir, addon.fileNameOnDisk)
+    return { jarPath, displayName: addon.name, modid: await jarModId(jarPath) }
   }
   return null
 }
@@ -76,25 +131,15 @@ export interface InstalledMod {
   versions: string[]
 }
 
-/**
- * Determine which version of `query` the pack has installed, from
- * `minecraftinstance.json` plus the jar's own `mcmod.info`.
- */
-export async function getInstalledMod(
-  query: string,
-  mcDir: string,
-  instance: MinecraftInstance | null
-): Promise<InstalledMod | null> {
-  const jar = await findModJar(query, mcDir, instance)
-  if (!jar) return null
-
+/** Which version of an already-located jar the pack ships. */
+export async function getInstalledMod(jar: ModJar): Promise<InstalledMod> {
   const fileName = jar.jarPath.split('/').pop() ?? jar.jarPath
   const versions = new Set<string>()
 
   const fromName = versionFromFileName(fileName)
   if (fromName) versions.add(fromName)
 
-  const q = query.toLowerCase()
+  const q = jar.modid?.toLowerCase()
   const entries = await readJarMcmodInfo(jar.jarPath)
   const entry = entries.find(e => e.modid?.toLowerCase() === q) ?? entries[0]
   if (entry?.version && !entry.version.includes('$')) versions.add(normalizeVersion(entry.version))

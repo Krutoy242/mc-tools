@@ -19,8 +19,8 @@ import {
 
 export { decompileMod } from './decompile.js'
 
-export { getInstalledMod } from './instance.js'
-export type { InstalledMod } from './instance.js'
+export { findModJar, getInstalledMod } from './instance.js'
+export type { InstalledMod, ModJar } from './instance.js'
 export { readJarEntry, readJarManifest, readJarMcmodInfo } from './jar.js'
 
 export type { Ctx, InstanceAddon, Logger, MinecraftInstance } from './types.js'
@@ -50,6 +50,7 @@ export function resolveContext(options: FindModSourceOptions = {}): Ctx {
     mcDir     : normalize(options.mcDir ?? process.cwd()),
     cfApiKey  : options.cfApiKey ?? process.env.CF_API_KEY,
     log       : options.log ?? makeLogger(options.silent),
+    rejected  : new Set(),
   }
 }
 
@@ -105,8 +106,10 @@ export async function findModSource(query: string, options: FindModSourceOptions
   const instance = await loadInstance(ctx.mcDir)
   if (!instance) ctx.log(chalk.red('minecraftinstance.json not found; skipping metadata-based resolution.'))
 
-  // What the pack ships, so every resolved folder can be pinned to it.
-  const installed = await getInstalledMod(query, ctx.mcDir, instance)
+  // Resolve the jar once: it decides which mod every later step works on, and
+  // which version the resolved folder gets pinned to.
+  const jar = await findModJar(query, ctx.mcDir, instance)
+  const installed = jar ? await getInstalledMod(jar) : null
   if (installed) {
     const versions = installed.versions.join(' / ') || 'unknown version'
     ctx.log(chalk.gray(`Installed: ${installed.fileName} (${versions})`))
@@ -129,12 +132,11 @@ export async function findModSource(query: string, options: FindModSourceOptions
 
   // 2. Clone from instance / CurseForge metadata
   if (instance) {
-    const cloned = await findRepoAndClone(query, instance, ctx)
+    const cloned = await findRepoAndClone(query, instance, ctx, jar)
     if (cloned) return reindex(cloned)
   }
 
   // 3. Jar metadata + GitHub search
-  const jar = await findModJar(query, ctx.mcDir, instance)
   if (jar) {
     const fromJar = await findRepoFromJar(query, jar.jarPath, jar.displayName, ctx)
     if (fromJar) return reindex(fromJar)
@@ -142,7 +144,7 @@ export async function findModSource(query: string, options: FindModSourceOptions
 
   // 4. Same-author (CF) + Gemini fallbacks
   if (instance) {
-    const addon = findAddon(instance, query)
+    const addon = findAddon(instance, query, jar)
     if (addon) {
       const cfSameAuthor = await findRepoFromSameAuthorCF(addon, instance, query, ctx)
       if (cfSameAuthor) return reindex(cfSameAuthor)

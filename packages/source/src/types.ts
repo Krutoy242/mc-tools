@@ -14,6 +14,11 @@ export interface Ctx {
   cfApiKey? : string
   /** Diagnostic logger (writes to stderr by default). */
   log       : Logger
+  /**
+   * Folders already rejected during this run. Several strategies can land on
+   * the same target folder, and re-verifying it only repeats the same failure.
+   */
+  rejected  : Set<string>
 }
 
 /** Narrow view of an addon entry in `minecraftinstance.json`. */

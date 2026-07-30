@@ -5,6 +5,11 @@ Locate, clone or decompile Minecraft mod source code
 <!-- persistent_desc any other changes in this file except this block will be overwritten -->
 The resolved absolute path is printed to **stdout**; all diagnostics go to **stderr**, so the result is easy to capture.
 
+A query is normally a **modid**. Since `minecraftinstance.json` carries no modid, a
+jar that declares the queried one outranks an addon that merely contains it as a name
+fragment — otherwise `jei` resolves to *JEI Bees* rather than the *Had Enough Items*
+fork that actually owns the id. Java, Scala and Kotlin sources all count as valid.
+
 ### Resolution pipeline
 
 1. **Local match** — existing folder / `.index.yaml` under `$MOD_SOURCES`.

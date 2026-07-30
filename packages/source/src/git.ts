@@ -9,18 +9,24 @@ import { normalizeVersion, readSourceVersion, VERSION_FILES, versionFromFile } f
 
 export const execAsync = promisify(child_process.exec)
 
-/** A source folder is "real" only if it carries a meaningful amount of Java. */
-const MIN_JAVA_FILES = 3
+/** A source folder is "real" only if it carries a meaningful amount of code. */
+const MIN_SOURCE_FILES = 3
+
+/**
+ * JVM languages a 1.12.2 mod can be written in. Scala and Kotlin mods are just
+ * as valid a source as Java ones — JEI Bees, for one, is pure Scala.
+ */
+const SOURCE_GLOBS = ['**/*.java', '**/*.scala', '**/*.kt']
 
 /**
  * A folder counts as valid mod source if it is a directory holding at least
- * {@link MIN_JAVA_FILES} `.java` files.
+ * {@link MIN_SOURCE_FILES} JVM source files.
  */
 export async function verifySourceFolder(dir: string, log: Logger): Promise<boolean> {
   try {
-    const javaFiles = await glob('**/*.java', { cwd: dir })
-    if (javaFiles.length >= MIN_JAVA_FILES) return true
-    log(chalk.yellow(`Folder ${dir} found but contains only ${javaFiles.length} .java files (requires >= ${MIN_JAVA_FILES}).`))
+    const sources = await glob(SOURCE_GLOBS, { cwd: dir })
+    if (sources.length >= MIN_SOURCE_FILES) return true
+    log(chalk.yellow(`Folder ${dir} found but contains only ${sources.length} source files (requires >= ${MIN_SOURCE_FILES}).`))
     return false
   }
   catch {

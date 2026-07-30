@@ -27,6 +27,11 @@ describe('findAddon', () => {
   it('returns undefined when nothing matches', () => {
     expect(findAddon(instance, 'nope')).toBeUndefined()
   })
+
+  it('prefers the addon owning an already-resolved jar', () => {
+    const jar = { jarPath: 'D:/mc/mods/Botania-1.12.2.jar', displayName: 'Botania', modid: 'botania' }
+    expect(findAddon(instance, 'jei', jar)?.name).toBe('Botania')
+  })
 })
 
 describe('resolveContext', () => {

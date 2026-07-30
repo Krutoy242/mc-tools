@@ -8,6 +8,34 @@ import { getLatestCommitDate } from './git.js'
 /** Maps lowercase modid → list of folder names under `modSources`. */
 export type IndexCache = Record<string, string[]>
 
+/** Key naming the mod id in a `gradle.properties`, in either casing style. */
+const MODID_KEY = /(?:^|\n)[ \t]*mod_?id[ \t]*=[ \t]*(\S+)/i
+
+/** Read a `key = value` pair out of a folder's `gradle.properties`. */
+async function gradleProperty(dir: string, key: string | RegExp): Promise<string | undefined> {
+  const re = typeof key === 'string'
+    ? new RegExp(`(?:^|\\n)[ \\t]*${key}[ \\t]*=[ \\t]*(\\S+)`, 'i')
+    : key
+  try {
+    return (await fs.readFile(join(dir, 'gradle.properties'), 'utf8')).match(re)?.[1]
+  }
+  catch {
+    return undefined
+  }
+}
+
+/**
+ * The modid a `mcmod.info` entry really names. Cleanroom/RFG mods template
+ * their metadata at build time (`"modid": "${mod_id}"`), so a checked-out
+ * source tree only names the mod in its `gradle.properties`.
+ */
+async function resolveDeclaredModId(declared: string | undefined, dir: string): Promise<string | undefined> {
+  if (!declared) return undefined
+  if (!declared.includes('$')) return declared
+  const key = declared.match(/^\$\{([\w.]+)\}$/)?.[1]
+  return key ? gradleProperty(dir, key) : undefined
+}
+
 /**
  * Scan `modSources` for mod folders (via `mcmod.info` and GTNH-style
  * `gradle.properties`) and write a `modid → folders` index to `indexPath`.
@@ -34,7 +62,8 @@ export async function updateIndexCache(modSources: string, indexPath: string, _l
       const entries = Array.isArray(json) ? json : json.modList ?? []
       const folder = metaFile.split('/')[0]
       for (const entry of entries) {
-        if (entry.modid) add(entry.modid, folder)
+        const modid = await resolveDeclaredModId(entry.modid, join(modSources, folder))
+        if (modid) add(modid, folder)
       }
     }
     catch { /* ignore unparseable mcmod.info */ }
@@ -42,11 +71,9 @@ export async function updateIndexCache(modSources: string, indexPath: string, _l
 
   const propFiles = await glob('*/gradle.properties', { cwd: modSources })
   for (const propFile of propFiles) {
-    try {
-      const match = (await fs.readFile(join(modSources, propFile), 'utf8')).match(/(?:^|\n)\s*modId\s*=\s*(\S+)/)
-      if (match) add(match[1], propFile.split('/')[0])
-    }
-    catch { /* ignore */ }
+    const folder = propFile.split('/')[0]
+    const modid = await gradleProperty(join(modSources, folder), MODID_KEY)
+    if (modid) add(modid, folder)
   }
 
   await fs.writeFile(indexPath, YAML.stringify(cache), 'utf8')
@@ -72,7 +99,8 @@ export async function resolveModId(folderPath: string): Promise<string | null> {
         | { modList?: { modid?: string }[] }
       const entries = Array.isArray(json) ? json : json.modList ?? []
       for (const entry of entries) {
-        if (entry.modid && !entry.modid.includes('$')) return entry.modid
+        const modid = await resolveDeclaredModId(entry.modid, folderPath)
+        if (modid) return modid
       }
     }
     catch { /* try next */ }
@@ -87,16 +115,15 @@ export async function resolveModId(folderPath: string): Promise<string | null> {
   }
   catch { /* ignore */ }
 
-  for (const [file, re] of [
-    ['gradle.properties', /(?:^|\n)\s*modId\s*=\s*(\S+)/],
-    ['build.gradle', /archivesBaseName\s*=\s*['"]([^'"]+)['"]/],
-  ] as const) {
-    try {
-      const match = (await fs.readFile(join(folderPath, file), 'utf8')).match(re)
-      if (match) return match[1]
-    }
-    catch { /* ignore */ }
+  const fromGradle = await gradleProperty(folderPath, MODID_KEY)
+  if (fromGradle) return fromGradle
+
+  try {
+    const text = await fs.readFile(join(folderPath, 'build.gradle'), 'utf8')
+    const match = text.match(/archivesBaseName\s*=\s*['"]([^'"]+)['"]/)
+    if (match) return match[1]
   }
+  catch { /* ignore */ }
 
   return null
 }
