@@ -204,6 +204,11 @@ matching tag or a history scan of the version-declaring file. Pinning detaches
 HEAD, so the branch it came from is stored in the repo's own git config
 (`mctools.sourceBranch`) and restored on the next run.
 
+**Invariant:** the query is a modid, but `minecraftinstance.json` has no modid
+field — so `findModJar` trusts the addon ranker only on an exact reason and
+otherwise prefers a jar declaring that modid (`jei` is Had Enough Items, not JEI
+Bees). Every later step takes its addon from that jar, not from the ranker.
+
 #### `packages/reducer/`
 
 Bisects a modpack: toggles mods on/off, launches and monitors the game, and
