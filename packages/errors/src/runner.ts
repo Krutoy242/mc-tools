@@ -1,18 +1,11 @@
-import type { CompiledConfig, FoundError } from './index.js'
+import type { CompiledConfig, FoundError, IgnoreHits, IgnoreRule } from './index.js'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { parse as parseYaml } from 'yaml'
-import {
-  compileConfig,
-
-  findErrors,
-
-  parseConfig,
-} from './index.js'
+import { compileConfigFromYaml, findErrors } from './index.js'
 import { pickFormat, renderMarkdown, renderPlain, renderTerminal } from './render.js'
 
 // In a SEA build `import.meta.url` is not a real file URL, so guard the
@@ -31,9 +24,10 @@ export const DEFAULT_CONFIG = (() => {
 /* v8 ignore stop */
 
 export interface CliArgs {
-  log   : string
-  config: string
-  output: string | undefined
+  log    : string
+  config : string
+  output : string | undefined
+  unused?: boolean
 }
 
 export async function tryLoadSeaAsset(name: string): Promise<string | null> {
@@ -53,7 +47,9 @@ export async function loadConfig(path: string, isDefault: boolean): Promise<Comp
   catch {
     raw = await loadDefaultFallback(path, isDefault)
   }
-  return compileConfig(parseConfig(parseYaml(raw)))
+  // Compiled from the raw text, not from a parsed object, so every ignore rule
+  // keeps the config line it is written on — that is what `--unused` reports.
+  return compileConfigFromYaml(raw)
 }
 
 async function loadDefaultFallback(path: string, isDefault: boolean): Promise<string> {
@@ -101,10 +97,28 @@ export async function writeOutput(
   }
 }
 
+/**
+ * One line per ignore rule that never matched, ending with a summary. Meant for
+ * stderr: it is a report about the config, not about the log, and must not mix
+ * into a piped or redirected error list.
+ */
+export function renderUnusedRules(
+  rules: IgnoreRule[],
+  hits: IgnoreHits,
+  configPath: string
+): string {
+  const unused = rules.filter(rule => !hits.has(rule))
+  const lines = unused.map(rule => `${configPath}:${rule.line ?? '?'} ${rule.path.join(' > ')}`)
+  lines.push(`${unused.length} of ${rules.length} ignore rules never matched`)
+  return `${lines.join('\n')}\n`
+}
+
 export async function run(args: CliArgs): Promise<number> {
   const config = await loadConfig(args.config, args.config === DEFAULT_CONFIG)
   const log = await loadLog(args.log)
-  const errors = findErrors(log, config)
+  const hits: IgnoreHits | undefined = args.unused ? new Map() : undefined
+  const errors = findErrors(log, config, hits)
   await writeOutput(errors, args.output)
+  if (hits) process.stderr.write(renderUnusedRules(config.ignoreRules, hits, args.config))
   return errors.length > 0 ? 1 : 0
 }

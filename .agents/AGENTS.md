@@ -154,12 +154,17 @@ are explicitly disabled for ZS-derived TS, which has no real tsconfig project.
 #### `packages/errors/`
 
 Scans `debug.log` using a YAML rule file (boundaries / match / ignore / replace
-/ groupBy). Key types: `Config`, `CompiledConfig`, `FoundError`; key functions
-`parseConfig`, `compileConfig`, `compileConfigFromYaml`, `findErrors`.
+/ groupBy). Key types: `Config`, `CompiledConfig`, `FoundError`, `IgnoreRule`;
+key functions `parseConfig`, `compileConfig`, `compileConfigFromYaml`,
+`findErrors`.
 
 **Boundary:** `findErrors(text, config)` is pure — text in, `FoundError[]` out.
 The CLI, the VS Code diagnostics engine and the tests all call this one
 function.
+
+**Invariant:** only `compileConfigFromYaml` knows where a rule is written, so
+`--unused` (which reports never-matched ignore rules with their config line)
+compiles from YAML text, never from a parsed object.
 
 #### `packages/modlist/`
 

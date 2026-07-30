@@ -1,5 +1,6 @@
+import type { Node } from 'yaml'
 import { naturalSort } from '@mctools/utils/natural-sort'
-import { parse as parseYaml } from 'yaml'
+import { isMap, isScalar, isSeq, parseDocument } from 'yaml'
 import { z } from 'zod'
 
 // YAML's empty scalar parses to `null`, so accept it and normalize to undefined.
@@ -39,10 +40,31 @@ export const ConfigSchema = z.object({
 
 export type Config = z.infer<typeof ConfigSchema>
 
+/**
+ * One leaf of the `ignore` tree, kept as an addressable object so a dropped
+ * entry can be attributed back to the exact rule — and config line — that
+ * dropped it. Rules nobody ever hits are dead weight in a config that has
+ * grown for years, and `--unused` lists them.
+ */
+export interface IgnoreRule {
+  /** Heading keys plus the leaf, exactly as written in the YAML. */
+  path  : string[]
+  /** Regex source this leaf compiles to — one branch of `ignoreFast`. */
+  source: string
+  /** `source` compiled on its own, for attributing a hit to this rule. */
+  regex : RegExp
+  /** 1-based line of the leaf in the config file. Only set by `compileConfigFromYaml`. */
+  line? : number
+}
+
+/** Per-rule hit counters, filled in by `findErrors` when one is passed in. */
+export type IgnoreHits = Map<IgnoreRule, number>
+
 export interface CompiledConfig {
   boundaries?: { from?: RegExp, to?: RegExp }
   groupBy    : RegExp[]
   ignoreFast : RegExp | null
+  ignoreRules: IgnoreRule[]
   match      : RegExp
   replace    : { from: RegExp, to: string }[]
 }
@@ -62,8 +84,85 @@ export function parseConfig(raw: unknown): Config {
   throw new Error(`Invalid errors config:\n${issues}`)
 }
 
+/**
+ * Compile from YAML *text* rather than from an already-parsed object, which is
+ * the only way to learn where each rule is written: the plain JS tree has no
+ * positions, so the document AST is walked in parallel to stamp every rule with
+ * its line.
+ */
 export function compileConfigFromYaml(yamlString: string): CompiledConfig {
-  return compileConfig(parseConfig(parseYaml(yamlString)))
+  const doc = parseDocument(yamlString)
+  const compiled = compileConfig(parseConfig(doc.toJS() as unknown))
+  attachIgnoreLines(compiled.ignoreRules, doc.get('ignore', true), yamlString)
+  return compiled
+}
+
+interface IgnoreLocation { path: string[], line: number }
+
+/**
+ * Stamp each compiled rule with the line its leaf is written on.
+ *
+ * Both walks are pre-order over the same tree, but they are matched by path
+ * instead of by index so that anything the JS tree and the AST disagree about
+ * (a map with duplicate keys collapses in JS but not in the AST) costs at most
+ * a missing line number, never a wrong one.
+ */
+function attachIgnoreLines(rules: IgnoreRule[], ignoreNode: unknown, yamlString: string): void {
+  const lineOf = makeLineLookup(yamlString)
+  const locations = collectIgnoreLocations(ignoreNode, [], offset => lineOf(offset) + 1, [])
+
+  const byPath = new Map<string, number[]>()
+  for (const loc of locations) {
+    const key = loc.path.join('\0')
+    const queue = byPath.get(key)
+    if (queue) queue.push(loc.line)
+    else byPath.set(key, [loc.line])
+  }
+
+  for (const rule of rules) {
+    const line = byPath.get(rule.path.join('\0'))?.shift()
+    if (line !== undefined) rule.line = line
+  }
+}
+
+/** Walk the `ignore` document AST, mirroring `compileIgnoreRules`, for positions. */
+function collectIgnoreLocations(
+  node: unknown,
+  prefix: string[],
+  lineOf: (offset: number) => number,
+  out: IgnoreLocation[]
+): IgnoreLocation[] {
+  if (isScalar(node)) {
+    if (typeof node.value === 'string' && node.value.length)
+      out.push({ path: [...prefix, node.value], line: lineAt(node, lineOf) })
+  }
+  else if (isSeq(node)) {
+    for (const item of node.items) collectIgnoreLocations(item, prefix, lineOf, out)
+  }
+  else if (isMap(node)) {
+    for (const pair of node.items) {
+      /* v8 ignore next -- a non-scalar (`? [a, b]`) key is not expressible in this schema */
+      if (!isScalar(pair.key)) continue
+      const path = [...prefix, String(pair.key.value)]
+      // The leaf is deleted by the line its key sits on, so a `key: value` leaf
+      // and a bare `key:` heading both report the key's line.
+      const line = lineAt(pair.key, lineOf)
+      const value = pair.value
+      if (isScalar(value)) {
+        if (value.value === null) out.push({ path, line })
+        else out.push({ path: [...path, String(value.value)], line })
+      }
+      else {
+        collectIgnoreLocations(value, path, lineOf, out)
+      }
+    }
+  }
+  return out
+}
+
+function lineAt(node: Node, lineOf: (offset: number) => number): number {
+  /* v8 ignore next -- every node of a freshly parsed document carries a range */
+  return lineOf(node.range?.[0] ?? 0)
 }
 
 /**
@@ -90,37 +189,48 @@ export function compileIgnoreFragment(pattern: string): string {
     .replace(/\\\*/g, GAP)
 }
 
+/** Flatten the `ignore` tree into one rule per leaf, in written order. */
+export function compileIgnoreRules(
+  nodes: IgnoreNode[],
+  prefix: string[] = [],
+  out: IgnoreRule[] = []
+): IgnoreRule[] {
+  for (const node of nodes) {
+    if (typeof node === 'string') {
+      if (node.length) out.push(makeIgnoreRule([...prefix, node]))
+      continue
+    }
+    for (const [key, children] of Object.entries(node)) {
+      const path = [...prefix, key]
+      // `- FML:` with nothing under it — the heading is the whole pattern.
+      if (children === null) out.push(makeIgnoreRule(path))
+      // `- OBJModel.Parser: found a face *` — YAML split one leaf on its `: `,
+      // and concatenating the halves back matches the same text anyway.
+      else if (typeof children === 'string') out.push(makeIgnoreRule([...path, children]))
+      else compileIgnoreRules(children, path, out)
+    }
+  }
+  return out
+}
+
 /** Flatten the `ignore` tree into one regex source per leaf. */
 export function compileIgnorePatterns(
   nodes: IgnoreNode[],
   prefix: string[] = [],
   out: string[] = []
 ): string[] {
-  for (const node of nodes) {
-    if (typeof node === 'string') {
-      if (node.length) out.push(joinIgnorePath([...prefix, node]))
-      continue
-    }
-    for (const [key, children] of Object.entries(node)) {
-      const path = [...prefix, key]
-      // `- FML:` with nothing under it — the heading is the whole pattern.
-      if (children === null) out.push(joinIgnorePath(path))
-      // `- OBJModel.Parser: found a face *` — YAML split one leaf on its `: `,
-      // and concatenating the halves back matches the same text anyway.
-      else if (typeof children === 'string') out.push(joinIgnorePath([...path, children]))
-      else compileIgnorePatterns(children, path, out)
-    }
-  }
+  for (const rule of compileIgnoreRules(nodes, prefix)) out.push(rule.source)
   return out
 }
 
-function joinIgnorePath(parts: string[]): string {
-  return parts.map(compileIgnoreFragment).join(GAP)
+function makeIgnoreRule(path: string[]): IgnoreRule {
+  const source = path.map(compileIgnoreFragment).join(GAP)
+  return { path, source, regex: new RegExp(source, 'm') }
 }
 
 export function compileConfig(config: Config): CompiledConfig {
   const ignoreList = Array.isArray(config.ignore) ? config.ignore : [config.ignore]
-  const nonEmpty = compileIgnorePatterns(ignoreList)
+  const ignoreRules = compileIgnoreRules(ignoreList)
 
   return {
     boundaries: config.boundaries && {
@@ -128,9 +238,10 @@ export function compileConfig(config: Config): CompiledConfig {
       to  : config.boundaries.to ? new RegExp(config.boundaries.to, 'm') : undefined,
     },
     groupBy   : (config.groupBy ?? []).map(s => new RegExp(s, 'm')),
-    ignoreFast: nonEmpty.length
-      ? new RegExp(nonEmpty.map(p => `(?:${p})`).join('|'), 'm')
+    ignoreFast: ignoreRules.length
+      ? new RegExp(ignoreRules.map(r => `(?:${r.source})`).join('|'), 'm')
       : null,
+    ignoreRules,
     match  : new RegExp(Array.isArray(config.match) ? config.match.join('') : config.match, 'gm'),
     replace: config.replace.map(r => ({ from: new RegExp(r.from, 'gm'), to: r.to })),
   }
@@ -140,7 +251,19 @@ function isCompiled(c: Config | CompiledConfig): c is CompiledConfig {
   return c.match instanceof RegExp
 }
 
-export function findErrors(debugLogText: string, config: Config | CompiledConfig): FoundError[] {
+/**
+ * Collect the log entries the `ignore` tree does not cover.
+ *
+ * Passing an `ignoreHits` map opts into attribution: every dropped entry is
+ * credited to the first rule that matches it, so a caller can tell which rules
+ * are alive. Left out, nothing is attributed and the scan costs what it always
+ * did.
+ */
+export function findErrors(
+  debugLogText: string,
+  config: Config | CompiledConfig,
+  ignoreHits?: IgnoreHits
+): FoundError[] {
   const c = isCompiled(config) ? config : compileConfig(config)
 
   let from = 0
@@ -163,7 +286,12 @@ export function findErrors(debugLogText: string, config: Config | CompiledConfig
   const result: FoundError[] = []
   for (const m of slice.matchAll(c.match)) {
     let entry = m[0]
-    if (c.ignoreFast?.test(entry)) continue
+    // Fast path first: one merged alternation decides, and only the entries it
+    // drops pay for finding out *which* rule dropped them.
+    if (c.ignoreFast?.test(entry)) {
+      if (ignoreHits) countIgnoreHit(c.ignoreRules, entry, ignoreHits)
+      continue
+    }
 
     const timeMatch = entry.match(/^\[(\d+:\d+:\d+)\]/)
     const time = timeMatch ? timeMatch[1] : undefined
@@ -196,6 +324,12 @@ export function findErrors(debugLogText: string, config: Config | CompiledConfig
     }
   }
   return out
+}
+
+/** Credit a dropped entry to the first rule that matches it. */
+function countIgnoreHit(rules: IgnoreRule[], entry: string, hits: IgnoreHits): void {
+  const rule = rules.find(r => r.regex.test(entry))
+  if (rule) hits.set(rule, (hits.get(rule) ?? 0) + 1)
 }
 
 function makeLineLookup(text: string): (offset: number) => number {

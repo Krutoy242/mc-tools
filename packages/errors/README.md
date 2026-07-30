@@ -52,6 +52,22 @@ ignore:
 A pattern is literal text in which `*` matches any run of characters within one
 line. Wrap it in slashes to use a JS RegExp instead. Quote any pattern that
 contains `: `, otherwise YAML splits it into two.
+
+An `ignore` tree only ever grows, and a rule whose error was fixed years ago is
+invisible dead weight. `--unused` (`-u`) writes to **stderr** every rule that
+matched nothing in the scanned log — full path, plus the line it occupies in the
+config, ready to delete — followed by a count. The error report on stdout and
+the exit code are unaffected, so it is safe to add to an existing command:
+
+```sh
+> npx @mctools/errors -c dev/tools/mct-errors-config.yml --unused
+dev/tools/mct-errors-config.yml:97 /(LaunchWrapper|Foundation)/ > Tweak class name * has already been visited
+dev/tools/mct-errors-config.yml:105 Failed to load bookmarked ItemStack from json string, the item no longer exists
+144 of 264 ignore rules never matched
+```
+
+One log is one data point: a rule is only proof-of-dead if it stays unused
+across the logs you care about.
 <!-- /persistent_desc -->
 
 ## Usage

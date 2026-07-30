@@ -32,6 +32,11 @@ export const main = defineCommand({
       default    : DEFAULT_CONFIG,
       description: 'Path to .yml file with configs',
     },
+    unused: {
+      type       : 'boolean',
+      alias      : 'u',
+      description: 'List into stderr every ignore rule that never matched, with its config line',
+    },
   },
   async run({ args }) {
     try {
@@ -39,6 +44,7 @@ export const main = defineCommand({
         log   : args.log,
         config: args.config,
         output: args.output,
+        unused: args.unused,
       })
     }
     catch (err) {
