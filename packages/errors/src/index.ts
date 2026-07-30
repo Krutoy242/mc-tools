@@ -5,13 +5,31 @@ import { z } from 'zod'
 // YAML's empty scalar parses to `null`, so accept it and normalize to undefined.
 const optStr = z.string().nullish().transform(v => v ?? undefined)
 
+/**
+ * One node of the `ignore` tree.
+ *
+ * A plain string is a pattern to test against a log entry. A single-key map is
+ * the same pattern plus the nested nodes it scopes — the key and each nested
+ * pattern must all appear in the entry, in the order they are written. Since
+ * every list item is its own map, the same key may repeat any number of times,
+ * which is what lets `WARN:` / `ERROR:` / a module name be used purely as
+ * grouping headings.
+ */
+export type IgnoreNode = string | { [pattern: string]: IgnoreChildren }
+export type IgnoreChildren = string | null | IgnoreNode[]
+
+const IgnoreNodeSchema: z.ZodType<IgnoreNode> = z.lazy(() => z.union([
+  z.string(),
+  z.record(z.string(), z.union([z.string(), z.null(), z.array(IgnoreNodeSchema)])),
+]))
+
 export const ConfigSchema = z.object({
   boundaries: z.object({
     from: optStr,
     to  : optStr,
   }).optional(),
   groupBy: z.array(z.string()).optional(),
-  ignore : z.union([z.string(), z.array(z.string())]),
+  ignore : z.union([z.string(), z.array(IgnoreNodeSchema)]),
   match  : z.union([z.string(), z.array(z.string())]),
   replace: z.array(z.object({
     from: z.string(),
@@ -48,9 +66,61 @@ export function compileConfigFromYaml(yamlString: string): CompiledConfig {
   return compileConfig(parseConfig(parseYaml(yamlString)))
 }
 
+/**
+ * Text inserted between the levels of an `ignore` path. Stays on one line: a
+ * level, a module and a message all live on the entry's first line, and letting
+ * the gap span newlines would let a heading match one line and its child match
+ * an unrelated line far below. A leaf that genuinely needs to span lines says
+ * so itself with an explicit `/[\s\S]+/` regex.
+ */
+const GAP = '[^\\n]*?'
+
+/**
+ * Turn one node's own text into regex source.
+ *
+ * `/.../ `-delimited text is taken as a raw JS RegExp. Anything else is a
+ * literal substring where `*` is the only wildcard — which is what almost every
+ * rule needs and what keeps the config free of backslashes.
+ */
+export function compileIgnoreFragment(pattern: string): string {
+  const asRegex = /^\/([\s\S]+)\/$/.exec(pattern)
+  if (asRegex) return asRegex[1]
+  return pattern
+    .replace(/[$()*+.?[\\\]^{|}]/g, '\\$&')
+    .replace(/\\\*/g, GAP)
+}
+
+/** Flatten the `ignore` tree into one regex source per leaf. */
+export function compileIgnorePatterns(
+  nodes: IgnoreNode[],
+  prefix: string[] = [],
+  out: string[] = []
+): string[] {
+  for (const node of nodes) {
+    if (typeof node === 'string') {
+      if (node.length) out.push(joinIgnorePath([...prefix, node]))
+      continue
+    }
+    for (const [key, children] of Object.entries(node)) {
+      const path = [...prefix, key]
+      // `- FML:` with nothing under it — the heading is the whole pattern.
+      if (children === null) out.push(joinIgnorePath(path))
+      // `- OBJModel.Parser: found a face *` — YAML split one leaf on its `: `,
+      // and concatenating the halves back matches the same text anyway.
+      else if (typeof children === 'string') out.push(joinIgnorePath([...path, children]))
+      else compileIgnorePatterns(children, path, out)
+    }
+  }
+  return out
+}
+
+function joinIgnorePath(parts: string[]): string {
+  return parts.map(compileIgnoreFragment).join(GAP)
+}
+
 export function compileConfig(config: Config): CompiledConfig {
   const ignoreList = Array.isArray(config.ignore) ? config.ignore : [config.ignore]
-  const nonEmpty = ignoreList.filter(p => p.length > 0)
+  const nonEmpty = compileIgnorePatterns(ignoreList)
 
   return {
     boundaries: config.boundaries && {

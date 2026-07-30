@@ -27,6 +27,31 @@ In large modpacks, the `debug.log` file can contain hundreds of thousands of lin
 *   **Stack Trace Shortening:** Truncates long stack traces.
 *   **Error Grouping:** Groups identical errors together.
 *   **Advanced Filtering:** Ignores a huge number of known harmless errors and warnings from many mods.
+
+### Ignore rules
+
+`ignore` is a tree. Each item is a pattern, and nesting means every pattern on
+the path must appear on the entry's first line in the order written — so a
+level and a module name work as headings for everything below them. Each item
+is its own map, so a heading may repeat as often as it reads well:
+
+```yaml
+ignore:
+  - ERROR:
+      - FML:
+          - 'MultiModel minecraft:builtin.missing is empty'
+  - WARN:
+      - FML:
+          - Unable to find recipe for minecraft:rabbit_stew
+      - /(mixin|CleanMix)/:
+          - '@Final field * should be final'
+  - FML:
+      - 'Parsing error loading recipe '
+```
+
+A pattern is literal text in which `*` matches any run of characters within one
+line. Wrap it in slashes to use a JS RegExp instead. Quote any pattern that
+contains `: `, otherwise YAML splits it into two.
 <!-- /persistent_desc -->
 
 ## Usage
