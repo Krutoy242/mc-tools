@@ -59,6 +59,7 @@ export async function readJarEntry(jarPath: string, entryName: string): Promise<
 export interface JarMcmodEntry {
   modid?     : string
   name?      : string
+  version?   : string
   url?       : string
   updateUrl? : string
   authorList?: string[]

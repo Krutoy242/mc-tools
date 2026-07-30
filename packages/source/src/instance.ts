@@ -5,6 +5,7 @@ import { matchAddons } from '@mctools/utils/mod-resolve'
 import { join } from 'pathe'
 import { glob } from 'tinyglobby'
 import { readJarMcmodInfo } from './jar.js'
+import { normalizeVersion, versionFromFileName } from './version.js'
 
 /** Read and parse `minecraftinstance.json` from `mcDir`, or `null` if absent. */
 export async function loadInstance(mcDir: string): Promise<MinecraftInstance | null> {
@@ -61,4 +62,42 @@ export async function findModJar(
     }
   }
   return null
+}
+
+/** What the pack actually ships for a mod, used to pin the sources to it. */
+export interface InstalledMod {
+  /** Jar file name as present in `mods/`. */
+  fileName: string
+  /**
+   * Candidate version strings, best guess first: the one encoded in the jar
+   * file name, then the one `mcmod.info` declares (they can disagree when a
+   * build bumps its number after the metadata is written).
+   */
+  versions: string[]
+}
+
+/**
+ * Determine which version of `query` the pack has installed, from
+ * `minecraftinstance.json` plus the jar's own `mcmod.info`.
+ */
+export async function getInstalledMod(
+  query: string,
+  mcDir: string,
+  instance: MinecraftInstance | null
+): Promise<InstalledMod | null> {
+  const jar = await findModJar(query, mcDir, instance)
+  if (!jar) return null
+
+  const fileName = jar.jarPath.split('/').pop() ?? jar.jarPath
+  const versions = new Set<string>()
+
+  const fromName = versionFromFileName(fileName)
+  if (fromName) versions.add(fromName)
+
+  const q = query.toLowerCase()
+  const entries = await readJarMcmodInfo(jar.jarPath)
+  const entry = entries.find(e => e.modid?.toLowerCase() === q) ?? entries[0]
+  if (entry?.version && !entry.version.includes('$')) versions.add(normalizeVersion(entry.version))
+
+  return { fileName, versions: [...versions] }
 }

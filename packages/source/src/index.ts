@@ -6,8 +6,8 @@ import chalk from 'chalk'
 import { join, normalize } from 'pathe'
 import { glob } from 'tinyglobby'
 import { decompileMod } from './decompile.js'
-import { ensureCorrectBranch, verifySourceFolder } from './git.js'
-import { findAddon, findModJar, loadInstance } from './instance.js'
+import { syncToInstalledVersion, verifySourceFolder } from './git.js'
+import { findAddon, findModJar, getInstalledMod, loadInstance } from './instance.js'
 import { getIndexCache, resolveModId, sortCandidates, updateIndexCache } from './localCache.js'
 import { makeLogger } from './log.js'
 import {
@@ -19,8 +19,13 @@ import {
 
 export { decompileMod } from './decompile.js'
 
+export { getInstalledMod } from './instance.js'
+export type { InstalledMod } from './instance.js'
 export { readJarEntry, readJarManifest, readJarMcmodInfo } from './jar.js'
+
 export type { Ctx, InstanceAddon, Logger, MinecraftInstance } from './types.js'
+export { readSourceVersion, versionFromFileName } from './version.js'
+export type { SourceVersion } from './version.js'
 
 /** Default `MOD_SOURCES` location when neither option nor env var is set. */
 const DEFAULT_MOD_SOURCES = 'e:/CODING_STATIC/mc/mod/'
@@ -97,30 +102,35 @@ export async function findModSource(query: string, options: FindModSourceOptions
   if (!existsSync(ctx.modSources)) await fs.mkdir(ctx.modSources, { recursive: true })
 
   const indexPath = join(ctx.modSources, '.index.yaml')
-  const reindex = async (path: string) => {
+  const instance = await loadInstance(ctx.mcDir)
+  if (!instance) ctx.log(chalk.red('minecraftinstance.json not found; skipping metadata-based resolution.'))
+
+  // What the pack ships, so every resolved folder can be pinned to it.
+  const installed = await getInstalledMod(query, ctx.mcDir, instance)
+  if (installed) {
+    const versions = installed.versions.join(' / ') || 'unknown version'
+    ctx.log(chalk.gray(`Installed: ${installed.fileName} (${versions})`))
+  }
+  const installedVersions = installed?.versions ?? []
+
+  /** Re-index a freshly created folder; clones are also pinned to the pack. */
+  const reindex = async (path: string, sync = true) => {
     await updateIndexCache(ctx.modSources, indexPath, ctx.log)
+    if (sync) await syncToInstalledVersion(path, installedVersions, ctx.log)
     return path
   }
 
   // 1. Local folders / index cache
   const candidates = await findLocalCandidates(query, ctx)
   for (const folder of await sortCandidates(candidates)) {
-    if (await ensureCorrectBranch(folder, ctx.log)) {
-      ctx.log(chalk.green(`Selected source folder: ${folder}`))
-      return folder
-    }
-    ctx.log(chalk.yellow(`Skipping '${folder}' (branch checkout failed).`))
+    if (await syncToInstalledVersion(folder, installedVersions, ctx.log)) return folder
+    ctx.log(chalk.yellow(`Skipping '${folder}' (checkout failed).`))
   }
-
-  const instance = await loadInstance(ctx.mcDir)
 
   // 2. Clone from instance / CurseForge metadata
   if (instance) {
     const cloned = await findRepoAndClone(query, instance, ctx)
     if (cloned) return reindex(cloned)
-  }
-  else {
-    ctx.log(chalk.red('minecraftinstance.json not found; skipping metadata-based resolution.'))
   }
 
   // 3. Jar metadata + GitHub search
@@ -143,8 +153,9 @@ export async function findModSource(query: string, options: FindModSourceOptions
 
   // 5. Decompile
   if (jar) {
+    // Decompiled output already *is* the installed version — nothing to sync.
     const decompiled = await decompileMod(jar.jarPath, jar.displayName, ctx)
-    if (decompiled) return reindex(decompiled)
+    if (decompiled) return reindex(decompiled, false)
   }
 
   ctx.log(chalk.red('Failed to find or create source code folder.'))

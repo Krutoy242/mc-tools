@@ -1,6 +1,5 @@
 import type { Logger } from './types.js'
 import fs from 'node:fs/promises'
-import chalk from 'chalk'
 import { basename, join } from 'pathe'
 import { glob } from 'tinyglobby'
 import * as YAML from 'yaml'
@@ -13,8 +12,7 @@ export type IndexCache = Record<string, string[]>
  * Scan `modSources` for mod folders (via `mcmod.info` and GTNH-style
  * `gradle.properties`) and write a `modid → folders` index to `indexPath`.
  */
-export async function updateIndexCache(modSources: string, indexPath: string, log: Logger): Promise<IndexCache> {
-  log(chalk.cyan('Indexing MOD_SOURCES to find mod folders...'))
+export async function updateIndexCache(modSources: string, indexPath: string, _log: Logger): Promise<IndexCache> {
   const cache: IndexCache = {}
 
   const add = (modid: string, folder: string) => {
@@ -52,7 +50,6 @@ export async function updateIndexCache(modSources: string, indexPath: string, lo
   }
 
   await fs.writeFile(indexPath, YAML.stringify(cache), 'utf8')
-  log(chalk.green(`Indexed ${Object.keys(cache).length} mod IDs.`))
   return cache
 }
 

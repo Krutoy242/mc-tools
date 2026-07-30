@@ -7,11 +7,20 @@ The resolved absolute path is printed to **stdout**; all diagnostics go to **std
 
 ### Resolution pipeline
 
-1. **Local match** — existing folder / `.index.yaml` under `$MOD_SOURCES`, checked out to a `1.12.x` branch.
+1. **Local match** — existing folder / `.index.yaml` under `$MOD_SOURCES`.
 2. **Clone** — GitHub/GitLab URL from `minecraftinstance.json` or the CurseForge API (`$CF_API_KEY`).
 3. **Jar metadata** — `mcmod.info` / `META-INF/MANIFEST.MF`, then a GitHub search by author or name.
 4. **Same author / Gemini** — repos of other mods by the same author, or the `gemini` CLI.
 5. **Decompile** — `cfr*.jar` (in the MC dir) or `vineflower*.jar` (in `$MOD_SOURCES`).
+
+### Version pinning
+
+Every cloned folder is checked out to the version the pack **actually installs**, taken from
+the jar file name and its `mcmod.info`. The sources are moved onto a `1.12.x` branch and then,
+if the tip does not already match, onto a matching tag or the newest commit declaring that
+version (read from `version.properties` / `gradle.properties` / `build.properties` /
+`build.gradle`). Both versions are logged, so a mismatch that could not be resolved is visible
+rather than silent.
 
 <!-- /persistent_desc -->
 
