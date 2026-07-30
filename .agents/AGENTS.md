@@ -198,6 +198,12 @@ are applied.
 **Invariant:** every step is best-effort and returns `null` rather than
 throwing, so the ladder can always fall through to the next strategy.
 
+**Invariant:** a resolved folder is pinned to the version the pack installs, not
+merely to a 1.12.x branch — `syncToInstalledVersion` pulls, then falls back to a
+matching tag or a history scan of the version-declaring file. Pinning detaches
+HEAD, so the branch it came from is stored in the repo's own git config
+(`mctools.sourceBranch`) and restored on the next run.
+
 #### `packages/reducer/`
 
 Bisects a modpack: toggles mods on/off, launches and monitors the game, and
