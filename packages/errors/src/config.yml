@@ -143,9 +143,6 @@ ignore:
       - Failed to fetch hierarchy node for *. This may cause patch issues
       # Safe WARNings, just for information, normal behavior
       - Unable to call Core API! It has not been initialized yet!
-  # Known warning. reported
-  - TickCentral:
-      - 'Unable to get superclass as resource: '
   # plethora incompatible with betteranimals
   - /plethora/:
       - /Cannot inject neural renderer for dev.itsmeow.betteranimals/
@@ -332,11 +329,6 @@ ignore:
   # Mechanics error https://github.com/wolforcept/mechanics/issues/13
   - Mechanics:
       - 'Failed to copy * property from block '
-
-  # https://github.com/Invadermonky/MagicultureIntegrations/issues/6
-  - WARN:
-      - /(mixin|CleanMix)/:
-          - /Mixin mixins.magicultureintegrations.tconstruct.json:TileHeatingStructureMixin from mod .+ has multiple constructors/
 
   # ##################
   # Cleanroom Loader errors
