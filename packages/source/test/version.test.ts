@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { versionFromFileName, versionFromGradle, versionFromProperties } from '../src/version.js'
+import { isBuildOf, versionFromFileName, versionFromGradle, versionFromProperties } from '../src/version.js'
 
 describe('versionFromFileName', () => {
   it.each([
@@ -52,5 +52,30 @@ describe('versionFromGradle', () => {
 
   it('ignores interpolated assignments', () => {
     expect(versionFromGradle(`version = "$\{config.minecraft_version}-$\{artifact_version}"`)).toBeNull()
+  })
+
+  it('reads an ext property of a multi-project build', () => {
+    expect(versionFromGradle('ext.craftTweakerVersion = "4.1.20"\n')).toBe('4.1.20')
+  })
+
+  it('skips versions of tools and dependencies', () => {
+    expect(versionFromGradle('  gradleVersion = \'4.9\'\n  forgeVersion = "14.23.5.2847"\n')).toBeNull()
+  })
+
+  it('prefers the mod version over a later tool version', () => {
+    expect(versionFromGradle('version = "4.0.20"\nwrapper {\n  gradleVersion = \'4.9\'\n}\n')).toBe('4.0.20')
+  })
+})
+
+describe('isBuildOf', () => {
+  it.each([
+    ['4.0.20', '4.0.20.11', true],
+    ['4.1.20', '4.1.20.715', true],
+    ['4.0.20', '4.0.20', false],
+    ['4.0.20', '4.0.21.11', false],
+    ['4.1.20', '1.12-4.1.20.715', false],
+    ['1.6', '1.6.0.1', false],
+  ])('%s vs %s → %s', (base, full, expected) => {
+    expect(isBuildOf(base, full)).toBe(expected)
   })
 })

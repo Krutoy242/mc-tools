@@ -1,13 +1,76 @@
+import type { ChildProcess } from 'node:child_process'
 import type { Logger } from './types.js'
 import type { SourceVersion } from './version.js'
 import child_process from 'node:child_process'
 import { existsSync } from 'node:fs'
+import process from 'node:process'
 import { promisify } from 'node:util'
 import chalk from 'chalk'
 import { glob } from 'tinyglobby'
-import { normalizeVersion, readSourceVersion, VERSION_FILES, versionFromFile } from './version.js'
+import { isBuildOf, normalizeVersion, readSourceVersion, VERSION_FILES, versionFromFile } from './version.js'
 
-export const execAsync = promisify(child_process.exec)
+/** Environment for every child: git must fail rather than stop to ask for input. */
+const CHILD_ENV = { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+
+const exec = promisify(child_process.exec)
+
+export async function execAsync(command: string, options: child_process.ExecOptions = {}) {
+  return exec(command, { env: CHILD_ENV, ...options, encoding: 'utf8' })
+}
+
+/** First line of an unknown throwable, which is all a diagnostic needs. */
+function reason(e: unknown): string {
+  return (e instanceof Error ? e.message : String(e)).split('\n')[0]
+}
+
+/** Hard ceiling on a network git call, so nothing can hang the CLI forever. */
+const NETWORK_TIMEOUT_MS = 20 * 60_000
+
+/**
+ * Kill a git process *and its children*. `git fetch` hands the transfer to
+ * `git-remote-https`, which keeps downloading — and keeps holding `.git` locks
+ * that break every later run — when only its parent is killed.
+ */
+function killTree(child: ChildProcess): void {
+  if (process.platform === 'win32' && child.pid) {
+    child_process.spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore' })
+  }
+  else {
+    child.kill('SIGKILL')
+  }
+}
+
+/**
+ * Run a long git command, forwarding its progress to the log as it arrives.
+ * `exec` withholds every byte until the process exits, which makes a transfer
+ * of a heavy history — 400+ MiB is not unusual for a 1.12 mod — look exactly
+ * like a freeze.
+ */
+async function gitProgress(args: string[], log: Logger): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = child_process.spawn('git', [...args, '--progress'], { env: CHILD_ENV, windowsHide: true })
+    const timer = setTimeout(() => {
+      killTree(child)
+      reject(new Error(`timed out after ${NETWORK_TIMEOUT_MS / 60_000} minutes`))
+    }, NETWORK_TIMEOUT_MS)
+
+    // Progress redraws itself with `\r`; only the tail is kept, for the error.
+    let tail = ''
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk: string) => {
+      tail = (tail + chunk).slice(-2000)
+      log(chalk.gray(chunk), false)
+    })
+
+    child.on('error', reject)
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (tail) log('')
+      if (code === 0) resolve()
+      else reject(new Error(tail.split(/[\r\n]+/).filter(l => l.trim()).pop() ?? `git exited with code ${code}`))
+    })
+  })
+}
 
 /** A source folder is "real" only if it carries a meaningful amount of code. */
 const MIN_SOURCE_FILES = 3
@@ -76,10 +139,8 @@ export async function cloneRepo(repoUrl: string, targetDir: string, log: Logger)
   if (branch) log(chalk.green(`found ${branch}. `), false)
   else log(chalk.yellow('no 1.12.x branch found, cloning default... '), false)
 
-  const cmd = branch
-    ? `git clone --depth 1 -b "${branch}" "${repoUrl}" "${targetDir}"`
-    : `git clone --depth 1 "${repoUrl}" "${targetDir}"`
-  await execAsync(cmd)
+  const onBranch = branch ? ['-b', branch] : []
+  await gitProgress(['clone', '--depth', '1', ...onBranch, repoUrl, targetDir], log)
   log(chalk.green('Done.'))
   return true
 }
@@ -111,12 +172,7 @@ export async function ensureCorrectBranch(dir: string, log: Logger): Promise<boo
     const targetRemote = candidates12.find(b => /1\.12\.2/.test(b)) || candidates12[0]
     const localName = targetRemote.replace(/^origin\//, '')
 
-    const { stdout: statusOut } = await execAsync(`git -C "${dir}" status --porcelain`)
-    if (statusOut.trim()) {
-      log(chalk.gray('Uncommitted changes detected, stashing...'), false)
-      await execAsync(`git -C "${dir}" stash push -m "mctools-source-auto-stash"`)
-      log(chalk.green('stashed.'))
-    }
+    await stashDirty(dir, log)
 
     try {
       await execAsync(`git -C "${dir}" show-ref --verify --quiet refs/heads/${localName}`)
@@ -145,27 +201,48 @@ async function isGitRepo(dir: string): Promise<boolean> {
   return execAsync(`git -C "${dir}" rev-parse --git-dir`).then(() => true, () => false)
 }
 
-/** Stash uncommitted work so checkouts and pulls cannot fail on dirt. */
+/**
+ * Stash uncommitted work so checkouts and pulls cannot fail on dirt. Untracked
+ * files are ignored: `stash push` leaves them alone anyway, and counting them
+ * as dirt means claiming to have stashed a folder that is still sitting there.
+ */
 async function stashDirty(dir: string, log: Logger): Promise<void> {
-  const { stdout } = await execAsync(`git -C "${dir}" status --porcelain`)
+  const { stdout } = await execAsync(`git -C "${dir}" status --porcelain --untracked-files=no`)
   if (!stdout.trim()) return
   await execAsync(`git -C "${dir}" stash push -m "mctools-source-auto-stash"`)
   log(chalk.gray('Uncommitted changes stashed.'))
 }
 
 /**
- * Bring the repo's objects up to date: unshallow if needed (older commits are
- * required to check out an older release) and fetch every branch and tag.
+ * Bring the repo's refs up to date. Deliberately shallow-preserving: deepening
+ * costs a full repository download, so it is left to {@link deepenRepo}, which
+ * runs only once the cheap ways to find the version are exhausted.
  */
 async function fetchRepo(dir: string, log: Logger): Promise<void> {
+  await gitProgress(['-C', dir, 'fetch', '--tags', '--force', 'origin'], log).catch((e: unknown) => {
+    const text = reason(e)
+    log(chalk.yellow(`Fetch failed: ${text}`))
+    if (text.includes('.lock'))
+      log(chalk.yellow('An earlier git run was interrupted — delete that stale lock file and retry.'))
+  })
+}
+
+/**
+ * Fetch the history a commit scan needs. A shallow clone holds only the tip, so
+ * the scan is blind without this — but it downloads the repository's entire
+ * history (hundreds of MiB for some mods), so it is announced, limited to the
+ * branch being scanned, and reached only as a last resort.
+ */
+async function deepenRepo(dir: string, log: Logger): Promise<void> {
   const shallow = await execAsync(`git -C "${dir}" rev-parse --is-shallow-repository`)
     .then(r => r.stdout.trim() === 'true', () => false)
-  try {
-    await execAsync(`git -C "${dir}" fetch --tags --force ${shallow ? '--unshallow' : ''} origin`)
-  }
-  catch (e) {
-    log(chalk.yellow(`Fetch failed: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}`))
-  }
+  if (!shallow) return
+
+  const branch = await currentBranchName(dir).catch(() => '')
+  log(chalk.cyan(`Shallow clone: downloading the full history of '${branch || 'origin'}' to search it. This may take minutes.`))
+  const refspec = branch ? [branch] : []
+  await gitProgress(['-C', dir, 'fetch', '--unshallow', 'origin', ...refspec], log)
+    .catch((e: unknown) => log(chalk.yellow(`Could not deepen the clone: ${reason(e)}`)))
 }
 
 /** Fast-forward the current branch onto its upstream, if it has one. */
@@ -254,6 +331,21 @@ function logSourceVersion(version: SourceVersion | null, log: Logger): void {
 }
 
 /**
+ * Whether a checked-out source version is what the pack installs. Besides an
+ * exact hit, a source declaring the base of a build-numbered jar (`4.0.20` for
+ * an installed `4.0.20.11`) is accepted: the build number is appended by the
+ * build server and appears in no commit, so no revision matches any closer.
+ */
+function acceptVersion(source: SourceVersion, versions: string[], log: Logger): boolean {
+  if (versions.includes(source.version)) return true
+
+  const build = versions.find(v => isBuildOf(source.version, v))
+  if (!build) return false
+  log(chalk.green(`Source ${source.version} is ${build} without its build number.`))
+  return true
+}
+
+/**
  * Check out the revision of `dir` that matches the mod actually installed in
  * the pack. `versions` are candidate version strings (jar file name first, then
  * the jar's own `mcmod.info`), which can disagree when a build bumps its number
@@ -268,7 +360,7 @@ function logSourceVersion(version: SourceVersion | null, log: Logger): void {
 export async function syncToInstalledVersion(dir: string, versions: string[], log: Logger): Promise<boolean> {
   const current = await readSourceVersion(dir)
   logSourceVersion(current, log)
-  if (current && versions.includes(current.version)) return true
+  if (current && acceptVersion(current, versions, log)) return true
 
   if (!await isGitRepo(dir)) {
     if (versions.length) log(chalk.yellow('Not a git repository, cannot switch to the installed version.'))
@@ -284,7 +376,7 @@ export async function syncToInstalledVersion(dir: string, versions: string[], lo
   await pullCurrentBranch(dir)
 
   const atTip = await readSourceVersion(dir)
-  if (atTip && versions.includes(atTip.version)) {
+  if (atTip && acceptVersion(atTip, versions, log)) {
     log(chalk.green(`Branch tip is ${atTip.version}.`))
     return true
   }
@@ -299,6 +391,7 @@ export async function syncToInstalledVersion(dir: string, versions: string[], lo
 
   const known = [atTip?.file, current?.file].filter((f): f is string => Boolean(f))
   const files = [...new Set([...known, ...VERSION_FILES])]
+  await deepenRepo(dir, log)
   const commit = await findVersionCommit(dir, versions, files)
     ?? await findVersionCommit(dir, versions, files, '--all')
   if (commit) {

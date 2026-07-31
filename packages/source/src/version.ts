@@ -23,6 +23,16 @@ export function normalizeVersion(version: string): string {
 }
 
 /**
+ * Whether `base` is `full` minus a trailing build number. Mods built on a build
+ * server commonly declare `4.0.20` in the build script and append
+ * `.$BUILD_NUMBER` at build time, so the jar reads `4.0.20.11` while no commit
+ * ever will — `4.0.20` is the closest the sources can get.
+ */
+export function isBuildOf(base: string, full: string): boolean {
+  return full.startsWith(`${base}.`) && /^\d+$/.test(full.slice(base.length + 1))
+}
+
+/**
  * Guess the mod version encoded in a jar file name, e.g.
  * `MCT-ImmersiveTechnology-1.12.2-1.10.203-release.jar` → `1.10.203`.
  * Game version tokens and build classifiers are discarded.
@@ -72,11 +82,24 @@ export function versionFromProperties(text: string): string | null {
   return NUMERIC_VERSION.test(full) || LOOSE_VERSION.test(full) ? normalizeVersion(full) : null
 }
 
-/** Pull `version = "1.6.0"` out of a `build.gradle` / `build.gradle.kts` body. */
+/** `version = "1.6.0"`, `project.version = …`, `ext.craftTweakerVersion = …`. */
+const GRADLE_VERSION_ASSIGN = /(?:^|\n)[ \t]*(?:project\.|ext\.)?(\w*?[Vv]ersion)[ \t]*=[ \t]*["']([^"'$]+)["']/g
+
+/** Assignment keys naming a tool or dependency version rather than the mod's. */
+const FOREIGN_VERSION_KEYS = /^(?:gradle|forge|fabric|mc|minecraft|mappings|jei|api|java|kotlin|scala|loader|plugin|wrapper)/i
+
+/**
+ * Pull the mod's version out of a `build.gradle` / `build.gradle.kts` body.
+ * Multi-project builds declare it as an `ext.` property of their own
+ * (`ext.craftTweakerVersion`), so every `*Version` assignment counts — bar the
+ * ones naming something other than the mod, like `gradleVersion = '4.9'`.
+ */
 export function versionFromGradle(text: string): string | null {
-  const match = text.match(/(?:^|\n)[ \t]*(?:project\.)?version[ \t]*=[ \t]*["']([^"'$]+)["']/)
-  const value = match?.[1]
-  return value && (NUMERIC_VERSION.test(value) || LOOSE_VERSION.test(value)) ? normalizeVersion(value) : null
+  for (const [, key, value] of text.matchAll(GRADLE_VERSION_ASSIGN)) {
+    if (FOREIGN_VERSION_KEYS.test(key)) continue
+    if (NUMERIC_VERSION.test(value) || LOOSE_VERSION.test(value)) return normalizeVersion(value)
+  }
+  return null
 }
 
 /** Files that may declare a mod's version, most specific first. */
@@ -100,9 +123,21 @@ export interface SourceVersion {
   file   : string
 }
 
+/**
+ * {@link VERSION_FILES} plus any other root `*.gradle` file. A multi-project
+ * build keeps its settings in a script of its own — CraftTweaker declares the
+ * version in `configuration.gradle`, and its `build.gradle` names none.
+ */
+async function versionFiles(dir: string): Promise<string[]> {
+  const extra = await fs.readdir(dir)
+    .then(names => names.filter(n => n.endsWith('.gradle') && n !== 'settings.gradle').sort())
+    .catch(() => [])
+  return [...new Set([...VERSION_FILES, ...extra])]
+}
+
 /** Best-effort version of a checked-out source folder. */
 export async function readSourceVersion(dir: string): Promise<SourceVersion | null> {
-  for (const file of VERSION_FILES) {
+  for (const file of await versionFiles(dir)) {
     try {
       const version = versionFromFile(file, await fs.readFile(join(dir, file), 'utf8'))
       if (version) return { version, file }
