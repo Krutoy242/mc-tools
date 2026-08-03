@@ -41,31 +41,46 @@ function killTree(child: ChildProcess): void {
 }
 
 /**
- * Run a long git command, forwarding its progress to the log as it arrives.
+ * Whether a live progress bar makes sense. It redraws itself with `\r`, which
+ * a terminal collapses into one line — but a log file, a CI job or an agent's
+ * captured output keeps every redraw, turning one fetch into hundreds of lines.
+ */
+const SHOW_PROGRESS = process.stderr.isTTY === true
+
+/**
+ * Run a long git command, forwarding its output to the log as it arrives.
  * `exec` withholds every byte until the process exits, which makes a transfer
  * of a heavy history — 400+ MiB is not unusual for a 1.12 mod — look exactly
- * like a freeze.
+ * like a freeze. Without a TTY the progress bar is not requested at all (git
+ * even tells the remote to skip it), so only git's real lines are logged, once
+ * the command is done.
  */
 async function gitProgress(args: string[], log: Logger): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = child_process.spawn('git', [...args, '--progress'], { env: CHILD_ENV, windowsHide: true })
+    const spawnArgs = SHOW_PROGRESS ? [...args, '--progress'] : args
+    const child = child_process.spawn('git', spawnArgs, { env: CHILD_ENV, windowsHide: true })
     const timer = setTimeout(() => {
       killTree(child)
       reject(new Error(`timed out after ${NETWORK_TIMEOUT_MS / 60_000} minutes`))
     }, NETWORK_TIMEOUT_MS)
 
-    // Progress redraws itself with `\r`; only the tail is kept, for the error.
+    // Only the tail is kept: enough for the error, and a cap on progress spam.
     let tail = ''
     child.stderr.setEncoding('utf8')
     child.stderr.on('data', (chunk: string) => {
       tail = (tail + chunk).slice(-2000)
-      log(chalk.gray(chunk), false)
+      if (SHOW_PROGRESS) log(chalk.gray(chunk), false)
     })
 
     child.on('error', reject)
     child.on('close', (code) => {
       clearTimeout(timer)
-      if (tail) log('')
+      if (SHOW_PROGRESS) {
+        if (tail) log('')
+      }
+      else if (tail.trim()) {
+        log(chalk.gray(tail.trimEnd()))
+      }
       if (code === 0) resolve()
       else reject(new Error(tail.split(/[\r\n]+/).filter(l => l.trim()).pop() ?? `git exited with code ${code}`))
     })
