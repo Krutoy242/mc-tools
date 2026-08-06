@@ -1,3 +1,4 @@
+import type { McToolsConfig } from '../../core/config.js'
 import type { DiagnosticsManager } from '../../core/diagnostics.js'
 import type { Logger } from '../../core/logger.js'
 import * as fs from 'node:fs/promises'
@@ -12,13 +13,7 @@ export async function activate(
   _ctx: vscode.ExtensionContext,
   diagnostics: DiagnosticsManager,
   logger: Logger,
-  config: {
-    path               : string
-    maxInitialReadBytes: number
-    overlapBytes       : number
-    configPath         : string
-    defaultMatchRegex  : string
-  }
+  config: McToolsConfig['debugLog']
 ): Promise<() => void> {
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   if (!root) {
@@ -27,55 +22,41 @@ export async function activate(
   }
 
   const fullPath = path.join(root, config.path)
-  try {
-    await fs.access(fullPath)
-  }
-  catch {
+  const fileStat = await fs.stat(fullPath).catch(() => null)
+  if (!fileStat) {
     logger.warn(`debug.log not found at ${config.path}`)
     return () => {}
   }
-
-  const fileStat = await fs.stat(fullPath)
   logger.info(`debug.log: ${(fileStat.size / 1024 / 1024).toFixed(2)} MB total`)
 
   const engineConfig = await loadEngineConfig(root, config, logger)
   const engine = new DebugLogEngine(engineConfig, logger)
-  const provider = new DebugLogDiagnosticsProvider(diagnostics, logger)
+  const provider = new DebugLogDiagnosticsProvider(diagnostics, logger, config.maxDiagnostics)
+  const uri = vscode.Uri.file(fullPath)
 
+  // The watcher owns the initial tail read too, so the file is never loaded
+  // whole and size/line counters can never drift from what was parsed.
   const watcher = new LogWatcher(
-    { path: config.path, debounceMs: 300 },
+    {
+      path               : config.path,
+      debounceMs         : 300,
+      maxInitialReadBytes: config.maxInitialReadBytes,
+    },
     logger,
     async (chunk) => {
-      const timer = logger.time(`Process debug-log chunk (${chunk.text.length} bytes, line ${chunk.startLine})`)
+      const timer = logger.time(`Process debug-log chunk (${chunk.text.length} chars, line ${chunk.startLine})`)
       if (chunk.isTruncated) {
         engine.reset()
         provider.clear()
         logger.info('Debug-log truncated — engine and diagnostics reset')
       }
       const novel = engine.processChunk(chunk)
-      if (novel.length) {
-        provider.update(novel, vscode.Uri.file(fullPath))
-      }
+      if (novel.length) provider.append(novel, uri)
       timer()
     }
   )
 
   await watcher.start()
-
-  const text = await fs.readFile(fullPath, 'utf-8')
-  let chunkText = text
-  let startLine = 0
-  if (text.length > config.maxInitialReadBytes) {
-    const sliceStart = text.length - config.maxInitialReadBytes
-    const safeStart = text.indexOf('\n', sliceStart) + 1 || sliceStart
-    chunkText = text.slice(safeStart)
-    startLine = text.slice(0, safeStart).split('\n').length - 1
-  }
-
-  const novel = engine.processChunk({ text: chunkText, startLine, isTruncated: false })
-  if (novel.length) {
-    provider.update(novel, vscode.Uri.file(fullPath))
-  }
 
   logger.info('Debug-log monitor activated')
 

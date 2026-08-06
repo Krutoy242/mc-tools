@@ -37,7 +37,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "release:all": "pnpm -r --workspace-concurrency=1 --filter=!@mctools/utils --filter=!@mctools/extension exec -- semantic-release",
+    "release:all": "pnpm -r --workspace-concurrency=1 --filter=!@mctools/utils --filter=!mc-tools-vscode exec -- semantic-release",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import type { CompiledConfig, FoundError } from '@mctools/errors'
 import type { Logger } from '../../core/logger.js'
 import { findErrors } from '@mctools/errors'
 import { hash } from 'ohash'
+import { countTextLines } from '../../util/logtail.js'
 
 export class DebugLogEngine {
   private known = new Set<string>()
@@ -25,10 +26,10 @@ export class DebugLogEngine {
       }
     }
 
-    const lines = chunk.text.split('\n').length
+    const lines = countTextLines(chunk.text)
     this.totalLines += lines
     this.totalNovel += novel.length
-    this.logger.info(`Processed ${lines} lines, ${novel.length} novel errors`)
+    this.logger.debug(`Processed ${lines} lines, ${novel.length} novel errors (${this.totalLines} lines / ${this.totalNovel} errors total)`)
 
     return novel
   }

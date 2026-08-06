@@ -52,9 +52,6 @@
       "import": "./dist/mods/reccomplex.mjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsdown",
     "coverage": "vitest run --coverage",

@@ -19,8 +19,12 @@ export function normalizeConfigName(name: string): string {
     .replace(/[^a-z0-9]/g, '')
 }
 
+/**
+ * `manifest.json` alone is deliberately not a marker — it collides with web app
+ * manifests, and matching it would activate the extension in unrelated projects.
+ */
 export async function isMinecraftModpack(root: string): Promise<boolean> {
-  const markers = ['mods', 'minecraftinstance.json', 'manifest.json']
+  const markers = ['mods', 'minecraftinstance.json']
   const checks = await Promise.all(
     markers.map(async (m) => {
       try {

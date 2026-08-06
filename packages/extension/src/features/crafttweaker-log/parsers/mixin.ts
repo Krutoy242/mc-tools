@@ -1,3 +1,4 @@
+import type { Dirent } from 'node:fs'
 import type { CraftTweakerParser } from './base.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'pathe'
@@ -21,34 +22,75 @@ function formatJavaSig(sig: string): string {
   return types.join(', ')
 }
 
-export async function buildMixinIndex(workspaceRoot: string): Promise<Map<string, MixinEntry>> {
-  const index = new Map<string, MixinEntry>()
-  const searchDirs = [path.join(workspaceRoot, 'scripts/mixin'), path.join(workspaceRoot, 'scripts')]
+const ZEN_CLASS = /zenClass\s+(\w+)/
 
-  for (const dir of searchDirs) {
-    try {
-      const entries = await fs.readdir(dir, { recursive: true, withFileTypes: true })
-      for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.endsWith('.zs')) continue
-        const fullPath = path.join(entry.parentPath, entry.name)
-        try {
-          const content = await fs.readFile(fullPath, 'utf-8')
-          const classMatch = content.match(/zenClass\s+(\w+)/)
-          if (classMatch) {
-            index.set(classMatch[1], { path: fullPath, content })
-          }
-        }
-        catch {
-          // ignore unreadable files
-        }
-      }
+/**
+ * Maps `zenClass` names to the `.zs` file declaring them.
+ *
+ * A full rebuild walks every script in the pack, so it happens once at
+ * activation; individual saves patch just the file that changed.
+ */
+export class MixinIndex {
+  private byClass = new Map<string, MixinEntry>()
+  private classByPath = new Map<string, string>()
+
+  get size(): number {
+    return this.byClass.size
+  }
+
+  get(className: string): MixinEntry | undefined {
+    return this.byClass.get(className)
+  }
+
+  /** Re-reads one file and re-points its entry, dropping a renamed class. */
+  async update(fullPath: string): Promise<void> {
+    const normalized = path.normalize(fullPath)
+    const previous = this.classByPath.get(normalized)
+
+    const content = await fs.readFile(normalized, 'utf-8').catch(() => null)
+    const className = content?.match(ZEN_CLASS)?.[1]
+
+    if (previous && previous !== className) {
+      this.byClass.delete(previous)
+      this.classByPath.delete(normalized)
     }
-    catch {
-      // ignore missing directories
+    if (content && className) {
+      this.byClass.set(className, { path: normalized, content })
+      this.classByPath.set(normalized, className)
     }
   }
 
-  return index
+  private add(entry: MixinEntry, className: string): void {
+    this.byClass.set(className, entry)
+    this.classByPath.set(entry.path, className)
+  }
+
+  static async build(workspaceRoot: string): Promise<MixinIndex> {
+    const index = new MixinIndex()
+    // `scripts` is walked recursively, so listing `scripts/mixin` separately
+    // would only read every mixin script twice.
+    const dir = path.join(workspaceRoot, 'scripts')
+
+    let entries: Dirent[]
+    try {
+      entries = await fs.readdir(dir, { recursive: true, withFileTypes: true })
+    }
+    catch {
+      return index
+    }
+
+    const files = entries
+      .filter(e => e.isFile() && e.name.endsWith('.zs'))
+      .map(e => path.normalize(path.join(e.parentPath, e.name)))
+
+    await Promise.all(files.map(async (fullPath) => {
+      const content = await fs.readFile(fullPath, 'utf-8').catch(() => null)
+      const className = content?.match(ZEN_CLASS)?.[1]
+      if (content && className) index.add({ path: fullPath, content }, className)
+    }))
+
+    return index
+  }
 }
 
 export function findMixinLine(content: string, className: string, methodName: string): number | undefined {
@@ -78,7 +120,7 @@ export function findMixinLine(content: string, className: string, methodName: st
   return undefined
 }
 
-export function createMixinParser(mixinIndex: Map<string, MixinEntry>): CraftTweakerParser {
+export function createMixinParser(mixinIndex: MixinIndex): CraftTweakerParser {
   return {
     name: 'mixin',
     tryParse(lines, startIndex, _workspaceRoot) {

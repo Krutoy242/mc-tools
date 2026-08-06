@@ -3,15 +3,19 @@ import type { Logger } from '../../core/logger.js'
 import type { DetectorConfig } from './detector.js'
 import type { GitStaging } from './git.js'
 import type { ModChangesProvider } from './tree.js'
+import * as fs from 'node:fs/promises'
 import { modListDiff } from '@mctools/curseforge'
 import * as path from 'pathe'
 import * as vscode from 'vscode'
 import { computeModChanges } from './detector.js'
 
 export interface ModTrackerState {
-  cachedHeadText?: string
-  cachedStatus   : { path: string, status: string }[]
-  gitOpsRunning  : boolean
+  /** Parsed `minecraftinstance.json` at git HEAD, reused until HEAD moves. */
+  headMci?     : Minecraftinstance
+  /** Commit `headMci` was read from; `null` when the repo has no HEAD. */
+  headCommit?  : string | null
+  cachedStatus : { path: string, status: string }[]
+  gitOpsRunning: boolean
 }
 
 export function createState(): ModTrackerState {
@@ -25,6 +29,61 @@ export interface TrackerConfig extends DetectorConfig {
   modTrackerGlobalFiles: string[]
 }
 
+/**
+ * Reads and parses `minecraftinstance.json` off the UI thread.
+ *
+ * The file is a single multi-megabyte line in this pack, so the parse is only
+ * repeated when the file's mtime and size actually change.
+ */
+export class InstanceCache {
+  private parsed?: Minecraftinstance
+  private stamp = ''
+
+  constructor(private filePath: string) {}
+
+  async read(): Promise<Minecraftinstance> {
+    const stat = await fs.stat(this.filePath)
+    const stamp = `${stat.mtimeMs}:${stat.size}`
+    if (this.parsed && stamp === this.stamp) return this.parsed
+
+    const text = await fs.readFile(this.filePath, 'utf-8')
+    this.parsed = JSON.parse(text) as Minecraftinstance
+    this.stamp = stamp
+    return this.parsed
+  }
+}
+
+/**
+ * Reads and parses `minecraftinstance.json` at HEAD, but only when HEAD moved.
+ *
+ * The blob is a couple of megabytes; fetching it on every refresh cost ~150 ms
+ * of the git extension's time for a result that only changes on commit.
+ */
+export async function syncHeadInstance(
+  state: ModTrackerState,
+  git: GitStaging,
+  mciPath: string
+): Promise<boolean> {
+  const commit = await git.headCommit()
+  if (state.headMci && state.headCommit === commit) return false
+
+  const headText = await git.showHead(mciPath)
+  state.headCommit = commit
+  if (!headText) return false
+  try {
+    state.headMci = JSON.parse(headText) as Minecraftinstance
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+/** The HEAD instance if one was parsed, otherwise the working-tree one. */
+export function headInstance(state: ModTrackerState, fallback: Minecraftinstance): Minecraftinstance {
+  return state.headMci ?? fallback
+}
+
 export function buildTreeData(
   state: ModTrackerState,
   treeProvider: ModChangesProvider,
@@ -34,7 +93,7 @@ export function buildTreeData(
   config: TrackerConfig,
   logger: Logger
 ): void {
-  const old = state.cachedHeadText ? JSON.parse(state.cachedHeadText) as Minecraftinstance : fresh
+  const old = headInstance(state, fresh)
   const diff = modListDiff(fresh, old)
 
   const changedUris = status
@@ -67,8 +126,8 @@ export async function runGitOps(
   logger: Logger
 ): Promise<void> {
   const gitTimer = logger.time('Git operations')
-  const [headText, status] = await Promise.all([
-    git.showHead(mciPath),
+  const [headChanged, status] = await Promise.all([
+    syncHeadInstance(state, git, mciPath),
     git.status(),
   ])
   gitTimer()
@@ -78,9 +137,7 @@ export async function runGitOps(
 
   const statusChanged = status.length !== state.cachedStatus.length
     || status.some((s, i) => s.path !== state.cachedStatus[i]?.path || s.status !== state.cachedStatus[i]?.status)
-  const headChanged = headText !== state.cachedHeadText
 
-  if (headText) state.cachedHeadText = headText
   state.cachedStatus = status
 
   if (headChanged || statusChanged) {

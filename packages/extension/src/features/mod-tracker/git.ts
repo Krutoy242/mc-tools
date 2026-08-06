@@ -1,7 +1,9 @@
 import type { Logger } from '../../core/logger.js'
 import type { API, GitExtension, Repository } from './git-api.js'
+import * as fs from 'node:fs/promises'
 import * as path from 'pathe'
 import * as vscode from 'vscode'
+import { isInsideSubmodule, parseSubmodulePaths } from '../../util/gitmodules.js'
 
 const STATUS_MAP: Record<number, string> = {
   0 : 'M ',
@@ -57,13 +59,31 @@ function toRel(root: string, filePath: string): string {
   return path.relative(root, filePath).replace(/\\/g, '/')
 }
 
+export async function readSubmodulePaths(root: string): Promise<string[]> {
+  const text = await fs.readFile(path.join(root, '.gitmodules'), 'utf-8').catch(() => null)
+  return text ? parseSubmodulePaths(text) : []
+}
+
 export class GitStaging {
   private repoPromise?: Promise<Repository | null>
+  private submodules  : string[] = []
 
   constructor(
     private logger: Logger,
     private root: string
   ) {}
+
+  async loadSubmodules(): Promise<void> {
+    this.submodules = await readSubmodulePaths(this.root)
+    if (this.submodules.length) {
+      this.logger.info(`Submodules excluded from staging: ${this.submodules.join(', ')}`)
+    }
+  }
+
+  /** True when `rel` is a submodule root or lives inside one. */
+  isSubmodulePath(rel: string): boolean {
+    return isInsideSubmodule(rel, this.submodules)
+  }
 
   private async ensureRepo(): Promise<Repository | null> {
     if (!this.repoPromise) {
@@ -94,22 +114,29 @@ export class GitStaging {
     if (!repo) return []
 
     const result: { path: string, status: string }[] = []
-    for (const change of repo.state.workingTreeChanges) {
-      result.push({ path: toRel(this.root, change.uri.fsPath), status: STATUS_MAP[change.status] ?? '  ' })
-    }
-    for (const change of repo.state.indexChanges) {
-      result.push({ path: toRel(this.root, change.uri.fsPath), status: STATUS_MAP[change.status] ?? '  ' })
-    }
-    for (const change of repo.state.untrackedChanges) {
-      result.push({ path: toRel(this.root, change.uri.fsPath), status: STATUS_MAP[change.status] ?? '  ' })
+    const groups = [repo.state.workingTreeChanges, repo.state.indexChanges, repo.state.untrackedChanges]
+    for (const group of groups) {
+      for (const change of group) {
+        const rel = toRel(this.root, change.uri.fsPath)
+        if (this.isSubmodulePath(rel)) continue
+        result.push({ path: rel, status: STATUS_MAP[change.status] ?? '  ' })
+      }
     }
     return result
   }
 
   async add(paths: string[]): Promise<void> {
     const repo = await this.ensureRepo()
-    if (!repo || !paths.length) return
-    await repo.add(paths.map(p => toRel(this.root, p)))
+    if (!repo) return
+
+    const rels = paths.map(p => toRel(this.root, p))
+    const skipped = rels.filter(rel => this.isSubmodulePath(rel))
+    const staged = rels.filter(rel => !this.isSubmodulePath(rel))
+
+    if (skipped.length) {
+      this.logger.warn(`Skipped ${skipped.length} submodule path(s): ${skipped.join(', ')}`)
+    }
+    if (staged.length) await repo.add(staged)
   }
 
   async addAll(): Promise<void> {
@@ -119,8 +146,21 @@ export class GitStaging {
       ...repo.state.workingTreeChanges,
       ...repo.state.indexChanges,
       ...repo.state.untrackedChanges,
-    ].map(c => toRel(this.root, c.uri.fsPath))
+    ]
+      .map(c => toRel(this.root, c.uri.fsPath))
+      .filter(rel => !this.isSubmodulePath(rel))
     if (all.length) await repo.add(all)
+  }
+
+  /**
+   * Commit HEAD points at, or null when unavailable.
+   *
+   * Reading it is free — the git extension keeps it in memory — which makes it
+   * the cheap way to tell whether a blob at HEAD is worth re-reading.
+   */
+  async headCommit(): Promise<string | null> {
+    const repo = await this.ensureRepo()
+    return repo?.state.HEAD?.commit ?? null
   }
 
   async showHead(filePath: string): Promise<string | null> {

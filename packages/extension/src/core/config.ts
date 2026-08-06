@@ -5,15 +5,18 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 export interface McToolsConfig {
   debugLog: {
+    enabled            : boolean
     path               : string
     maxInitialReadBytes: number
-    overlapBytes       : number
     configPath         : string
     defaultMatchRegex  : string
+    maxDiagnostics     : number
   }
   crafttweakerLog: {
+    enabled       : boolean
     path          : string
     fileExtensions: string[]
+    maxDiagnostics: number
   }
   manifest: {
     autoUpdate: boolean
@@ -29,6 +32,7 @@ export interface McToolsConfig {
     sortBy      : 'addonID' | 'name'
   }
   modTracker: {
+    enabled               : boolean
     inputPath             : string
     configWatchPattern    : string
     globalFiles           : string[]
@@ -49,15 +53,18 @@ function get<T>(key: string, defaultValue: T): T {
 function getSection(): McToolsConfig {
   return {
     debugLog: {
+      enabled            : get('debugLog.enabled', true),
       path               : get('debugLog.path', 'logs/debug.log'),
-      maxInitialReadBytes: get('debugLog.maxInitialReadBytes', 10_485_760),
-      overlapBytes       : get('debugLog.overlapBytes', 4096),
+      maxInitialReadBytes: get('debugLog.maxInitialReadBytes', 67_108_864),
       configPath         : get('debugLog.configPath', 'dev/tools/mct-errors-config.yml'),
       defaultMatchRegex  : get('debugLog.defaultMatchRegex', '.*(?:WARN|ERROR|FATAL).*'),
+      maxDiagnostics     : get('debugLog.maxDiagnostics', 500),
     },
     crafttweakerLog: {
+      enabled       : get('crafttweakerLog.enabled', true),
       path          : get('crafttweakerLog.path', 'crafttweaker.log'),
       fileExtensions: get('crafttweakerLog.fileExtensions', ['.zs']),
+      maxDiagnostics: get('crafttweakerLog.maxDiagnostics', 500),
     },
     manifest: {
       autoUpdate: get('manifest.autoUpdate', true),
@@ -73,6 +80,7 @@ function getSection(): McToolsConfig {
       sortBy      : get('modlist.sortBy', 'addonID'),
     },
     modTracker: {
+      enabled               : get('modTracker.enabled', true),
       inputPath             : get('modTracker.inputPath', 'minecraftinstance.json'),
       configWatchPattern    : get('modTracker.configWatchPattern', 'config/**/*'),
       globalFiles           : get('modTracker.globalFiles', ['MODS.md', '.gitignore', '.gitattributes']),
@@ -89,8 +97,8 @@ function getSection(): McToolsConfig {
 
 export const readConfig = getSection
 
-export function onConfigChange(callback: () => void): vscode.Disposable {
+export function onConfigChange(callback: (e: vscode.ConfigurationChangeEvent) => void): vscode.Disposable {
   return vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration('mc-tools')) callback()
+    if (e.affectsConfiguration('mc-tools')) callback(e)
   })
 }

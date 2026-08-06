@@ -25,7 +25,7 @@ Every package is usable both as a library (`src/index.ts`) and as a CLI
 | `@mctools/source` | npm | Locate a mod's source code — clone from CurseForge/GitHub metadata, or decompile the jar |
 | `@mctools/zsfind` | npm | Look up ZenScript classes, fields and method signatures in CraftTweaker `.dzs` dumps |
 | `@mctools/utils` | **never** | Shared utilities — bundled-only: `private`, inlined into consumers, never published |
-| `@mctools/extension` | VS Code Marketplace (`vsce`) | "MC Tools: Modpack Dev Assistant" — `private` on npm |
+| `mc-tools-vscode` | VS Code Marketplace (`vsce`) | "MC Tools: Modpack Dev Assistant" — `private` on npm. Unscoped because `vsce` rejects scoped names |
 
 ## Architecture
 

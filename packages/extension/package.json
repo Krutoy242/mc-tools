@@ -1,6 +1,6 @@
 {
   "publisher": "Krutoy242",
-  "name": "@mctools/extension",
+  "name": "mc-tools-vscode",
   "displayName": "MC Tools: Modpack Dev Assistant",
   "type": "module",
   "version": "0.1.0",
@@ -15,7 +15,9 @@
   },
   "bugs": "https://github.com/Krutoy242/mc-tools/issues",
   "keywords": [
+    "automation",
     "minecraft",
+    "tools",
     "modpack",
     "curseforge",
     "crafttweaker",
@@ -25,22 +27,17 @@
     "Other"
   ],
   "main": "./dist/extension.mjs",
-  "icon": "assets/icon.svg",
+  "icon": "assets/icon.png",
   "engines": {
-    "vscode": "^1.120.0",
-    "node": ">=24.0.0"
+    "vscode": "^1.120.0"
   },
   "extensionDependencies": [
     "vscode.git"
   ],
   "activationEvents": [
-    "onStartupFinished",
     "onView:mc-tools.modChanges",
-    "workspaceContains:logs/debug.log",
-    "workspaceContains:debug.log",
-    "workspaceContains:crafttweaker.log",
     "workspaceContains:minecraftinstance.json",
-    "workspaceContains:manifest.json"
+    "workspaceContains:mods/*.jar"
   ],
   "contributes": {
     "commands": [
@@ -89,11 +86,42 @@
         {
           "id": "mc-tools.modChanges",
           "name": "Mod Changes",
-          "icon": "assets/icon.svg"
+          "icon": "assets/icon.svg",
+          "when": "mc-tools:modTrackerActive"
         }
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "mc-tools.showDebugLogPanel",
+          "when": "mc-tools:isModpack"
+        },
+        {
+          "command": "mc-tools.showCtErrors",
+          "when": "mc-tools:isModpack"
+        },
+        {
+          "command": "mc-tools.refreshModChanges",
+          "when": "mc-tools:isModpack"
+        },
+        {
+          "command": "mc-tools.stageMod",
+          "when": "false"
+        },
+        {
+          "command": "mc-tools.stageAllMods",
+          "when": "mc-tools:isModpack"
+        },
+        {
+          "command": "mc-tools.updateModsMd",
+          "when": "mc-tools:isModpack"
+        },
+        {
+          "command": "mc-tools.updateManifest",
+          "when": "mc-tools:isModpack"
+        }
+      ],
       "view/title": [
         {
           "command": "mc-tools.refreshModChanges",
@@ -119,7 +147,7 @@
       "view/item/context": [
         {
           "command": "mc-tools.stageMod",
-          "when": "view == mc-tools.modChanges && viewItem == mod",
+          "when": "view == mc-tools.modChanges && viewItem =~ /^(mod|global)$/",
           "group": "inline"
         }
       ]
@@ -127,20 +155,25 @@
     "configuration": {
       "title": "MC Tools",
       "properties": {
+        "mc-tools.debugLog.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan debug.log and report findings as diagnostics"
+        },
         "mc-tools.debugLog.path": {
           "type": "string",
           "default": "logs/debug.log",
           "description": "Path to debug.log relative to workspace root"
         },
+        "mc-tools.debugLog.maxDiagnostics": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum debug.log diagnostics kept in the Problems panel. Oldest are dropped first; the full count is reported in the MC Tools output channel."
+        },
         "mc-tools.debugLog.maxInitialReadBytes": {
           "type": "number",
-          "default": 10485760,
-          "description": "Maximum bytes to read on initial load for large debug.log files"
-        },
-        "mc-tools.debugLog.overlapBytes": {
-          "type": "number",
-          "default": 4096,
-          "description": "Overlap window in bytes for incremental debug.log parsing"
+          "default": 67108864,
+          "description": "Maximum bytes parsed on initial load, counted from the start of debug.log. Mod-loading errors are written first, so the head is what matters; anything past the cap is skipped."
         },
         "mc-tools.debugLog.configPath": {
           "type": "string",
@@ -152,6 +185,11 @@
           "default": ".*(?:WARN|ERROR|FATAL).*",
           "description": "Default regex for debug-log when no workspace config is present"
         },
+        "mc-tools.crafttweakerLog.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan crafttweaker.log and report findings as diagnostics"
+        },
         "mc-tools.crafttweakerLog.path": {
           "type": "string",
           "default": "crafttweaker.log",
@@ -159,9 +197,23 @@
         },
         "mc-tools.crafttweakerLog.fileExtensions": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": [".zs"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".zs"
+          ],
           "description": "File extensions that trigger CraftTweaker log re-scan on save"
+        },
+        "mc-tools.crafttweakerLog.maxDiagnostics": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum CraftTweaker diagnostics kept in the Problems panel. Errors are kept before warnings; the full count is reported in the MC Tools output channel."
+        },
+        "mc-tools.modTracker.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Track mod changes and show them in the Mod Changes view"
         },
         "mc-tools.modTracker.inputPath": {
           "type": "string",
@@ -175,14 +227,29 @@
         },
         "mc-tools.modTracker.globalFiles": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["MODS.md", ".gitignore", ".gitattributes"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "MODS.md",
+            ".gitignore",
+            ".gitattributes"
+          ],
           "description": "Files treated as global changes in mod tracker"
         },
         "mc-tools.modTracker.ignoredMappingPatterns": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["mods/*", "minecraftinstance.json", "manifest*.json", "MODS.md", ".gitignore", ".gitattributes"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "mods/*",
+            "minecraftinstance.json",
+            "manifest*.json",
+            "MODS.md",
+            ".gitignore",
+            ".gitattributes"
+          ],
           "description": "File patterns ignored when mapping changed files to mods"
         },
         "mc-tools.modlist.baselinePath": {
@@ -207,7 +274,10 @@
         },
         "mc-tools.modlist.sortBy": {
           "type": "string",
-          "enum": ["addonID", "name"],
+          "enum": [
+            "addonID",
+            "name"
+          ],
           "default": "addonID",
           "description": "Sort order for MODS.md"
         },
@@ -238,7 +308,12 @@
         },
         "mc-tools.logging.level": {
           "type": "string",
-          "enum": ["debug", "info", "warn", "error"],
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
           "default": "info",
           "description": "Log output channel verbosity"
         }
@@ -247,8 +322,9 @@
   },
   "scripts": {
     "build": "tsdown",
-    "build:watch": "node scripts/watch.mjs",
+    "coverage": "vitest run --coverage",
     "test": "vitest run --passWithNoTests",
+    "build:watch": "node scripts/watch.mjs",
     "package": "vsce package --no-dependencies --out dist/mc-tools.vsix",
     "publish:vsce": "vsce publish --no-dependencies"
   },
@@ -267,5 +343,11 @@
     "@vscode/vsce": "^3.2.0",
     "typescript": "^6.0.3",
     "vitest": "^3.2.4"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
   }
 }

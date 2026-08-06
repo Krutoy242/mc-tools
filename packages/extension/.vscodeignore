@@ -1,0 +1,16 @@
+# The build bundles every dependency into dist/, so the .vsix only needs the
+# bundle, the icon and the docs. Everything else is source or tooling.
+**
+!dist/extension.mjs
+!dist/*.mjs
+!assets/icon.png
+# The Mod Changes view references the SVG; VS Code needs it at runtime.
+!assets/icon.svg
+!README.md
+!LICENSE
+!package.json
+
+# Never ship declaration files or source maps — they are build by-products.
+dist/**/*.d.mts
+dist/**/*.d.ts
+dist/**/*.map

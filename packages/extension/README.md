@@ -1,4 +1,4 @@
-<h1 align="center">@mctools/extension</h1>
+<h1 align="center">mc-tools-vscode</h1>
 
 VS Code extension for Minecraft 1.12.2 modpack development automation
 
@@ -8,23 +8,33 @@ VS Code extension for Minecraft 1.12.2 modpack development automation
 ### Debug Log Monitor
 - Incrementally parses `logs/debug.log` using `@mctools/errors`
 - Shows errors and warnings as VSCode Diagnostics
-- Handles large files (>50 MB) by reading the tail only
+- Parses from the start of the log, where Minecraft writes its mod-loading
+  errors, then tails the rest — line numbers are counted incrementally as the
+  log grows, so the file is never re-read
 - Supports log truncation detection on Minecraft restart
+- Caps the Problems panel via `mc-tools.debugLog.maxDiagnostics`
 
 ### CraftTweaker Log Monitor
-- Parses `logs/crafttweaker.log` with custom parsers:
+- Parses `crafttweaker.log` with custom parsers:
   - **Mixin parser** — maps mixin fatal errors back to `.zs` source files
   - **Script parser** — resolves `__script__(file.zs:line)` stack traces
   - **Generic parser** — fallback for all `[FATAL|ERROR|WARNING]` lines
-- Updates diagnostics when `.zs` files are saved
+- Rescans when `.zs` files are saved, patching only the saved script in the
+  mixin index instead of rewalking every script in the pack
+- Clears diagnostics for scripts that no longer have findings
 
 ### Mod Tracker
 - Detects mod changes by diffing `minecraftinstance.json` against git HEAD
 - Groups changed `config/*` files by mod using fuzzy name matching
 - Shows changes in a dedicated **Mod Changes** Explorer panel
 - Supports staging files per-mod or all at once
+- Skips paths inside git submodules, which cannot be staged from the parent repo
 - Incrementally updates `manifest.json` when `minecraftinstance.json` changes
 - Generates `MODS.md` on demand via `@mctools/modlist`
+
+The extension stays completely idle in workspaces that are not a modpack: the
+**Mod Changes** view and the command palette entries only appear once a `mods/`
+folder or a `minecraftinstance.json` is found.
 
 ## Commands
 
@@ -42,10 +52,15 @@ VS Code extension for Minecraft 1.12.2 modpack development automation
 
 All settings live under the `mc-tools` namespace:
 
+- `mc-tools.debugLog.enabled` — toggle the debug.log monitor
 - `mc-tools.debugLog.path` — path to `debug.log`
-- `mc-tools.debugLog.maxInitialReadBytes` — tail read limit for large logs
-- `mc-tools.debugLog.overlapBytes` — overlap window for incremental parsing
+- `mc-tools.debugLog.maxInitialReadBytes` — initial-read limit, from the start
+- `mc-tools.debugLog.maxDiagnostics` — cap on entries in the Problems panel
+- `mc-tools.crafttweakerLog.enabled` — toggle the CraftTweaker log monitor
 - `mc-tools.crafttweakerLog.path` — path to `crafttweaker.log`
+- `mc-tools.crafttweakerLog.maxDiagnostics` — cap on entries; errors are kept
+  before warnings
+- `mc-tools.modTracker.enabled` — toggle the Mod Changes view
 - `mc-tools.manifest.autoUpdate` — auto-patch `manifest.json`
 - `mc-tools.manifest.postfix` — manifest file postfix
 - `mc-tools.curseforge.apiKey` — API key for `MODS.md` generation
@@ -57,43 +72,54 @@ All settings live under the `mc-tools` namespace:
 # Install dependencies
 pnpm install
 
-# Build extension
+# Build the bundle (entry point: dist/extension.mjs)
 pnpm run build
 
-# The extension entry point is dist/extension.cjs
+# Regenerate assets/icon.png from the SVG motif
+node scripts/build-icon.mjs
+
+# Produce dist/mc-tools.vsix
+pnpm run package
 ```
+
+Press <kbd>F5</kbd> in this folder to launch an Extension Development Host with
+the modpack repository already opened.
 
 ## Architecture
 
 ```
 src/
-├── extension.ts          # Entry point
+├── extension.ts            # Host: activation, feature graph, context keys
+├── watcher.ts              # Incremental log tailer
 ├── core/
-│   ├── config.ts         # VSCode settings wrapper
-│   ├── logger.ts         # OutputChannel with timings
-│   ├── watcher.ts        # Incremental file watcher
-│   └── diagnostics.ts    # Unified DiagnosticCollection manager
-├── debug-log/
-│   ├── index.ts          # Module activate/deactivate
-│   ├── reader.ts         # Incremental reader
-│   ├── engine.ts         # @mctools/errors adapter
-│   └── provider.ts       # Diagnostic provider
-├── crafttweaker-log/
-│   ├── index.ts
-│   ├── parsers/          # Mixin, Script, Generic
-│   ├── resolver.ts       # .zs file resolver
-│   └── provider.ts
-├── mod-tracker/
-│   ├── index.ts
-│   ├── detector.ts       # Diff & fuzzy matching
-│   ├── manifest-sync.ts  # Incremental manifest update
-│   ├── modlist-sync.ts   # MODS.md generation
-│   ├── git-staging.ts    # Git integration
-│   └── tree-provider.ts  # TreeDataProvider
-└── utils/
-    ├── file.ts
-    ├── regex.ts
-    └── throttle.ts
+│   ├── config.ts           # VSCode settings wrapper
+│   ├── context.ts          # mc-tools:* context keys for `when` clauses
+│   ├── logger.ts           # OutputChannel with timings
+│   └── diagnostics.ts      # Unified DiagnosticCollection manager
+├── features/
+│   ├── debug-log/
+│   │   ├── index.ts        # Module activate/deactivate
+│   │   ├── engine.ts       # @mctools/errors adapter + dedupe
+│   │   └── provider.ts     # Accumulating diagnostic provider
+│   ├── crafttweaker-log/
+│   │   ├── index.ts
+│   │   ├── parsers/        # base, mixin (+MixinIndex), script, generic
+│   │   └── provider.ts
+│   └── mod-tracker/
+│       ├── index.ts
+│       ├── commands.ts     # Command registrations
+│       ├── detector.ts     # Diff & fuzzy file→mod matching
+│       ├── git.ts          # Staging via the vscode.git API
+│       ├── git-api.ts      # Typings for the git extension
+│       ├── manifest.ts     # manifest.json generation/patching
+│       ├── modlist.ts      # MODS.md generation
+│       ├── state.ts        # Cached instances + tree assembly
+│       └── tree.ts         # TreeDataProvider
+└── util/
+    ├── gitmodules.ts       # .gitmodules parsing, submodule checks
+    ├── helpers.ts          # Error text, severity, glob matching
+    ├── logtail.ts          # Byte-range reads and newline counting
+    └── normalize.ts        # Jar/config name normalisation
 ```
 <!-- /persistent_desc -->
 
