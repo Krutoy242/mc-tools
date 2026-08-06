@@ -1,5 +1,6 @@
 import type CFV2 from 'curseforge-v2'
 import { getClient } from './client.js'
+import { retryRequest } from './retry.js'
 
 /**
  * Fetch metadata for multiple files at once using the batch endpoint.
@@ -13,7 +14,10 @@ export async function fetchFiles(
 ): Promise<CFV2.CF2File[]> {
   if (!fileIds.length) return []
 
-  const response = await getClient(cfApiKey).getFiles({ fileIds })
+  const response = await retryRequest(
+    `metadata of ${fileIds.length} file(s)`,
+    async () => getClient(cfApiKey).getFiles({ fileIds })
+  )
   return response.data?.data ?? []
 }
 
@@ -29,6 +33,9 @@ export async function fetchFile(
   fileId: number,
   cfApiKey: string
 ): Promise<CFV2.CF2File | undefined> {
-  const response = await getClient(cfApiKey).getModFile(modId, fileId)
+  const response = await retryRequest(
+    `metadata of file ${fileId} (mod ${modId})`,
+    async () => getClient(cfApiKey).getModFile(modId, fileId)
+  )
   return response.data?.data
 }

@@ -3,6 +3,7 @@ import type { ChangelogEntry, FileChangelog } from './types.js'
 import process from 'node:process'
 import { getClient } from './client.js'
 import { asFileID } from './minecraftinstance.js'
+import { retryRequest } from './retry.js'
 
 /**
  * Execute async tasks with a concurrency limit.
@@ -65,7 +66,10 @@ export async function fetchChangelogs(
       if (doLogging) process.stdout.write(`\rFetching changelogs: ${i + 1}/${entries.length}`)
 
       try {
-        const response = await client.getModFileChangelog(modId, fileId)
+        const response = await retryRequest(
+          `changelog of file ${fileId} (mod ${modId})`,
+          async () => client.getModFileChangelog(modId, fileId)
+        )
         if (response.data?.data) result.set(fileId, response.data.data)
       }
       catch {
@@ -119,7 +123,10 @@ export async function fetchIntermediateFileChangelogs(
   const allFiles: CFV2.CF2File[] = []
 
   // Load page 0 first to get total count and first batch of files
-  const page0 = await client.getModFiles({ modId, ...gameVersion ? { gameVersion } : {}, index: 0, pageSize })
+  const page0 = await retryRequest(
+    `file list of mod ${modId}`,
+    async () => client.getModFiles({ modId, ...gameVersion ? { gameVersion } : {}, index: 0, pageSize })
+  )
   const files0 = page0.data?.data ?? []
   if (!files0.length) return { changelogs: [], totalCount: 0 }
   allFiles.push(...files0)
@@ -129,7 +136,10 @@ export async function fetchIntermediateFileChangelogs(
 
   if (pagesNeeded > 1) {
     const pagePromises = Array.from({ length: pagesNeeded - 1 }, async (_, i) =>
-      client.getModFiles({ modId, ...gameVersion ? { gameVersion } : {}, index: (i + 1) * pageSize, pageSize }))
+      retryRequest(
+        `file list of mod ${modId} (page ${i + 2})`,
+        async () => client.getModFiles({ modId, ...gameVersion ? { gameVersion } : {}, index: (i + 1) * pageSize, pageSize })
+      ))
     const pages = await Promise.all(pagePromises)
     for (const page of pages) {
       const files = page.data?.data ?? []
@@ -182,7 +192,10 @@ export async function fetchIntermediateFileChangelogs(
 
       let changelog = ''
       try {
-        const response = await client.getModFileChangelog(modId, file.id)
+        const response = await retryRequest(
+          `changelog of file ${file.id} (mod ${modId})`,
+          async () => client.getModFileChangelog(modId, file.id)
+        )
         if (response.data?.data) changelog = response.data.data
       }
       catch {
@@ -213,7 +226,10 @@ export async function fetchIntermediateFileChangelogs(
     if (extraFile) {
       let extraChangelog = ''
       try {
-        const response = await client.getModFileChangelog(modId, extraFile.id)
+        const response = await retryRequest(
+          `changelog of file ${extraFile.id} (mod ${modId})`,
+          async () => client.getModFileChangelog(modId, extraFile.id)
+        )
         if (response.data?.data) extraChangelog = response.data.data
       }
       catch {

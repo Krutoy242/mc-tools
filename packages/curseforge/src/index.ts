@@ -9,4 +9,6 @@ export type { AddonID, FileID } from './minecraftinstance.js'
 
 export { fetchMod, fetchMods, loadFromCF } from './mods.js'
 
+export { describeRequestError, isTransientError, retryRequest } from './retry.js'
+
 export type { AddonDifference, ChangelogEntry, FileChangelog, ModsComparison, ModsUnion } from './types.js'
