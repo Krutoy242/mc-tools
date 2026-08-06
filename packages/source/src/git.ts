@@ -3,7 +3,9 @@ import type { Logger } from './types.js'
 import type { SourceVersion } from './version.js'
 import child_process from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import process from 'node:process'
+import { setTimeout as delay } from 'node:timers/promises'
 import { promisify } from 'node:util'
 import chalk from 'chalk'
 import { glob } from 'tinyglobby'
@@ -25,6 +27,57 @@ function reason(e: unknown): string {
 
 /** Hard ceiling on a network git call, so nothing can hang the CLI forever. */
 const NETWORK_TIMEOUT_MS = 20 * 60_000
+
+/** Attempts of one network git call, the first try included. */
+const NETWORK_ATTEMPTS = 4
+
+/** Base backoff between those attempts, doubled each retry. */
+const RETRY_DELAY_MS = 1000
+
+/**
+ * Whether a failure is the transport giving up rather than the remote refusing.
+ * A local proxy or VPN — which anyone behind a blocked GitHub runs — resets a
+ * noticeable share of connections, so `Recv failure: Connection was reset` says
+ * nothing about the repository and is worth another attempt; a 404, an auth
+ * error or a bad refspec is not.
+ */
+export function isTransientNetworkError(message: string): boolean {
+  return /connection (?:was )?reset|recv failure|send failure|failed to connect|couldn't connect|could not resolve|connection timed out|operation timed out|remote end hung up|rpc failed|early eof|unexpected disconnect|transfer closed|empty reply from server|gnutls|ssl_read|schannel|returned error: 5\d\d|not closed cleanly/i
+    .test(message)
+}
+
+export interface RetryOptions {
+  /** Undo whatever a half-finished attempt left behind, before the next one. */
+  beforeRetry?: () => Promise<void>
+  /** Base backoff, doubled each retry. Tests set it to 0 to stay fast. */
+  baseDelayMs?: number
+  /** Off when `run` already prints git's own error, so it is not said twice. */
+  logReason?  : boolean
+}
+
+/**
+ * Run a network git call, repeating it while it fails in a way a repeat can
+ * fix.
+ */
+export async function withNetworkRetry<T>(
+  label: string,
+  log: Logger,
+  run: () => Promise<T>,
+  { beforeRetry, baseDelayMs = RETRY_DELAY_MS, logReason = true }: RetryOptions = {}
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run()
+    }
+    catch (e) {
+      const text = reason(e)
+      if (attempt >= NETWORK_ATTEMPTS || !isTransientNetworkError(text)) throw e
+      log(chalk.gray(`${label}${logReason ? `: ${text}` : ''} — retry ${attempt}/${NETWORK_ATTEMPTS - 1}...`))
+      await beforeRetry?.()
+      await delay(baseDelayMs * 2 ** (attempt - 1))
+    }
+  }
+}
 
 /**
  * Kill a git process *and its children*. `git fetch` hands the transfer to
@@ -55,7 +108,7 @@ const SHOW_PROGRESS = process.stderr.isTTY === true
  * even tells the remote to skip it), so only git's real lines are logged, once
  * the command is done.
  */
-async function gitProgress(args: string[], log: Logger): Promise<void> {
+async function spawnGit(args: string[], log: Logger): Promise<void> {
   return new Promise((resolve, reject) => {
     const spawnArgs = SHOW_PROGRESS ? [...args, '--progress'] : args
     const child = child_process.spawn('git', spawnArgs, { env: CHILD_ENV, windowsHide: true })
@@ -85,6 +138,12 @@ async function gitProgress(args: string[], log: Logger): Promise<void> {
       else reject(new Error(tail.split(/[\r\n]+/).filter(l => l.trim()).pop() ?? `git exited with code ${code}`))
     })
   })
+}
+
+/** {@link spawnGit}, retried while the transport keeps dropping the transfer. */
+async function gitProgress(args: string[], log: Logger, beforeRetry?: () => Promise<void>): Promise<void> {
+  const verb = args[0] === '-C' ? args[2] : args[0]
+  return withNetworkRetry(`git ${verb}`, log, async () => spawnGit(args, log), { beforeRetry, logReason: false })
 }
 
 /** A source folder is "real" only if it carries a meaningful amount of code. */
@@ -130,8 +189,12 @@ async function currentBranchName(dir: string): Promise<string> {
 }
 
 /** Pick the best `1.12.x` remote branch of a repo, preferring exact `1.12.2`. */
-async function pick112Branch(repoUrl: string): Promise<string | undefined> {
-  const { stdout } = await execAsync(`git ls-remote --heads "${repoUrl}"`)
+async function pick112Branch(repoUrl: string, log: Logger): Promise<string | undefined> {
+  const { stdout } = await withNetworkRetry(
+    'git ls-remote',
+    log,
+    async () => execAsync(`git ls-remote --heads "${repoUrl}"`)
+  )
   const branches = stdout.split('\n')
     .map(line => line.match(/refs\/heads\/(.*)/)?.[1]?.trim())
     .filter((b): b is string => Boolean(b))
@@ -149,13 +212,17 @@ export async function cloneRepo(repoUrl: string, targetDir: string, log: Logger)
     return true
   }
 
-  const branch = await pick112Branch(repoUrl).catch(() => undefined)
+  const branch = await pick112Branch(repoUrl, log).catch(() => undefined)
   log(chalk.blue(`Cloning ${repoUrl}... `), false)
   if (branch) log(chalk.green(`found ${branch}. `), false)
   else log(chalk.yellow('no 1.12.x branch found, cloning default... '), false)
 
   const onBranch = branch ? ['-b', branch] : []
-  await gitProgress(['clone', '--depth', '1', ...onBranch, repoUrl, targetDir], log)
+  // A reset mid-clone leaves a partial folder that makes the next attempt fail
+  // on "destination path already exists" instead of on the network.
+  await gitProgress(['clone', '--depth', '1', ...onBranch, repoUrl, targetDir], log, async () => {
+    await rm(targetDir, { recursive: true, force: true }).catch(() => {})
+  })
   log(chalk.green('Done.'))
   return true
 }
