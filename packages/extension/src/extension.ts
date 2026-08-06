@@ -20,6 +20,7 @@ const RELOAD_REQUIRED = [
   'mc-tools.debugLog.path',
   'mc-tools.debugLog.configPath',
   'mc-tools.debugLog.maxInitialReadBytes',
+  'mc-tools.debugLog.sortOrder',
   'mc-tools.crafttweakerLog.enabled',
   'mc-tools.crafttweakerLog.path',
   'mc-tools.modTracker.enabled',

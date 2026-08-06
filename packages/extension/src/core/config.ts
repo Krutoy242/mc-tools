@@ -3,6 +3,17 @@ import * as vscode from 'vscode'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
+/**
+ * How debug-log findings are ordered in the Problems panel.
+ *
+ * The panel's tree sort is hard-coded to severity, then file, then line, and no
+ * setting reaches it (`problems.sortOrder` only steers F8 navigation). So the
+ * only way to get one chronological list is to hand every finding the same
+ * severity and let the line number decide — which is what `chronological` does,
+ * moving the real level into the message.
+ */
+export type SortOrder = 'severity' | 'chronological'
+
 export interface McToolsConfig {
   debugLog: {
     enabled            : boolean
@@ -11,6 +22,7 @@ export interface McToolsConfig {
     configPath         : string
     defaultMatchRegex  : string
     maxDiagnostics     : number
+    sortOrder          : SortOrder
   }
   crafttweakerLog: {
     enabled       : boolean
@@ -59,6 +71,7 @@ function getSection(): McToolsConfig {
       configPath         : get('debugLog.configPath', 'dev/tools/mct-errors-config.yml'),
       defaultMatchRegex  : get('debugLog.defaultMatchRegex', '.*(?:WARN|ERROR|FATAL).*'),
       maxDiagnostics     : get('debugLog.maxDiagnostics', 500),
+      sortOrder          : get<SortOrder>('debugLog.sortOrder', 'severity'),
     },
     crafttweakerLog: {
       enabled       : get('crafttweakerLog.enabled', true),

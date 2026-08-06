@@ -170,6 +170,19 @@
           "default": 500,
           "description": "Maximum debug.log diagnostics kept in the Problems panel. Oldest are dropped first; the full count is reported in the MC Tools output channel."
         },
+        "mc-tools.debugLog.sortOrder": {
+          "type": "string",
+          "enum": [
+            "severity",
+            "chronological"
+          ],
+          "enumDescriptions": [
+            "Errors first, then warnings — each group ordered by line, which is how the Problems panel always sorts.",
+            "One list in log order. The Problems tree sorts by severity before line and no setting changes that, so every finding is reported at the same severity and its real level is shown as a ⛔/⚠️/ℹ️ marker in the message."
+          ],
+          "default": "severity",
+          "description": "Order of debug.log findings in the Problems panel"
+        },
         "mc-tools.debugLog.maxInitialReadBytes": {
           "type": "number",
           "default": 67108864,

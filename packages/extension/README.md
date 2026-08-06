@@ -11,7 +11,10 @@ VS Code extension for Minecraft 1.12.2 modpack development automation
 - Parses from the start of the log, where Minecraft writes its mod-loading
   errors, then tails the rest — line numbers are counted incrementally as the
   log grows, so the file is never re-read
-- Supports log truncation detection on Minecraft restart
+- Detects a restart whether Minecraft truncates the log in place or rolls it
+  away and opens a new one, and drops the previous run's diagnostics
+- Reloads `mc-tools.debugLog.configPath` on save and re-filters the log — an
+  invalid rule file is ignored rather than applied
 - Caps the Problems panel via `mc-tools.debugLog.maxDiagnostics`
 
 ### CraftTweaker Log Monitor
@@ -56,6 +59,10 @@ All settings live under the `mc-tools` namespace:
 - `mc-tools.debugLog.path` — path to `debug.log`
 - `mc-tools.debugLog.maxInitialReadBytes` — initial-read limit, from the start
 - `mc-tools.debugLog.maxDiagnostics` — cap on entries in the Problems panel
+- `mc-tools.debugLog.configPath` — error-filter rules, reloaded on save
+- `mc-tools.debugLog.sortOrder` — `severity` (default) or `chronological`; the
+  Problems tree always sorts severity before line, so one log-ordered list is
+  only possible by reporting every finding at the same severity
 - `mc-tools.crafttweakerLog.enabled` — toggle the CraftTweaker log monitor
 - `mc-tools.crafttweakerLog.path` — path to `crafttweaker.log`
 - `mc-tools.crafttweakerLog.maxDiagnostics` — cap on entries; errors are kept
