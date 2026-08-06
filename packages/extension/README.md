@@ -18,13 +18,21 @@ VS Code extension for Minecraft 1.12.2 modpack development automation
 - Caps the Problems panel via `mc-tools.debugLog.maxDiagnostics`
 
 ### CraftTweaker Log Monitor
-- Parses `crafttweaker.log` with custom parsers:
+- Reads `crafttweaker.log` as entries — a `[SCOPE][SCOPE][LEVEL]` header plus
+  the exception and stack frames below it — so a trace is never mistaken for a
+  finding of its own
+- Parses each entry with custom parsers:
   - **Mixin parser** — maps mixin fatal errors back to `.zs` source files
-  - **Script parser** — resolves `__script__(file.zs:line)` stack traces
-  - **Generic parser** — fallback for all `[FATAL|ERROR|WARNING]` lines
+  - **Script parser** — reports the error on the `.zs` line that caused it,
+    taken from the location in the message or from the topmost `.zs` stack
+    frame; the frames below it become related "called from" locations
+  - **Generic parser** — fallback for all `[FATAL|ERROR|WARNING]` entries
+- Collapses a failure logged once per event into one entry with a `(×N)` count
+- Links a finding moved onto a script back to the log line it came from
 - Rescans when `.zs` files are saved, patching only the saved script in the
   mixin index instead of rewalking every script in the pack
-- Clears diagnostics for scripts that no longer have findings
+- Clears diagnostics for scripts that no longer have findings, and drops them
+  all when the log is deleted or replaced by a new game session
 
 ### Mod Tracker
 - Detects mod changes by diffing `minecraftinstance.json` against git HEAD

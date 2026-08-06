@@ -22,6 +22,8 @@ export interface Recorder {
   treeViews  : string[]
   outputLines: string[]
   watchers   : StubWatcher[]
+  /** Whatever the last `DiagnosticCollection.set` published. */
+  diagnostics: Array<[Uri, Diagnostic[]]>
   disposed   : number
 }
 
@@ -31,6 +33,7 @@ export const recorder: Recorder = {
   treeViews  : [],
   outputLines: [],
   watchers   : [],
+  diagnostics: [],
   disposed   : 0,
 }
 
@@ -40,6 +43,7 @@ export function resetRecorder(): void {
   recorder.treeViews = []
   recorder.outputLines = []
   recorder.watchers = []
+  recorder.diagnostics = []
   recorder.disposed = 0
 }
 
@@ -58,7 +62,12 @@ export class Disposable {
 }
 
 export class Uri {
-  private constructor(public readonly fsPath: string, public readonly scheme = 'file') {}
+  private constructor(
+    public readonly fsPath: string,
+    public readonly scheme = 'file',
+    public readonly fragment = ''
+  ) {}
+
   static file(p: string): Uri {
     return new Uri(p)
   }
@@ -67,8 +76,12 @@ export class Uri {
     return new Uri(value.replace(/^file:\/\//, ''))
   }
 
+  with(change: { scheme?: string, fragment?: string }): Uri {
+    return new Uri(this.fsPath, change.scheme ?? this.scheme, change.fragment ?? this.fragment)
+  }
+
   toString(): string {
-    return `${this.scheme}://${this.fsPath}`
+    return `${this.scheme}://${this.fsPath}${this.fragment ? `#${this.fragment}` : ''}`
   }
 }
 
@@ -92,9 +105,18 @@ export enum DiagnosticSeverity {
   Hint
 }
 
+export class Location {
+  constructor(public uri: Uri, public range: Range) {}
+}
+
+export class DiagnosticRelatedInformation {
+  constructor(public location: Location, public message: string) {}
+}
+
 export class Diagnostic {
-  source?: string
-  code?  : string | number
+  source?            : string
+  code?              : string | number | { value: string | number, target: Uri }
+  relatedInformation?: DiagnosticRelatedInformation[]
   constructor(
     public range: Range,
     public message: string,
@@ -207,9 +229,16 @@ export const commands = {
 export const languages = {
   createDiagnosticCollection: (name: string) => ({
     name,
-    set    : () => {},
-    delete : () => {},
-    clear  : () => {},
+    set: (arg: unknown, list?: Diagnostic[]) => {
+      // `set` takes either one URI plus its list, or the whole collection.
+      recorder.diagnostics = arg instanceof Uri
+        ? [[arg, list ?? []]]
+        : (arg as Array<[Uri, Diagnostic[]]>)
+    },
+    delete: () => {},
+    clear : () => {
+      recorder.diagnostics = []
+    },
     dispose: () => {},
   }),
 }

@@ -1,7 +1,7 @@
 import type { McToolsConfig } from '../../core/config.js'
 import type { DiagnosticsManager } from '../../core/diagnostics.js'
 import type { Logger } from '../../core/logger.js'
-import type { CraftTweakerParser, ParsedError } from './parsers/base.js'
+import type { CraftTweakerParser } from './parsers/base.js'
 import * as fs from 'node:fs/promises'
 import { hash } from 'ohash'
 import * as path from 'pathe'
@@ -12,6 +12,7 @@ import { genericParser } from './parsers/generic.js'
 import { createMixinParser, MixinIndex } from './parsers/mixin.js'
 import { scriptParser } from './parsers/script.js'
 import { CraftTweakerDiagnosticsProvider } from './provider.js'
+import { scanLog } from './scan.js'
 
 class CraftTweakerScanner {
   private lastHash = ''
@@ -41,33 +42,16 @@ class CraftTweakerScanner {
       }
       this.lastHash = textHash
 
-      const lines = text.split('\n')
-      this.logger.info(`📖 crafttweaker.log: ${(stat.size / 1024 / 1024).toFixed(2)} MB, ${lines.length.toLocaleString()} lines`)
+      const { errors, lineCount, hits } = scanLog(text, this.workspaceRoot, this.parsers)
+      this.logger.info(`📖 crafttweaker.log: ${(stat.size / 1024 / 1024).toFixed(2)} MB, ${lineCount.toLocaleString()} lines`)
 
-      const errors: ParsedError[] = []
-      const parserHits = new Map<string, number>()
-      let i = 0
-      while (i < lines.length) {
-        let consumed = 0
-        let parsed: ParsedError | undefined
-        for (const parser of this.parsers) {
-          const res = parser.tryParse(lines, i, this.workspaceRoot)
-          if (res) {
-            parsed = res.result
-            consumed = res.linesConsumed
-            parserHits.set(parser.name, (parserHits.get(parser.name) ?? 0) + 1)
-            break
-          }
-        }
-        if (parsed) errors.push(parsed)
-        i += consumed + 1
-      }
-
-      const byParser = Array.from(parserHits.entries()).map(([n, c]) => `${n}: ${c}`).join(', ')
+      const byParser = Array.from(hits.entries()).map(([n, c]) => `${n}: ${c}`).join(', ')
       this.logger.info(`🔍 Found ${errors.length} CraftTweaker errors${byParser ? ` (${byParser})` : ''}`)
       this.provider.update(errors)
     }
     catch (err) {
+      // A log that vanished mid-scan is the delete handler's business.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return
       this.logger.error(`❌ CraftTweaker scan failed: ${errorMessage(err)}`)
     }
   }
@@ -92,12 +76,11 @@ export async function activateCraftTweakerLog(
   }
 
   const fullPath = path.join(root, config.path)
-  try {
-    await fs.access(fullPath)
-  }
-  catch {
-    logger.warn(`crafttweaker.log not found at ${config.path}`)
-    return () => {}
+  const exists = await fs.access(fullPath).then(() => true, () => false)
+  if (!exists) {
+    // The log only appears once the game has run once. Bailing out here used to
+    // mean no diagnostics for the rest of the session.
+    logger.info(`crafttweaker.log not found at ${config.path} — waiting for it`)
   }
 
   const indexTimer = logger.time('Build mixin index')
@@ -108,7 +91,7 @@ export async function activateCraftTweakerLog(
   const provider = new CraftTweakerDiagnosticsProvider(diagnostics, logger, root, config.path, config.maxDiagnostics)
   const scanner = new CraftTweakerScanner(fullPath, root, mixinIndex, provider, logger)
 
-  await scanner.scan()
+  if (exists) await scanner.scan()
 
   const debouncedScan = debounce(async () => scanner.scan(), 300, { trailing: true })
   const rescan = () => {
@@ -118,7 +101,17 @@ export async function activateCraftTweakerLog(
   const pattern = new vscode.RelativePattern(root, config.path)
   const watcher = vscode.workspace.createFileSystemWatcher(pattern)
   watcher.onDidChange(rescan)
-  watcher.onDidCreate(rescan)
+  watcher.onDidCreate(() => {
+    // A recreated log is a new game session: whatever the old one reported is
+    // gone, and its content hash must not suppress the first scan of the new.
+    scanner.invalidate()
+    rescan()
+  })
+  watcher.onDidDelete(() => {
+    logger.info('crafttweaker.log deleted — dropping its diagnostics')
+    scanner.invalidate()
+    provider.clear()
+  })
 
   const scriptsDir = path.join(root, 'scripts')
   const saveSub = vscode.workspace.onDidSaveTextDocument((doc) => {

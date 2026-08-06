@@ -123,19 +123,20 @@ export function findMixinLine(content: string, className: string, methodName: st
 export function createMixinParser(mixinIndex: MixinIndex): CraftTweakerParser {
   return {
     name: 'mixin',
-    tryParse(lines, startIndex, _workspaceRoot) {
-      const line = lines[startIndex]
-      if (startIndex + 1 >= lines.length) return undefined
-      if (!/\[FATAL\].*Error occurred when applying mixin/.test(line)) return undefined
+    tryParse(ctx) {
+      if (ctx.header.level !== 'FATAL') return undefined
+      // The details land on the line below, which mixin logs as an entry of
+      // their own — so this reads the raw log rather than this entry's body.
+      if (ctx.index + 1 >= ctx.lines.length) return undefined
 
-      const classMatch = line.match(/Error occurred when applying mixin (\w+)/)
+      const classMatch = ctx.header.message.match(/Error occurred when applying mixin (\w+)/)
       if (!classMatch) return undefined
       const mixinClassName = classMatch[1]
 
       const entry = mixinIndex.get(mixinClassName)
       if (!entry) return undefined
 
-      const nextLine = lines[startIndex + 1]
+      const nextLine = ctx.lines[ctx.index + 1]
       const methodMatch = nextLine.match(/->@Inject::(\w+)/) ?? nextLine.match(/annotation on (\w+)/)
       if (!methodMatch) return undefined
       const methodName = methodMatch[1]
@@ -165,7 +166,8 @@ export function createMixinParser(mixinIndex: MixinIndex): CraftTweakerParser {
           message,
           targetUri : vscode.Uri.file(entry.path),
           targetLine,
-          originLine: startIndex,
+          originLine: ctx.index,
+          scope     : ctx.header.scopes.join('/'),
         },
         linesConsumed: 1,
       }

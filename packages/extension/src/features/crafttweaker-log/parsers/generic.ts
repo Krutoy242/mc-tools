@@ -1,30 +1,21 @@
-import type { CraftTweakerParser, ParsedError } from './base.js'
+import type { CraftTweakerParser, ParseContext } from './base.js'
+import { severityOf } from './base.js'
 
+/** Last resort: report the entry where it was logged, without a script target. */
 export const genericParser: CraftTweakerParser = {
   name: 'generic',
-  tryParse(lines, startIndex, _workspaceRoot) {
-    const line = lines[startIndex]
-    const match = line.match(/\[(FATAL|ERROR|WARNING)\]/)
-    if (!match) return undefined
-
-    const logLevel = match[1]
-    const severity: ParsedError['severity'] = logLevel === 'WARNING' ? 'warning' : 'error'
-
-    // eslint-disable-next-line regexp/no-super-linear-backtracking, regexp/no-unused-capturing-group
-    let cleanMessage = line.replace(/^(\s*\[[^\]]+\]\s*)+/, '')
-
-    const lastColon = cleanMessage.lastIndexOf(':')
-    if (lastColon !== -1) {
-      cleanMessage = cleanMessage.substring(lastColon + 1).trim()
-    }
-
-    if (!cleanMessage) cleanMessage = line.trim()
+  tryParse(ctx: ParseContext) {
+    const severity = severityOf(ctx.header.level)
+    if (!severity) return undefined
 
     return {
       result: {
         severity,
-        message   : cleanMessage,
-        originLine: startIndex,
+        // An entry whose whole text sat inside the brackets still deserves a
+        // message, so fall back to the line itself.
+        message   : ctx.header.message || ctx.lines[ctx.index].trim(),
+        originLine: ctx.index,
+        scope     : ctx.header.scopes.join('/'),
       },
       linesConsumed: 0,
     }
