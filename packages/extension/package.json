@@ -35,7 +35,6 @@
     "vscode.git"
   ],
   "activationEvents": [
-    "onView:mc-tools.modChanges",
     "workspaceContains:minecraftinstance.json",
     "workspaceContains:mods/*.jar"
   ],
