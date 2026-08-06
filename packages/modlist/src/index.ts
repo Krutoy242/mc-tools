@@ -9,6 +9,7 @@ import type { ModsComparison } from '@mctools/curseforge'
 import type { InstalledAddon } from '@mctools/curseforge/minecraftinstance'
 import type { AddonDifference, EnrichedAddon, EnrichedDiff, ModListOpts } from './types.js'
 
+import process from 'node:process'
 import { fetchChangelogs, fetchMods, modListDiff, modListUnion } from '@mctools/curseforge'
 import { buildModChangelog } from './changelog/processor.js'
 import { createSortFn } from './sort.js'
@@ -25,6 +26,11 @@ export type { ModListOpts } from './types.js'
 export async function generateModsList(opts: ModListOpts): Promise<string> {
   const log = (msg: string): void => {
     if (opts.verbose) opts.onLog?.(msg)
+  }
+
+  /** Degraded output is worth reporting even when the caller asked for no logs. */
+  const warn = (msg: string): void => {
+    process.stderr.write(`[modlist] ${msg}\n`)
   }
 
   log('Get Mods diffs from JSONs ... ')
@@ -99,8 +105,15 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
       async (update, idx) => {
         const tMod = performance.now()
         const oldHtml = oldChangelogsMap.get(update.was.installedFile.id)
-        const changelog = await buildModChangelog(update, opts.key, opts.fresh.gameVersion, opts.verbose, oldHtml)
-        modChangelogs.set(update.now.addonID, changelog)
+        try {
+          const changelog = await buildModChangelog(update, opts.key, opts.fresh.gameVersion, opts.verbose, oldHtml)
+          modChangelogs.set(update.now.addonID, changelog)
+        }
+        catch (error) {
+          // One unreachable mod costs that mod's changelog, not the whole list —
+          // the caller may be a release script with nothing to fall back on.
+          warn(`changelog of mod ${update.now.addonID} skipped: ${error instanceof Error ? error.message : String(error)}`)
+        }
         log(`  [${idx + 1}/${diff.updated!.length}] Mod ${update.now.addonID} changelog built (${formatDuration(performance.now() - tMod)})\n`)
       },
       UPDATED_CONCURRENCY
