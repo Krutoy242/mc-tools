@@ -87,7 +87,13 @@ node scripts/build-icon.mjs
 
 # Produce dist/mc-tools.vsix
 pnpm run package
+
+# Build, package and install into the local editor, then reload the window
+pnpm run install:local
 ```
+
+`install:local` picks the first CLI it finds among `code`, `code-insiders`,
+`codium`, `cursor` and `windsurf`; set `VSCODE_CLI` to override it.
 
 Press <kbd>F5</kbd> in this folder to launch an Extension Development Host with
 the modpack repository already opened.

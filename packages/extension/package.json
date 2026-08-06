@@ -339,6 +339,7 @@
     "test": "vitest run --passWithNoTests",
     "build:watch": "node scripts/watch.mjs",
     "package": "vsce package --no-dependencies --out dist/mc-tools.vsix",
+    "install:local": "pnpm run build && pnpm run package && node scripts/install-local.mjs",
     "publish:vsce": "vsce publish --no-dependencies"
   },
   "dependencies": {
