@@ -5,7 +5,7 @@ import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
-import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors } from '../launcher/index.js'
+import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors, waitUntilReady } from '../launcher/index.js'
 import {
   clearSession,
   readSession,
@@ -272,6 +272,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
   }
   if (result.outcome === 'exit') {
     consola.error('LOAD ✗ Minecraft process exited unexpectedly (no crash report).')
+    if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
     return 1
   }
   if (result.outcome === 'timeout') {
@@ -309,19 +310,31 @@ export async function runReady(input: ReadyInput): Promise<number> {
   const runtime = await loadRuntime(input.mcPath)
   const launcher = resolveLauncher(input.mcPath, runtime.config.launcher)
   const signals = probeSignals(runtime.config)
-  const deadline = Date.now() + (input.wait ? input.timeout : 0)
-  for (;;) {
+
+  if (!input.wait) {
     const v = await probeReadyNow(input.mcPath, signals, launcher)
-    if (v.ready) {
-      consola.success(`ready ✔ ${v.reason}`)
-      return 0
-    }
-    if (!input.wait || Date.now() >= deadline) {
-      consola.warn(`not ready ✗ ${v.reason}`)
-      return 1
-    }
-    await sleep(2000)
+    if (v.ready) consola.success(`ready ✔ ${v.reason}`)
+    else consola.warn(`not ready ✗ ${v.reason}`)
+    return v.ready ? 0 : 1
   }
+
+  const v = await waitUntilReady(input.mcPath, signals, launcher, {
+    timeoutMs: input.timeout,
+    // The boot that precedes this call is the only one that can be blamed.
+    since    : Date.now() - 60_000,
+  })
+  if (v.outcome === 'ready') {
+    consola.success(`ready ✔ ${v.reason}`)
+    return 0
+  }
+  if (v.outcome === 'dead') {
+    consola.error(`LOAD ✗ ${v.reason} — not waiting out the timeout.`)
+    if (v.diagnostics) process.stderr.write(`${v.diagnostics}\n`)
+    else consola.warn('nothing in crash-reports/ or debug.log explains it — check the launcher console.')
+    return 1
+  }
+  consola.warn(`not ready ✗ ${v.reason} (gave up after ${fmtSec(input.timeout)})`)
+  return 1
 }
 
 export async function runKill(mcPath: string, dry: boolean): Promise<number> {

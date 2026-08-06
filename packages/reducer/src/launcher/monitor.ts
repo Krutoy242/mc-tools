@@ -160,9 +160,11 @@ export interface ReadySignals {
 }
 
 export interface ReadyVerdict {
-  ready : boolean
+  ready  : boolean
   /** How readiness was (or was not) decided. */
-  reason: string
+  reason : string
+  /** Is a game process alive at all? A dead game never becomes ready. */
+  running: boolean
 }
 
 /**
@@ -173,12 +175,83 @@ export interface ReadyVerdict {
  */
 export async function probeReadyNow(mcDir: string, signals: ReadySignals, launcher: Launcher): Promise<ReadyVerdict> {
   const pid = await launcher.getPid()
-  if (!pid) return { ready: false, reason: 'game is not running' }
-  if (signals.port && await tcpOpen(signals.port)) return { ready: true, reason: `port ${signals.port} is accepting connections` }
+  if (!pid) return { ready: false, running: false, reason: 'game is not running' }
+  if (signals.port && await tcpOpen(signals.port)) return { ready: true, running: true, reason: `port ${signals.port} is accepting connections` }
   const tail = await tailText(dbgLogPath(mcDir), 256 * 1024)
-  if (signals.pattern && signals.pattern.test(tail)) return { ready: true, reason: 'ready line present in debug.log' }
-  if (FML_LOADED.test(tail)) return { ready: true, reason: 'mods loaded (FML), at main menu' }
-  return { ready: false, reason: 'still loading (no FML-loaded line yet)' }
+  if (signals.pattern && signals.pattern.test(tail)) return { ready: true, running: true, reason: 'ready line present in debug.log' }
+  if (FML_LOADED.test(tail)) return { ready: true, running: true, reason: 'mods loaded (FML), at main menu' }
+  return { ready: false, running: true, reason: 'still loading (no FML-loaded line yet)' }
+}
+
+export interface WaitOptions {
+  /** Give up after this long with the game still loading. */
+  timeoutMs: number
+  /** Poll period (default 2s). */
+  pollMs?  : number
+  /** How long the process may stay invisible right after a launch (default 60s). */
+  launchMs?: number
+  /** Consecutive process-less polls before the game counts as dead (default 3). */
+  strikes? : number
+  /** Only crash reports newer than this belong to this boot (default: now). */
+  since?   : number
+  onPoll?  : (verdict: ReadyVerdict, elapsed: number) => void
+}
+
+export interface WaitVerdict extends ReadyVerdict {
+  outcome     : 'ready' | 'dead' | 'timeout'
+  /** Crash report / last FATAL block, when the game died. */
+  diagnostics?: string
+}
+
+/**
+ * Block until the game is ready — or until it is *provably never going to be*.
+ * A dead game cannot become ready, so waiting out the timeout after the process
+ * is gone only delays the report by minutes; `dead` is returned as soon as the
+ * process has been missing for `strikes` polls (a few seconds of slack, because
+ * a relauncher legitimately swaps the JVM mid-boot).
+ */
+export async function waitUntilReady(
+  mcDir   : string,
+  signals : ReadySignals,
+  launcher: Launcher,
+  opts    : WaitOptions
+): Promise<WaitVerdict> {
+  const pollMs = opts.pollMs ?? 2000
+  const launchMs = opts.launchMs ?? DEFAULT_LAUNCH_MS / 2
+  const strikes = opts.strikes ?? 3
+  const start = Date.now()
+  const since = opts.since ?? start
+  let everRan = false
+  let misses = 0
+
+  for (;;) {
+    const verdict = await probeReadyNow(mcDir, signals, launcher)
+    const elapsed = Date.now() - start
+    if (verdict.ready) return { ...verdict, outcome: 'ready' }
+    if (verdict.running) {
+      everRan = true
+      misses = 0
+    }
+    else {
+      misses++
+    }
+    opts.onPoll?.(verdict, elapsed)
+
+    // Gone for good: it either died mid-boot or never started at all.
+    if (misses >= strikes && (everRan || elapsed >= launchMs)) {
+      return {
+        ready  : false,
+        running: false,
+        outcome: 'dead',
+        reason : everRan
+          ? 'the game process died while loading'
+          : `no game process appeared within ${Math.round(launchMs / 1000)}s of waiting`,
+        diagnostics: await deathReport(mcDir, since) ?? undefined,
+      }
+    }
+    if (elapsed >= opts.timeoutMs) return { ...verdict, outcome: 'timeout' }
+    await sleep(pollMs)
+  }
 }
 
 async function findNewestCrashReport(mcDir: string, afterTs: number): Promise<string | null> {
@@ -200,6 +273,34 @@ async function findNewestCrashReport(mcDir: string, afterTs: number): Promise<st
   catch {
     return null
   }
+}
+
+/**
+ * Last FATAL entry of `debug.log` — the message line plus the throwable printed
+ * under it. A launch can die *without* a crash report (the report builder itself
+ * can throw, and pre-`Minecraft.init` failures never reach it), and then this is
+ * the only trace of what happened.
+ */
+export async function lastFatal(mcDir: string, maxLines = 12): Promise<string | null> {
+  const lines = (await tailText(dbgLogPath(mcDir), 256 * 1024)).split('\n')
+  const at = lines.findLastIndex(l => /\/FATAL\]/.test(l))
+  if (at < 0) return null
+  const block = [lines[at].trim()]
+  for (let i = at + 1; i < lines.length && block.length < maxLines; i++) {
+    if (/^\[\d\d:\d\d:\d\d\]/.test(lines[i])) break // next log entry — throwable ended
+    if (lines[i].trim()) block.push(lines[i].trimEnd())
+  }
+  return block.join('\n')
+}
+
+/**
+ * Why the game died: its crash report if one was written after `afterTs`,
+ * otherwise the last FATAL block. `null` when the log says nothing at all.
+ */
+export async function deathReport(mcDir: string, afterTs: number): Promise<string | null> {
+  const crash = await findNewestCrashReport(mcDir, afterTs)
+  if (crash) return `${crash}\n${await readCrashSummary(crash)}`
+  return lastFatal(mcDir)
 }
 
 async function readCrashSummary(crashPath: string): Promise<string> {
@@ -288,6 +389,7 @@ export async function restartAndMonitor(
   let lastProgress = launchTs
   let lastPortProbe = 0
   let fmlAt = 0 // when FML finished loading mods (0 = not yet)
+  let misses = 0 // consecutive health checks that found no process
   let crashed = false
   let crashSummary: string | undefined
 
@@ -344,8 +446,12 @@ export async function restartAndMonitor(
 
     if (now - lastHealth >= HEALTH_MS) {
       lastHealth = now
-      if (pid && !await launcher.getPid()) {
-        return { outcome: 'exit', pid }
+      // Two consecutive misses, because a relauncher legitimately swaps the JVM
+      // mid-boot and the pid is briefly nobody's.
+      if (pid && !await launcher.getPid()) misses++
+      else misses = 0
+      if (misses >= 2) {
+        return { outcome: 'exit', pid, crashSummary: await lastFatal(mcDir) ?? undefined }
       }
     }
 
