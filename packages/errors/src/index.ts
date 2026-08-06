@@ -3,6 +3,9 @@ import { naturalSort } from '@mctools/utils/natural-sort'
 import { isMap, isScalar, isSeq, parseDocument } from 'yaml'
 import { z } from 'zod'
 
+export type { ParsedEntry } from './parse.js'
+export { parseEntry } from './parse.js'
+
 // YAML's empty scalar parses to `null`, so accept it and normalize to undefined.
 const optStr = z.string().nullish().transform(v => v ?? undefined)
 
@@ -301,7 +304,11 @@ export function findErrors(
       r.from.lastIndex = 0
       entry = entry.replace(r.from, r.to)
     }
-    result.push({ text: entry, line: lineForOffset(absOffset), time })
+    // `match` stops before the newline that ends an entry but still swallows the
+    // `\r` in front of it on a CRLF log, and block patterns end on a full line
+    // break. Either way the tail is invisible padding that consumers would have
+    // to render as an extra blank line.
+    result.push({ text: entry.trimEnd(), line: lineForOffset(absOffset), time })
   }
 
   if (!c.groupBy.length) return result
