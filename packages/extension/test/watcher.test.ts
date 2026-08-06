@@ -108,4 +108,51 @@ describe('logWatcher', () => {
     expect(chunks[1].startLine).toBe(0)
     expect(chunks[1].text).toBe(lines(0, 3))
   })
+
+  it('spots a rotation that left a bigger file behind', async () => {
+    // Minecraft rolls debug.log away and opens a new one, which can outgrow the
+    // previous run before the first scan lands. Reported as diagnostics that
+    // survived a restart and pointed at lines from the old session.
+    await writeFile(file, lines(0, 100), 'utf-8')
+
+    const watcher = new LogWatcher({ path: 'debug.log', debounceMs: 0 }, silentLogger, collect)
+    await watcher.start()
+
+    await rm(file)
+    await writeFile(file, lines(0, 500), 'utf-8')
+    recorder.watchers[0].fireChange()
+    await new Promise(resolve => setTimeout(resolve, 60))
+    watcher.dispose()
+
+    expect(chunks[1].isTruncated).toBe(true)
+    expect(chunks[1].startLine).toBe(0)
+    expect(chunks[1].text).toBe(lines(0, 500))
+  })
+
+  it('carries the reset over an empty file left by a delete event', async () => {
+    // log4j creates the new log before writing to it, so the scan that follows
+    // the delete finds nothing to hand over. The reset has to wait for the first
+    // chunk that does carry text instead of being dropped.
+    await writeFile(file, lines(0, 100), 'utf-8')
+
+    const watcher = new LogWatcher({ path: 'debug.log', debounceMs: 0 }, silentLogger, collect)
+    await watcher.start()
+
+    await rm(file)
+    for (const cb of recorder.watchers[0].delete) cb()
+    await writeFile(file, '', 'utf-8')
+    recorder.watchers[0].fireChange()
+    await new Promise(resolve => setTimeout(resolve, 60))
+
+    expect(chunks).toHaveLength(1)
+
+    await writeFile(file, lines(0, 4), 'utf-8')
+    recorder.watchers[0].fireChange()
+    await new Promise(resolve => setTimeout(resolve, 60))
+    watcher.dispose()
+
+    expect(chunks[1].isTruncated).toBe(true)
+    expect(chunks[1].startLine).toBe(0)
+    expect(chunks[1].text).toBe(lines(0, 4))
+  })
 })

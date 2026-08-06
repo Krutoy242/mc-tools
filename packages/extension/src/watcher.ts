@@ -38,8 +38,13 @@ export class LogWatcher {
   private disposed = false
   private lastSize = 0
   private lastLine = 0
+  private lastIno = 0
   private scanning = false
   private rescanQueued = false
+  /** A delete event arrived; whatever shows up under the path next is a new run. */
+  private resetPending = false
+  /** A reset was detected but no handler has been told about it yet. */
+  private resetUnreported = false
   private debouncedScan?: () => Promise<void>
 
   constructor(
@@ -73,8 +78,10 @@ export class LogWatcher {
     this.watcher.onDidCreate(trigger)
     this.watcher.onDidDelete(() => {
       this.logger.warn(`File deleted: ${this.options.path}`)
-      this.lastSize = 0
-      this.lastLine = 0
+      // The counters are deliberately left alone: zeroing them here would make
+      // the file that reappears under the same path look like a plain append,
+      // and the handler would never learn the previous run is gone.
+      this.resetPending = true
     })
   }
 
@@ -98,6 +105,7 @@ export class LogWatcher {
     const buf = await readRange(fullPath, 0, end)
     this.lastSize = end
     this.lastLine = countBufferNewlines(buf)
+    this.lastIno = stat.ino
 
     await this.handler({ text: buf.toString('utf-8'), startLine: 0, isTruncated: false })
 
@@ -136,12 +144,25 @@ export class LogWatcher {
     try {
       const stat = await fs.stat(fullPath)
 
-      // Minecraft rotates debug.log on restart; a shrunk file means a new run.
-      const isTruncated = stat.size < this.lastSize
-      if (isTruncated) {
-        this.logger.warn('File truncated, resetting state')
+      // Minecraft rotates debug.log on every restart: log4j rolls the old file
+      // away and opens a fresh one. A shrunk file catches a truncate-in-place,
+      // but a roll-and-recreate can already be past the old size by the time the
+      // first scan lands — and NTFS hands a file recreated under the same name
+      // its predecessor's creation time — so the inode is what actually tells
+      // the two runs apart.
+      const isNewFile = this.resetPending
+        || (this.lastIno !== 0 && stat.ino !== 0 && stat.ino !== this.lastIno)
+      this.resetPending = false
+      this.lastIno = stat.ino
+
+      if (isNewFile || stat.size < this.lastSize) {
+        this.logger.warn('File rotated or truncated, resetting state')
         this.lastSize = 0
         this.lastLine = 0
+        // Latched instead of reported straight away: a log4j file that has just
+        // been opened is still empty, so the reset has to ride along with the
+        // first chunk that actually carries text.
+        this.resetUnreported = true
       }
 
       if (stat.size <= this.lastSize) return
@@ -152,6 +173,8 @@ export class LogWatcher {
       this.lastSize = stat.size
       this.lastLine += countBufferNewlines(buf)
 
+      const isTruncated = this.resetUnreported
+      this.resetUnreported = false
       await this.handler({ text: buf.toString('utf-8'), startLine, isTruncated })
     }
     catch (err) {
