@@ -200,12 +200,12 @@ function instanceIdInCmd(cmd: string, roots: string[]): string | null {
  * Relative path (from the instance's `.minecraft` dir) of the *generated*
  * auto-join marker script. `scripts/mixin/probezs/shared.zs`'s
  * `Op.tryAutoJoinWorld()` reads `AutoJoinMarker.world` (rewritten fresh by
- * this function before every launch) once, at the HEAD of the main-menu
- * GUI's `initGui` (see `scripts/mixin/probezs/gui.zs` /
- * `gui_custommainmenu.zs`), and calls `launchIntegratedServer` directly —
- * GUI init always runs on the main client thread, so there's no
- * cross-thread marshaling problem, and no dependency on PrismLauncher's own
- * (Custom-Main-Menu-defeated) `--world` flag.
+ * this function before every launch) once, when the first screen finishes
+ * `setWorldAndResolution` (see `scripts/mixin/probezs/gui.zs`, which hooks
+ * vanilla `GuiScreen` and so covers any main-menu replacement), and calls
+ * `launchIntegratedServer` directly — GUI init always runs on the main client
+ * thread, so there's no cross-thread marshaling problem, and no dependency on
+ * PrismLauncher's own (Custom-Main-Menu-defeated) `--world` flag.
  *
  * A generated `.zs` file is used instead of a plain marker file because
  * ZenUtils blacklists file I/O from ZenScript's native access (even inside
