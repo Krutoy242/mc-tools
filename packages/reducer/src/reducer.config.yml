@@ -8,6 +8,12 @@ ready:
 scan:
   - crafttweaker.log
 
+# Mods that quietly take a harness feature with them when disabled. Warning-only,
+# printed by the non-interactive `restart`/`status` so an agent knows up front.
+capabilities:
+  - mod: ProbeZS
+    provides: in-game commands over its RMI bridge (`pnpm mc-cmd`, `pnpm ct-syntax`) and boot-time world auto-join are
+
 # Mandatory dependencies
 # Could exact mod name or regexp test (of the file or mod name)
 # Could be single string, array of strings or a tree

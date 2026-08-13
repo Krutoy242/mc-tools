@@ -61,6 +61,21 @@ export const ReadyConfigSchema = z.object({
 
 export type ReadyConfig = z.infer<typeof ReadyConfigSchema>
 
+/**
+ * A pack capability that only exists while one mod stays enabled. Purely
+ * informational, and — like `ready` — declared by the pack so the core stays
+ * mod-agnostic: non-interactive runs print a warning when the mod ends up
+ * disabled, so an agent learns what it just lost before it tries to use it.
+ */
+export const CapabilitySchema = z.object({
+  /** Free-form mod query (CF id / name / filename), resolved like a CLI arg. */
+  mod     : z.string(),
+  /** What stops working without it — phrased to follow "… is unavailable". */
+  provides: z.string(),
+})
+
+export type Capability = z.infer<typeof CapabilitySchema>
+
 export const ReducerConfigSchema = z.object({
   dependencies: BranchSchema.default({}),
   dependents  : BranchSchema.default({}),
@@ -69,6 +84,8 @@ export const ReducerConfigSchema = z.object({
   ready       : ReadyConfigSchema.default({ quietMs: 8000, maxMs: 900_000 }),
   /** Logs scanned for ERROR/FATAL after load (skipped if absent). Warning-only. */
   scan        : z.array(z.string()).default(['crafttweaker.log']),
+  /** Mods whose absence silently limits the harness (warning-only, CLI-only). */
+  capabilities: z.array(CapabilitySchema).default([]),
 })
 
 export type ReducerConfig = z.infer<typeof ReducerConfigSchema>

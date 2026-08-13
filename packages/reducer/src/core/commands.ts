@@ -1,3 +1,4 @@
+import type { Capability } from '../config.js'
 import type { Mod } from '../Mod.js'
 import type { ActionKind, ActionPlan } from './modActions.js'
 import process from 'node:process'
@@ -14,7 +15,7 @@ import {
 } from '../session/lock.js'
 import { formatFind } from './find.js'
 import { applyPlan, computeAction, computeCombined, isConflict } from './modActions.js'
-import { resolveMods } from './resolve.js'
+import { resolveMod, resolveMods } from './resolve.js'
 import { loadRuntime } from './runtime.js'
 import { guardSession } from './session.js'
 import { summarizeDiagnostics, summarizeRoster, summarizeWeight } from './summaries.js'
@@ -70,6 +71,23 @@ function logPlan(plan: ActionPlan, dry: boolean): void {
 
 function printRoster(mods: Mod[]): void {
   out(summarizeRoster(mods))
+}
+
+/**
+ * Warn about pack capabilities lost with a disabled mod (config `capabilities`).
+ * Never fatal — the game boots fine without them; the point is that an agent
+ * driving a reduced mod set learns e.g. that in-game commands are gone *now*,
+ * instead of from a puzzling timeout later.
+ */
+export function warnLostCapabilities(mods: Mod[], capabilities: Capability[]): void {
+  for (const cap of capabilities) {
+    const r = resolveMod(mods, cap.mod)
+    if (r.kind === 'ok' && r.mod.enabled) continue
+    if (r.kind === 'ambiguous' && r.candidates.some(m => m.enabled)) continue
+    const name = r.kind === 'ok' ? r.mod.displayName : cap.mod
+    const state = r.kind === 'notfound' ? 'is not installed' : 'is disabled'
+    consola.warn(`${name} ${state} — ${cap.provides} unavailable.`)
+  }
 }
 
 /** Report an interrupted/drifted prior session; returns true if the caller must abort. */
@@ -233,6 +251,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
   }
 
   printRoster(runtime.mods)
+  warnLostCapabilities(runtime.mods, runtime.config.capabilities)
 
   if (dry) {
     consola.info('dry run — Minecraft not restarted (assumed).')
@@ -380,6 +399,7 @@ export async function runStatus(mcPath: string): Promise<number> {
   const v = await probeReadyNow(mcPath, probeSignals(runtime.config), launcher)
   out(`GAME  ${v.ready ? 'ready' : 'not ready'} — ${v.reason}`)
   out(summarizeRoster(runtime.mods))
+  warnLostCapabilities(runtime.mods, runtime.config.capabilities)
   for (const l of summarizeDiagnostics(runtime.warnings)) out(l)
   for (const l of summarizeWeight(runtime.mods)) out(l)
   return 0

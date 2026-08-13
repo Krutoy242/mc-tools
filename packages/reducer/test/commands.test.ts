@@ -1,7 +1,9 @@
+import consola from 'consola'
 import { resolve } from 'pathe'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { runAction, runFind, runKill, runRestart } from '../src/core/commands.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { runAction, runFind, runKill, runRestart, warnLostCapabilities } from '../src/core/commands.js'
 import { loadRuntime } from '../src/core/runtime.js'
+import { Mod } from '../src/Mod.js'
 import { clearSession, snapshotMods, writeSession  } from '../src/session/lock.js'
 
 const PACK = resolve(__dirname, 'fixtures/pack')
@@ -54,5 +56,36 @@ describe('dry actions', () => {
     const { mods } = await loadRuntime(PACK)
     // Nothing was actually disabled on disk.
     expect(mods.every(m => m.enabled)).toBe(true)
+  })
+})
+
+describe('capability warnings', () => {
+  const capture = () => {
+    const lines: string[] = []
+    const spy = vi.spyOn(consola, 'warn').mockImplementation((...args: unknown[]) => {
+      lines.push(String(args[0]))
+    })
+    return { lines, restore: () => spy.mockRestore() }
+  }
+
+  it('says nothing while the mod is enabled', () => {
+    const { lines, restore } = capture()
+    warnLostCapabilities([new Mod('alpha.jar', undefined)], [{ mod: 'alpha', provides: 'commands' }])
+    restore()
+    expect(lines).toEqual([])
+  })
+
+  it('warns once the mod is disabled, naming what is lost', () => {
+    const { lines, restore } = capture()
+    warnLostCapabilities([new Mod('alpha.jar.disabled', undefined)], [{ mod: 'alpha', provides: 'commands' }])
+    restore()
+    expect(lines).toEqual(['alpha is disabled — commands unavailable.'])
+  })
+
+  it('warns when the mod is not installed at all', () => {
+    const { lines, restore } = capture()
+    warnLostCapabilities([new Mod('alpha.jar', undefined)], [{ mod: 'zzz-nope', provides: 'commands' }])
+    restore()
+    expect(lines).toEqual(['zzz-nope is not installed — commands unavailable.'])
   })
 })
