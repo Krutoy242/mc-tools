@@ -403,6 +403,17 @@ var x = 1;
     // a blank line at the top of the TS that gets squashed back to nothing.
     expect(back.trim()).toBe(source.trim())
   })
+
+  it('keeps Math.pow intact — ZS has no `**` operator', () => {
+    const source = 'val x = Math.pow(a + b, i - 4);'
+    const fwd = zsToTs(source)
+    expect(fwd.ok).toBe(true)
+    if (!fwd.ok) return
+    // The preamble disables the ESLint rule that would rewrite it to `a ** b`,
+    // so nothing has to be unwound on the way back. See lintAdapter.test.ts.
+    expect(fwd.ts).toContain('/* eslint-disable prefer-exponentiation-operator */')
+    expect(revert(fwd.ts).trim()).toBe(source)
+  })
 })
 
 describe('cli smoke', () => {

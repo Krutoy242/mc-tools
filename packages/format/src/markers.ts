@@ -102,6 +102,7 @@ export const DEBRIS_PREAMBLE = `
 /* eslint-disable object-shorthand */
 /* eslint-disable perfectionist/sort-imports */
 /* eslint-disable prefer-arrow-callback */
+/* eslint-disable prefer-exponentiation-operator */
 /* eslint-disable prefer-template */
 /* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/max-statements-per-line */

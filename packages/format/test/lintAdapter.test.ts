@@ -4,6 +4,7 @@ import { Linter } from 'eslint'
 import { describe, expect, it } from 'vitest'
 
 import { formatZs, formatZsSync } from '../src/index.js'
+import { DEBRIS_PREAMBLE } from '../src/markers.js'
 
 /**
  * Pass-through adapter — exercises the formatZs / formatZsSync seam without
@@ -67,5 +68,20 @@ describe('formatZs / formatZsSync', () => {
     if (out instanceof Promise) return
     expect(out.output).toBe('var x = 1;')
     expect(out.errorCount).toBe(0)
+  })
+
+  it('the preamble directive stops ESLint from rewriting Math.pow into `**`', () => {
+    // ZenScript has no `**` operator, so the rewrite would produce a .zs file
+    // the grammar cannot re-parse. Plain JS here — the point is that the
+    // directive spelling in DEBRIS_PREAMBLE names a real, effective rule.
+    const directive = DEBRIS_PREAMBLE.match(/^\/\* eslint-disable prefer-exponentiation-operator \*\/$/m)
+    expect(directive).not.toBeNull()
+    const linter = new Linter({ configType: 'flat' })
+    const config: Linter.Config[] = [{
+      files: ['**/*.js'],
+      rules: { 'prefer-exponentiation-operator': 'error' },
+    }]
+    const fixed = linter.verifyAndFix(`${directive?.[0]}\nvar x = Math.pow(a, b);\n`, config, { filename: 'foo.js' })
+    expect(fixed.output).toContain('Math.pow(a, b)')
   })
 })
