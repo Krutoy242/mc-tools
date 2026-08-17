@@ -301,7 +301,11 @@ async function stashDirty(dir: string, log: Logger): Promise<void> {
  * runs only once the cheap ways to find the version are exhausted.
  */
 async function fetchRepo(dir: string, log: Logger): Promise<void> {
-  await gitProgress(['-C', dir, 'fetch', '--tags', '--force', 'origin'], log).catch((e: unknown) => {
+  // `--quiet` drops the per-ref summary: a first fetch into a shallow clone
+  // reports every tag the repo ever had — hundreds of lines for a mod carrying
+  // 1.7.10..1.21.x branches. Errors still reach stderr, so retries and the
+  // failure message are unaffected; `--progress` overrides it on a TTY.
+  await gitProgress(['-C', dir, 'fetch', '--tags', '--force', '--quiet', 'origin'], log).catch((e: unknown) => {
     const text = reason(e)
     log(chalk.yellow(`Fetch failed: ${text}`))
     if (text.includes('.lock'))
