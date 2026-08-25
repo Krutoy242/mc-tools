@@ -5,7 +5,7 @@ import { CommandLauncher } from './command.js'
 import { PrismLauncher } from './prism.js'
 
 export type { MonitorOptions, MonitorTick, ReadySignals, ReadyVerdict, WaitOptions, WaitVerdict } from './monitor.js'
-export { deathReport, lastFatal, probeReadyNow, readCraftTweakerErrors, restartAndMonitor, scanLogErrors, tcpOpen, waitUntilReady } from './monitor.js'
+export { deathReport, lastFatal, probeReadyNow, readCraftTweakerErrors, restartAndMonitor, scanLogErrors, stallHint, tcpOpen, waitUntilReady } from './monitor.js'
 export type { Launcher, MonitorOutcome, MonitorResult } from './types.js'
 export { describeLauncher } from './types.js'
 

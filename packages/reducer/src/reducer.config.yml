@@ -13,6 +13,8 @@ scan:
 capabilities:
   - mod: ProbeZS
     provides: in-game commands over its RMI bridge (`pnpm mc-cmd`, `pnpm ct-syntax`) and boot-time world auto-join are
+  - mod: cleanroom-relauncher
+    provides: the Cleanroom JVM handoff is gone; the pack falls back to plain Java 8 Forge, dies right after the coremod phase, and the whole launch is
 
 # Mandatory dependencies
 # Could exact mod name or regexp test (of the file or mod name)

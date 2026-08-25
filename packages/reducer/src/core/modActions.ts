@@ -88,11 +88,19 @@ export interface ApplyResult {
 
 /**
  * Apply a plan to disk. Disables first (frees jar handles) then enables.
- * In `dry` mode nothing is renamed; the caller is expected to log the intended
- * transitions with an "assumed" marker.
+ * In `dry` mode nothing is renamed — the plan is projected onto the in-memory
+ * roster instead, so whatever the caller reports afterwards describes the
+ * resulting set; the caller still logs the transitions with an "assumed" marker.
  */
 export async function applyPlan(plan: ActionPlan, dry: boolean): Promise<ApplyResult> {
   if (dry) {
+    // Project the plan onto the in-memory roster without renaming a single jar, so
+    // everything printed afterwards (roster counts, lost-capability warnings)
+    // describes the set the plan *would* produce. Reporting the pre-plan state
+    // instead is how a dry run used to hide that `--only` drops, say, the
+    // relauncher. Nothing reads these mods again after the caller's report.
+    for (const mod of plan.toDisable) mod.isDisabled = true
+    for (const mod of plan.toEnable) mod.isDisabled = false
     return { enabled: plan.toEnable.length, disabled: plan.toDisable.length, failed: [] }
   }
   const dis = await ModClass.disable(plan.toDisable)

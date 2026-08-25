@@ -45,4 +45,6 @@ export interface MonitorResult {
   reached?     : 'pattern' | 'port' | 'menu'
   pid?         : number
   crashSummary?: string
+  /** Last `debug.log` line seen — names the stage a failed boot froze on. */
+  lastLine?    : string
 }

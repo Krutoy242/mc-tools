@@ -1,5 +1,6 @@
 import type { Mod } from '../src/Mod.js'
-import { resolve } from 'pathe'
+import { readdirSync } from 'node:fs'
+import { join, resolve } from 'pathe'
 import { describe, expect, it } from 'vitest'
 import { dependencyClosure, dependentsClosure } from '../src/core/graph.js'
 import { applyPlan, computeAction, computeCombined, isConflict } from '../src/core/modActions.js'
@@ -111,15 +112,22 @@ describe('computeCombined', () => {
 })
 
 describe('applyPlan (dry)', () => {
-  it('reports counts without touching files', async () => {
+  it('projects the plan in memory without touching files', async () => {
     const list = await mods()
     const plan = computeAction(list, 'only', [byName(list, 'Alpha')])
     const before = list.filter(m => m.enabled).length
+    const jarsBefore = readdirSync(join(PACK, 'mods')).sort()
+    const restore = list.map(m => m.isDisabled) // loadRuntime is cached — hand the roster back
     const res = await applyPlan(plan, true)
     expect(res.disabled).toBe(plan.toDisable.length)
     expect(res.failed).toHaveLength(0)
-    // Dry run must not change any on-disk state.
-    expect(list.filter(m => m.enabled).length).toBe(before)
+    // Dry run must not rename a single jar…
+    expect(readdirSync(join(PACK, 'mods')).sort()).toEqual(jarsBefore)
+    // …but the roster it leaves behind is the one the plan would produce, so a
+    // dry run's roster print and capability warnings describe the right set.
+    expect(plan.toDisable.every(m => m.disabled)).toBe(true)
+    expect(list.filter(m => m.enabled).length).toBe(before - plan.toDisable.length + plan.toEnable.length)
+    for (const [i, m] of list.entries()) m.isDisabled = restore[i]
   })
 
   it('dependentsClosure of a leaf is just itself', async () => {

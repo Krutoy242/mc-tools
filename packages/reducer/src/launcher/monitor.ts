@@ -19,6 +19,52 @@ const PORT_PROBE_MS = 2000 // don't hammer the socket every tick
 // Marks "mods finished loading / main menu imminent" — the mod-agnostic anchor for
 // the readiness fallbacks. NOT a mod-specific line.
 const FML_LOADED = /Forge Mod Loader has successfully loaded/i
+// A boot that writes nothing for this long is worth calling out: the progress
+// heartbeat repeats the same stale line, so without this a frozen launch and a
+// slow one look identical.
+const STALL_MS = 45_000
+
+/**
+ * Boot stages that legitimately go silent for minutes, and what the operator
+ * needs to know while staring at a frozen progress line. Matched against the
+ * last `debug.log` line — the only evidence there is while nothing is written.
+ */
+const STALL_HINTS: { match: RegExp, hint: string }[] = [
+  {
+    match: /CleanroomRelauncher|Preparing Cleanroom|JavaProvisioner/i,
+    hint : 'the Cleanroom relauncher is fetching Cleanroom and its libraries. That is a download, not a hang — but the JVM ignores HTTP(S)_PROXY, so behind a proxy-only connection it stalls here forever. Watch ~/.cleanroom/relauncher for a growing *.tmp; if it never grows, add -Dhttps.proxyHost/-Dhttps.proxyPort to the launcher JVM args.',
+  },
+]
+
+/** Known cause for a boot frozen on `lastLine`, or `null` if we have no idea. */
+export function stallHint(lastLine: string): string | null {
+  return STALL_HINTS.find(h => h.match.test(lastLine))?.hint ?? null
+}
+
+function fmtDur(ms: number): string {
+  const s = Math.round(ms / 1000)
+  return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s` : `${s}s`
+}
+
+/** How long `filePath` has gone without being written to (0 if it is missing). */
+async function quietFor(filePath: string): Promise<number> {
+  try {
+    return Math.max(0, Date.now() - (await fs.stat(filePath)).mtimeMs)
+  }
+  catch {
+    return 0
+  }
+}
+
+/** Last non-empty line of a text blob, trimmed. */
+function lastLineOf(text: string): string {
+  const lines = text.split(/\r?\n/)
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = lines[i].trim()
+    if (t) return t
+  }
+  return ''
+}
 
 const sleep = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -180,7 +226,17 @@ export async function probeReadyNow(mcDir: string, signals: ReadySignals, launch
   const tail = await tailText(dbgLogPath(mcDir), 256 * 1024)
   if (signals.pattern && signals.pattern.test(tail)) return { ready: true, running: true, reason: 'ready line present in debug.log' }
   if (FML_LOADED.test(tail)) return { ready: true, running: true, reason: 'mods loaded (FML), at main menu' }
-  return { ready: false, running: true, reason: 'still loading (no FML-loaded line yet)' }
+  // Alive but pre-FML. Say whether it is *moving*: a silent debug.log is the only
+  // way to tell a wedged boot from a slow one, and both look "still loading".
+  const quiet = await quietFor(dbgLogPath(mcDir))
+  if (quiet < STALL_MS) return { ready: false, running: true, reason: 'still loading (no FML-loaded line yet)' }
+  const last = lastLineOf(tail)
+  const hint = stallHint(last)
+  return {
+    ready  : false,
+    running: true,
+    reason : `still loading, but debug.log has been silent for ${fmtDur(quiet)} — last line: ${last}${hint ? ` — ${hint}` : ''}`,
+  }
 }
 
 export interface WaitOptions {
@@ -328,8 +384,12 @@ export interface MonitorTick {
 export interface MonitorOptions {
   /** Called every tick (~1s). Return `'stop'` to end monitoring early. */
   onTick?      : (tick: MonitorTick) => 'stop' | void | Promise<'stop' | void>
-  /** Heartbeat (~every few s) so a long boot shows progress instead of silence. */
-  onProgress?  : (info: { elapsed: number, lastLine: string }) => void
+  /**
+   * Heartbeat (~every few s) so a long boot shows progress instead of silence.
+   * `stalledMs` is how long `debug.log` has gone unwritten — without it a frozen
+   * launch prints the same line as a healthy one, only with a bigger clock.
+   */
+  onProgress?  : (info: { elapsed: number, lastLine: string, stalledMs: number }) => void
   /** Layer 1: pack "fully ready" line — matching it ends monitoring immediately. */
   readyPattern?: RegExp
   /** Layer 2: pack port that starts accepting connections once ready. */
@@ -394,6 +454,7 @@ export async function restartAndMonitor(
   let crashSummary: string | undefined
 
   const resolvePid = async () => pid ?? await launcher.getPid() ?? undefined
+  const lastLine = () => debugLog[debugLog.length - 1] ?? ''
 
   for (;;) {
     await sleep(TICK_MS)
@@ -422,7 +483,7 @@ export async function restartAndMonitor(
 
     if (opts.onProgress && now - lastProgress >= PROGRESS_MS) {
       lastProgress = now
-      opts.onProgress({ elapsed: now - launchTs, lastLine: debugLog[debugLog.length - 1] ?? '' })
+      opts.onProgress({ elapsed: now - launchTs, lastLine: lastLine(), stalledMs: now - lastChange })
     }
 
     if (opts.onTick) {
@@ -451,15 +512,15 @@ export async function restartAndMonitor(
       if (pid && !await launcher.getPid()) misses++
       else misses = 0
       if (misses >= 2) {
-        return { outcome: 'exit', pid, crashSummary: await lastFatal(mcDir) ?? undefined }
+        return { outcome: 'exit', pid: pid ?? undefined, lastLine: lastLine(), crashSummary: await lastFatal(mcDir) ?? undefined }
       }
     }
 
     if (!pid && now - launchTs >= launchMs) {
-      return { outcome: 'exit' }
+      return { outcome: 'exit', lastLine: lastLine() }
     }
     if (now - launchTs >= maxMs) {
-      return { outcome: 'timeout', pid: pid ?? undefined }
+      return { outcome: 'timeout', pid: pid ?? undefined, lastLine: lastLine() }
     }
   }
 }

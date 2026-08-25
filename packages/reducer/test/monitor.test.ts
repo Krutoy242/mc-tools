@@ -1,9 +1,9 @@
 import type { Launcher } from '../src/launcher/types.js'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'pathe'
 import { describe, expect, it } from 'vitest'
-import { lastFatal, probeReadyNow, scanLogErrors, waitUntilReady } from '../src/launcher/monitor.js'
+import { lastFatal, probeReadyNow, scanLogErrors, stallHint, waitUntilReady } from '../src/launcher/monitor.js'
 
 function mkMc(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), 'reducer-mon-'))
@@ -116,5 +116,33 @@ describe('waitUntilReady fails fast instead of waiting out the timeout', () => {
     const dir = mkMc({ 'logs/debug.log': '[FML]: Forge Mod Loader has successfully loaded 4 mods\n' })
     const v = await waitUntilReady(dir, {}, fakeLauncher(1), opts)
     expect(v.outcome).toBe('ready')
+  })
+})
+
+describe('stall reporting (a frozen boot must not read as progress)', () => {
+  it('names the Cleanroom relauncher download stage', () => {
+    const hint = stallHint('[22:06:14] [main/INFO] [CleanroomRelauncher]: Preparing Cleanroom v0.6.11-alpha and its libraries...')
+    expect(hint).toMatch(/download|fetching/i)
+    expect(hint).toMatch(/PROXY/i)
+  })
+  it('has no opinion about an unknown stage', () => {
+    expect(stallHint('[22:06:14] [main/INFO] [FML]: Processing ObjectHolder annotations')).toBeNull()
+  })
+
+  it('a pre-FML boot whose log stopped moving is reported as silent, with the hint', async () => {
+    const dir = mkMc({ 'logs/debug.log': '[22:06:14] [main/INFO] [CleanroomRelauncher]: Preparing Cleanroom and its libraries...\n' })
+    const stale = new Date(Date.now() - 5 * 60_000)
+    utimesSync(join(dir, 'logs', 'debug.log'), stale, stale)
+    const v = await probeReadyNow(dir, {}, fakeLauncher(1))
+    expect(v.ready).toBe(false)
+    expect(v.running).toBe(true)
+    expect(v.reason).toMatch(/silent for 5m00s/)
+    expect(v.reason).toMatch(/CleanroomRelauncher/)
+  })
+
+  it('a boot that is still writing stays a plain "still loading"', async () => {
+    const dir = mkMc({ 'logs/debug.log': '[22:06:14] [main/INFO] [FML]: Processing ObjectHolder annotations\n' })
+    const v = await probeReadyNow(dir, {}, fakeLauncher(1))
+    expect(v.reason).toBe('still loading (no FML-loaded line yet)')
   })
 })

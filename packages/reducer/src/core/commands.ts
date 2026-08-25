@@ -6,7 +6,7 @@ import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
-import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors, waitUntilReady } from '../launcher/index.js'
+import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors, stallHint, waitUntilReady } from '../launcher/index.js'
 import {
   clearSession,
   readSession,
@@ -31,6 +31,9 @@ function fmtSec(ms: number): string {
   const s = Math.round(ms / 1000)
   return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s` : `${s}s`
 }
+
+/** A boot that writes nothing for this long stops reading as progress. */
+const STALL_WARN_MS = 45_000
 
 function trimLine(s: string, max = 100): string {
   const t = s.replace(/\s+/g, ' ').trim()
@@ -277,11 +280,29 @@ export async function runRestart(input: RestartInput): Promise<number> {
 
   // ----- blocking restart + monitor (no session lock held) -----
   consola.start(`restarting via ${launcher.name} …`)
+  // A wedged boot used to print the same heartbeat as a healthy one, so it read as
+  // progress for as long as the operator was willing to wait. Name the stall instead.
+  let hinted = false
   const result = await restartAndMonitor(mcPath, launcher, {
     ...signals,
     log       : m => consola.log(m),
-    onProgress: ({ elapsed, lastLine }) => consola.log(`  booting ${fmtSec(elapsed)} · ${trimLine(lastLine)}`),
+    onProgress: ({ elapsed, lastLine, stalledMs }) => {
+      const stall = stalledMs >= STALL_WARN_MS ? ` · no log output for ${fmtSec(stalledMs)}` : ''
+      consola.log(`  booting ${fmtSec(elapsed)}${stall} · ${trimLine(lastLine)}`)
+      const hint = !hinted && stalledMs >= STALL_WARN_MS ? stallHint(lastLine) : null
+      if (hint) {
+        hinted = true
+        consola.warn(`stalled here: ${hint}`)
+      }
+    },
   })
+  /** Name the boot stage a failed launch froze on, and why it can freeze there. */
+  const explainStage = () => {
+    if (!result.lastLine) return
+    consola.info(`last log line: ${trimLine(result.lastLine)}`)
+    const hint = stallHint(result.lastLine)
+    if (hint) consola.info(hint)
+  }
 
   // ── Block 1: did it load? (liveness — the exit code follows this) ──
   if (result.outcome === 'crash') {
@@ -292,10 +313,12 @@ export async function runRestart(input: RestartInput): Promise<number> {
   if (result.outcome === 'exit') {
     consola.error('LOAD ✗ Minecraft process exited unexpectedly (no crash report).')
     if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
+    explainStage()
     return 1
   }
   if (result.outcome === 'timeout') {
     consola.warn(`LOAD ✗ monitor ceiling (${fmtSec(signals.maxMs)}) reached with no ready signal — still booting, hung, or too slow. Raise ready.maxMs / REDUCER_MONITOR_MAX_MS if the pack just needs longer.`)
+    explainStage()
     return 1
   }
   const how = result.reached === 'pattern'

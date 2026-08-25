@@ -1,5 +1,6 @@
+import { readdirSync } from 'node:fs'
 import consola from 'consola'
-import { resolve } from 'pathe'
+import { join, resolve } from 'pathe'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runAction, runFind, runKill, runRestart, warnLostCapabilities } from '../src/core/commands.js'
 import { loadRuntime } from '../src/core/runtime.js'
@@ -51,11 +52,12 @@ describe('failure handling', () => {
 
 describe('dry actions', () => {
   it('a dry action succeeds without touching files', async () => {
+    const jarsBefore = readdirSync(join(PACK, 'mods')).sort()
     const code = await runAction({ mcPath: PACK, kind: 'only', queries: ['Alpha'], dry: true, advise: true })
     expect(code).toBe(0)
-    const { mods } = await loadRuntime(PACK)
-    // Nothing was actually disabled on disk.
-    expect(mods.every(m => m.enabled)).toBe(true)
+    // Only the jars prove it: `loadRuntime` is cached, so its roster is the
+    // projected one a dry run deliberately leaves behind.
+    expect(readdirSync(join(PACK, 'mods')).sort()).toEqual(jarsBefore)
   })
 })
 
