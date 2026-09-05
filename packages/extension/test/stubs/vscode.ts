@@ -22,7 +22,7 @@ export interface Recorder {
   treeViews  : string[]
   outputLines: string[]
   watchers   : StubWatcher[]
-  /** Whatever the last `DiagnosticCollection.set` published. */
+  /** Everything the last-written `DiagnosticCollection` currently holds. */
   diagnostics: Array<[Uri, Diagnostic[]]>
   disposed   : number
 }
@@ -227,20 +227,44 @@ export const commands = {
 }
 
 export const languages = {
-  createDiagnosticCollection: (name: string) => ({
-    name,
-    set: (arg: unknown, list?: Diagnostic[]) => {
-      // `set` takes either one URI plus its list, or the whole collection.
-      recorder.diagnostics = arg instanceof Uri
-        ? [[arg, list ?? []]]
-        : (arg as Array<[Uri, Diagnostic[]]>)
-    },
-    delete: () => {},
-    clear : () => {
-      recorder.diagnostics = []
-    },
-    dispose: () => {},
-  }),
+  createDiagnosticCollection: (name: string) => {
+    // Keeps the state the real collection keeps, because the difference matters:
+    // `set(entries)` replaces only the URIs the array lists, so a file left out
+    // of it keeps its previous diagnostics until `[uri, undefined]` clears it.
+    const data = new Map<string, [Uri, Diagnostic[]]>()
+    const publish = () => {
+      recorder.diagnostics = [...data.values()]
+    }
+    const put = (uri: Uri, list?: readonly Diagnostic[]) => {
+      if (list?.length) data.set(uri.toString(), [uri, [...list]])
+      else data.delete(uri.toString())
+    }
+    return {
+      name,
+      set: (arg: unknown, list?: Diagnostic[]) => {
+        // `set` takes either one URI plus its list, or a batch of tuples.
+        if (arg instanceof Uri) {
+          put(arg, list)
+        }
+        else {
+          for (const [uri, l] of arg as Array<[Uri, Diagnostic[] | undefined]>) put(uri, l)
+        }
+        publish()
+      },
+      forEach: (cb: (uri: Uri, list: Diagnostic[]) => void) => {
+        for (const [uri, list] of [...data.values()]) cb(uri, list)
+      },
+      delete: (uri: Uri) => {
+        data.delete(uri.toString())
+        publish()
+      },
+      clear: () => {
+        data.clear()
+        publish()
+      },
+      dispose: () => {},
+    }
+  },
 }
 
 export const extensions = {

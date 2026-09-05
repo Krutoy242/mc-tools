@@ -17,12 +17,23 @@ export class DiagnosticsManager {
   }
 
   /**
-   * Replaces the whole collection in one call. Unlike repeated {@link set},
-   * this drops URIs that are absent from `entries`, so diagnostics for a file
-   * that no longer has findings disappear instead of lingering.
+   * Replaces the whole collection in one call, so diagnostics for a file that
+   * no longer has findings disappear instead of lingering.
+   *
+   * `DiagnosticCollection.set(entries)` only touches the URIs it lists — a file
+   * missing from the array keeps whatever it had, and an empty array is a
+   * no-op. URIs that dropped out are therefore cleared explicitly, in the same
+   * call, by pairing them with `undefined`.
    */
   setAll(source: string, entries: ReadonlyArray<[vscode.Uri, vscode.Diagnostic[]]>): void {
-    this.collection(source).set(entries as [vscode.Uri, vscode.Diagnostic[]][])
+    const col = this.collection(source)
+    const next = new Set(entries.map(([uri]) => uri.toString()))
+    const stale: Array<[vscode.Uri, vscode.Diagnostic[] | undefined]> = []
+    col.forEach((uri) => {
+      if (!next.has(uri.toString())) stale.push([uri, undefined])
+    })
+    if (!entries.length && !stale.length) return
+    col.set([...entries, ...stale])
   }
 
   delete(source: string, uri: vscode.Uri): void {

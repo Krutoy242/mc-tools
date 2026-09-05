@@ -162,6 +162,17 @@ describe('craftTweakerDiagnosticsProvider', () => {
     expect(d.relatedInformation).toHaveLength(2)
   })
 
+  it('drops findings from the previous run when the game rewrites a clean log', () => {
+    const p = provider()
+    p.update(scanLog(TINKER_FATAL, ROOT, PARSERS).errors)
+    expect(recorder.diagnostics).toHaveLength(1)
+
+    // The pack now loads without a single FATAL — nothing to report, and
+    // nothing left over from before.
+    p.update(scanLog('[INITIALIZATION][CLIENT][INFO] all good', ROOT, PARSERS).errors)
+    expect(recorder.diagnostics).toHaveLength(0)
+  })
+
   it('leaves findings that stayed on the log without a self-link', () => {
     const { errors } = scanLog('[ERROR] [FML]: something bad', ROOT, PARSERS)
     provider().update(errors)
