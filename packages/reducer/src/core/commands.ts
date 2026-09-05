@@ -1,12 +1,13 @@
-import type { Capability } from '../config.js'
+import type { Capability, ReadyConfig } from '../config.js'
 import type { Mod } from '../Mod.js'
 import type { ActionKind, ActionPlan } from './modActions.js'
+import type { Target } from './target.js'
 import process from 'node:process'
 import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
-import { describeLauncher, probeReadyNow, resolveLauncher, restartAndMonitor, scanLogErrors, stallHint, waitUntilReady } from '../launcher/index.js'
+import { describeLauncher, probeReadyNow, restartAndMonitor, scanLogErrors, stallHint, waitUntilReady } from '../launcher/index.js'
 import {
   clearSession,
   readSession,
@@ -19,6 +20,7 @@ import { resolveMod, resolveMods } from './resolve.js'
 import { loadRuntime } from './runtime.js'
 import { guardSession } from './session.js'
 import { summarizeDiagnostics, summarizeRoster, summarizeWeight } from './summaries.js'
+import { openTarget, summarizeProvision } from './target.js'
 
 /** Primary, parseable output → stdout. Diagnostics go through consola (stderr). */
 function out(line: string): void {
@@ -41,21 +43,31 @@ function trimLine(s: string, max = 100): string {
 }
 
 /** Readiness config → monitor signals (all mod-agnostic, layers optional). */
-function readySignals(cfg: { ready: { logPattern?: string, tcpPort?: number, quietMs: number, maxMs: number } }) {
+function readySignals(ready: ReadyConfig) {
   return {
-    readyPattern: cfg.ready.logPattern ? new RegExp(cfg.ready.logPattern, 'i') : undefined,
-    readyPort   : cfg.ready.tcpPort,
-    quietMs     : cfg.ready.quietMs,
-    maxMs       : cfg.ready.maxMs,
+    readyPattern: ready.logPattern ? new RegExp(ready.logPattern, 'i') : undefined,
+    readyPort   : ready.tcpPort,
+    quietMs     : ready.quietMs,
+    maxMs       : ready.maxMs,
   }
 }
 
 /** The subset (pattern/port) used by the state-only `probeReadyNow`. */
-function probeSignals(cfg: { ready: { logPattern?: string, tcpPort?: number } }) {
+function probeSignals(ready: ReadyConfig) {
   return {
-    pattern: cfg.ready.logPattern ? new RegExp(cfg.ready.logPattern, 'i') : undefined,
-    port   : cfg.ready.tcpPort,
+    pattern: ready.logPattern ? new RegExp(ready.logPattern, 'i') : undefined,
+    port   : ready.tcpPort,
   }
+}
+
+/** The pack's roster for whichever game `target` names. */
+async function rosterOf(target: Target) {
+  return loadRuntime(target.gameDir, { packPath: target.packDir, config: target.config })
+}
+
+/** Say what the server dir was brought to, before anything acts on it. */
+function reportProvision(target: Target): void {
+  if (target.provisioned) out(summarizeProvision(target.provisioned))
 }
 
 function reportResolveFailures(failures: ReturnType<typeof resolveMods>['failures']): boolean {
@@ -114,6 +126,8 @@ export interface ActionInput {
   kind     : ActionKind
   queries  : string[]
   dry      : boolean
+  /** Act on the pack's dedicated server instead of its client. */
+  server?  : boolean
   continue?: boolean
   new?     : boolean
   /** Print the ⚠ "prefer a combined command" advice (standalone verbs). */
@@ -123,9 +137,11 @@ export interface ActionInput {
 /** disable / enable / only / except (and `full` via restart). */
 export async function runAction(input: ActionInput): Promise<number> {
   const { mcPath, kind, queries, dry } = input
-  const runtime = await loadRuntime(mcPath)
+  const target = await openTarget({ mcPath, server: input.server, provision: true, dry })
+  reportProvision(target)
+  const runtime = await rosterOf(target)
 
-  const guard = guardSession(mcPath, runtime.mods, { continue: input.continue, new: input.new })
+  const guard = guardSession(target.gameDir, runtime.mods, { continue: input.continue, new: input.new })
   if (reportGuardBlock(guard)) return 1
 
   let targets: Mod[] = []
@@ -140,7 +156,7 @@ export async function runAction(input: ActionInput): Promise<number> {
   }
 
   const plan = computeAction(runtime.mods, kind, targets)
-  writeSession(mcPath, {
+  writeSession(target.gameDir, {
     phase   : 'applying',
     snapshot: snapshotMods(runtime.mods),
     plan    : { toEnable: plan.toEnable.map(m => m.fileNameNoExt), toDisable: plan.toDisable.map(m => m.fileNameNoExt) },
@@ -150,7 +166,7 @@ export async function runAction(input: ActionInput): Promise<number> {
   logPlan(plan, dry)
   for (const f of res.failed) consola.error(`failed: ${f.mod.fileNameNoExt} — ${f.error}`)
 
-  clearSession(mcPath)
+  clearSession(target.gameDir)
   printRoster(runtime.mods)
 
   if (input.advise) {
@@ -160,24 +176,30 @@ export async function runAction(input: ActionInput): Promise<number> {
 }
 
 export interface RestartInput {
-  mcPath   : string
-  dry      : boolean
-  full     : boolean
-  disable  : string[]
-  enable   : string[]
-  only     : string[]
-  except   : string[]
-  continue?: boolean
-  new?     : boolean
+  mcPath    : string
+  dry       : boolean
+  full      : boolean
+  disable   : string[]
+  enable    : string[]
+  only      : string[]
+  except    : string[]
+  continue? : boolean
+  new?      : boolean
   /** Launch and return immediately; poll readiness with `reducer ready`. */
-  detach?  : boolean
+  detach?   : boolean
   /** Treat post-load log ERROR/FATAL as failure (exit 1) instead of a warning. */
-  strict?  : boolean
+  strict?   : boolean
+  /** Boot the pack's dedicated server instead of its client. */
+  server?   : boolean
+  /** Server only: re-run the loader installer before booting. */
+  reinstall?: boolean
 }
 
 export async function runRestart(input: RestartInput): Promise<number> {
   const { mcPath, dry } = input
-  const runtime = await loadRuntime(mcPath)
+  const target = await openTarget({ mcPath, server: input.server, provision: true, dry, reinstall: input.reinstall })
+  reportProvision(target)
+  const runtime = await rosterOf(target)
 
   const modes = ([
     ['disable', input.disable],
@@ -227,10 +249,10 @@ export async function runRestart(input: RestartInput): Promise<number> {
   const mutates = plan.toEnable.length > 0 || plan.toDisable.length > 0
 
   if (mutates) {
-    const guard = guardSession(mcPath, runtime.mods, { continue: input.continue, new: input.new })
+    const guard = guardSession(target.gameDir, runtime.mods, { continue: input.continue, new: input.new })
     if (reportGuardBlock(guard)) return 1
 
-    writeSession(mcPath, {
+    writeSession(target.gameDir, {
       phase   : 'applying',
       snapshot: snapshotMods(runtime.mods),
       plan    : { toEnable: plan.toEnable.map(m => m.fileNameNoExt), toDisable: plan.toDisable.map(m => m.fileNameNoExt) },
@@ -243,26 +265,26 @@ export async function runRestart(input: RestartInput): Promise<number> {
       consola.error('aborting restart — free the locked file(s) and rerun with --continue.')
       return 1 // session kept for --continue
     }
-    clearSession(mcPath) // jars consistent — no lock held across the boot
+    clearSession(target.gameDir) // jars consistent — no lock held across the boot
   }
   else {
     // No mutation: a stale interrupted session (from an earlier aborted mod change)
     // shouldn't block a plain reboot. --new clears it; otherwise just warn.
-    const prev = readSession(mcPath)
-    if (input.new) clearSession(mcPath)
+    const prev = readSession(target.gameDir)
+    if (input.new) clearSession(target.gameDir)
     else if (prev && prev.phase !== 'idle') consola.warn('note: an earlier mod-set change was left interrupted (`reducer restart --new` clears that record). Rebooting current state.')
   }
 
   printRoster(runtime.mods)
-  warnLostCapabilities(runtime.mods, runtime.config.capabilities)
+  warnLostCapabilities(runtime.mods, target.capabilities)
 
   if (dry) {
-    consola.info('dry run — Minecraft not restarted (assumed).')
+    consola.info(`dry run — ${target.isServer ? 'the server was' : 'Minecraft was'} not restarted (assumed).`)
     return 0
   }
 
-  const launcher = resolveLauncher(mcPath, runtime.config.launcher)
-  const signals = readySignals(runtime.config)
+  const launcher = target.launcher
+  const signals = readySignals(target.ready)
 
   // ----- detached restart: launch and return fast, caller polls `reducer ready` -----
   if (input.detach) {
@@ -283,7 +305,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
   // A wedged boot used to print the same heartbeat as a healthy one, so it read as
   // progress for as long as the operator was willing to wait. Name the stall instead.
   let hinted = false
-  const result = await restartAndMonitor(mcPath, launcher, {
+  const result = await restartAndMonitor(target.gameDir, launcher, {
     ...signals,
     log       : m => consola.log(m),
     onProgress: ({ elapsed, lastLine, stalledMs }) => {
@@ -305,13 +327,14 @@ export async function runRestart(input: RestartInput): Promise<number> {
   }
 
   // ── Block 1: did it load? (liveness — the exit code follows this) ──
+  const game = target.isServer ? 'the server' : 'Minecraft'
   if (result.outcome === 'crash') {
-    consola.error('LOAD ✗ Minecraft crashed:')
+    consola.error(`LOAD ✗ ${game} crashed:`)
     if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
     return 1
   }
   if (result.outcome === 'exit') {
-    consola.error('LOAD ✗ Minecraft process exited unexpectedly (no crash report).')
+    consola.error(`LOAD ✗ ${game} process exited unexpectedly (no crash report).`)
     if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
     explainStage()
     return 1
@@ -322,15 +345,15 @@ export async function runRestart(input: RestartInput): Promise<number> {
     return 1
   }
   const how = result.reached === 'pattern'
-    ? 'ready line seen — in world'
+    ? target.isServer ? 'server accepting players' : 'ready line seen — in world'
     : result.reached === 'port'
       ? 'ready port open'
-      : 'reached main menu (no world auto-joined)'
-  consola.success(`LOAD ✔ Minecraft loaded (${how}).`)
+      : target.isServer ? 'mods loaded (log went quiet)' : 'reached main menu (no world auto-joined)'
+  consola.success(`LOAD ✔ ${game} loaded (${how}).`)
 
   // ── Block 2: are the scripts clean? (warning-only unless --strict) ──
   const scanned = runtime.config.scan
-  const scan = await scanLogErrors(mcPath, scanned)
+  const scan = await scanLogErrors(target.gameDir, scanned)
   if (scan.count > 0) {
     consola.warn(`SCRIPTS ⚠ ${scan.count} ERROR/FATAL line(s) in ${scanned.join(', ')}${input.strict ? '' : ' (warning — pass --strict to fail on these)'}:`)
     for (const l of scan.lines.slice(0, 50)) out(l)
@@ -345,22 +368,26 @@ export interface ReadyInput {
   mcPath : string
   wait   : boolean
   timeout: number
+  /** Ask about the pack's dedicated server instead of its client. */
+  server?: boolean
 }
 
 /** Answer "is the game loaded & ready for commands right now?" — mod-agnostic. */
 export async function runReady(input: ReadyInput): Promise<number> {
-  const runtime = await loadRuntime(input.mcPath)
-  const launcher = resolveLauncher(input.mcPath, runtime.config.launcher)
-  const signals = probeSignals(runtime.config)
+  // Read-only: never provision, so asking about a server that was never built
+  // answers "not running" instead of installing a loader behind the user's back.
+  const target = await openTarget({ mcPath: input.mcPath, server: input.server })
+  const launcher = target.launcher
+  const signals = probeSignals(target.ready)
 
   if (!input.wait) {
-    const v = await probeReadyNow(input.mcPath, signals, launcher)
+    const v = await probeReadyNow(target.gameDir, signals, launcher)
     if (v.ready) consola.success(`ready ✔ ${v.reason}`)
     else consola.warn(`not ready ✗ ${v.reason}`)
     return v.ready ? 0 : 1
   }
 
-  const v = await waitUntilReady(input.mcPath, signals, launcher, {
+  const v = await waitUntilReady(target.gameDir, signals, launcher, {
     timeoutMs: input.timeout,
     // The boot that precedes this call is the only one that can be blamed.
     since    : Date.now() - 60_000,
@@ -379,12 +406,12 @@ export async function runReady(input: ReadyInput): Promise<number> {
   return 1
 }
 
-export async function runKill(mcPath: string, dry: boolean): Promise<number> {
-  const runtime = await loadRuntime(mcPath)
-  const launcher = resolveLauncher(mcPath, runtime.config.launcher)
+export async function runKill(mcPath: string, dry: boolean, server = false): Promise<number> {
+  const target = await openTarget({ mcPath, server })
+  const launcher = target.launcher
   const pid = await launcher.getPid()
   if (!pid) {
-    consola.warn('Minecraft is not running — nothing to kill.')
+    consola.warn(`${target.isServer ? 'The server' : 'Minecraft'} is not running — nothing to kill.`)
     return 0
   }
   if (dry) {
@@ -402,10 +429,13 @@ export interface FindInput {
   queries     : string[]
   dependencies: boolean
   dependents  : boolean
+  /** Resolve against the server's mod set instead of the client's. */
+  server?     : boolean
 }
 
 export async function runFind(input: FindInput): Promise<number> {
-  const runtime = await loadRuntime(input.mcPath)
+  const target = await openTarget({ mcPath: input.mcPath, server: input.server, provision: true })
+  const runtime = await rosterOf(target)
   const lines = formatFind(runtime.mods, input.queries, {
     dependencies: input.dependencies,
     dependents  : input.dependents,
@@ -414,15 +444,21 @@ export async function runFind(input: FindInput): Promise<number> {
   return lines.some(l => l.includes('<not found>') || l.includes('<ambiguous')) ? 1 : 0
 }
 
-/** Print the non-interactive equivalents of the dashboard panels. */
-export async function runStatus(mcPath: string): Promise<number> {
-  const runtime = await loadRuntime(mcPath)
+/**
+ * Print the non-interactive equivalents of the dashboard panels. With
+ * `--server` this doubles as the provision-only command: the game dir is
+ * brought up to date and reported on, but nothing is launched.
+ */
+export async function runStatus(mcPath: string, server = false): Promise<number> {
+  const target = await openTarget({ mcPath, server, provision: true })
+  reportProvision(target)
+  const runtime = await rosterOf(target)
   // Lead with liveness so "what's happening right now" is the first line.
-  const launcher = resolveLauncher(mcPath, runtime.config.launcher)
-  const v = await probeReadyNow(mcPath, probeSignals(runtime.config), launcher)
+  const launcher = target.launcher
+  const v = await probeReadyNow(target.gameDir, probeSignals(target.ready), launcher)
   out(`GAME  ${v.ready ? 'ready' : 'not ready'} — ${v.reason}`)
   out(summarizeRoster(runtime.mods))
-  warnLostCapabilities(runtime.mods, runtime.config.capabilities)
+  warnLostCapabilities(runtime.mods, target.capabilities)
   for (const l of summarizeDiagnostics(runtime.warnings)) out(l)
   for (const l of summarizeWeight(runtime.mods)) out(l)
   return 0
@@ -437,13 +473,17 @@ export interface BinaryInput {
   ignored   : string[]
   continue? : boolean
   new?      : boolean
+  /** Bisect the pack's dedicated server instead of its client. */
+  server?   : boolean
 }
 
 export async function runBinary(input: BinaryInput): Promise<number> {
   const { mcPath, dry, force } = input
-  const runtime = await loadRuntime(mcPath)
+  const target = await openTarget({ mcPath, server: input.server, provision: true, dry })
+  reportProvision(target)
+  const runtime = await rosterOf(target)
 
-  const guard = guardSession(mcPath, runtime.mods, { continue: input.continue, new: input.new })
+  const guard = guardSession(target.gameDir, runtime.mods, { continue: input.continue, new: input.new })
   if (guard.mode === 'interrupted') {
     consola.error('a previous binary search was interrupted. Resume with --continue or discard with --new.')
     return 1
@@ -465,7 +505,7 @@ export async function runBinary(input: BinaryInput): Promise<number> {
     return 1
   }
 
-  const validation = await validateConditions(conditions, mcPath)
+  const validation = await validateConditions(conditions, target.gameDir)
   for (const w of validation.warnings) consola.warn(w)
   if (!validation.ok) {
     for (const err of validation.errors) consola.error(err)
@@ -480,19 +520,17 @@ export async function runBinary(input: BinaryInput): Promise<number> {
   const ignored = resolveMods(runtime.mods, input.ignored)
   if (reportResolveFailures([...trusted.failures, ...ignored.failures])) return 1
 
-  const launcher = resolveLauncher(mcPath, runtime.config.launcher)
-
   const result = await runAutoBinary({
-    mcDir     : mcPath,
+    mcDir     : target.gameDir,
     mods      : runtime.mods,
     conditions,
-    launcher,
+    launcher  : target.launcher,
     dry,
     trusted   : trusted.mods,
     ignored   : ignored.mods,
     log       : m => consola.log(m),
     onProgress: (status, iterations) => {
-      writeSession(mcPath, {
+      writeSession(target.gameDir, {
         phase   : 'bisecting',
         snapshot: snapshotMods(runtime.mods),
         binary  : {
@@ -507,7 +545,7 @@ export async function runBinary(input: BinaryInput): Promise<number> {
   if (result.outcome === 'culprit' && result.culprit) {
     consola.success(`CULPRIT FOUND: ${result.culprit.displayName} ◂${result.culprit.fileNameNoExt}▸`)
     out(`culprit: ./mods/${result.culprit.fileName}`)
-    clearSession(mcPath)
+    clearSession(target.gameDir)
     return 0
   }
   if (result.outcome === 'aborted') {
@@ -516,6 +554,6 @@ export async function runBinary(input: BinaryInput): Promise<number> {
     return 1
   }
   consola.warn(`inconclusive: ${result.message ?? result.outcome}`)
-  clearSession(mcPath)
+  clearSession(target.gameDir)
   return 1
 }

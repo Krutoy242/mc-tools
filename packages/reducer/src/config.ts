@@ -76,6 +76,67 @@ export const CapabilitySchema = z.object({
 
 export type Capability = z.infer<typeof CapabilitySchema>
 
+/**
+ * How to build and boot a dedicated server out of this pack.
+ *
+ * Every string here may be a literal *or* a reference to a file the pack
+ * already maintains (`path/to/file#dotted.path`, see `server/refs.ts`), and
+ * every list entry may expand to a whole list — so the loader build, the JVM
+ * flags and the client-only projects are read where they are already written
+ * down instead of being copied into a second list that goes stale.
+ */
+export const ServerInstallSchema = z.object({
+  /** Loader build the server must match, e.g. `config/relauncher.json#selectedVersion`. */
+  version      : z.string().optional(),
+  /** Installer jar URL; `{version}` is substituted. */
+  installer    : z.string().optional(),
+  /** Arguments passed to the installer jar (Forge/Cleanroom: `--installServer`). */
+  args         : z.array(z.string()).default([]),
+  /**
+   * List the produced jar in its own manifest `Class-Path`. Coremods that read
+   * the launch classpath (ZenUtils compiling mixin scripts) otherwise cannot
+   * see the Forge classes and take the server down at vanilla bootstrap.
+   */
+  selfClassPath: z.boolean().default(false),
+})
+
+export type ServerInstallConfig = z.infer<typeof ServerInstallSchema>
+
+export const ServerConfigSchema = z.object({
+  /** Game directory of the server, relative to the pack. Disposable. */
+  dir           : z.string().default('~server'),
+  /** Jar to `java -jar`; `{version}` is substituted. */
+  jar           : z.string().optional(),
+  install       : ServerInstallSchema.optional(),
+  /** Java binary, or a reference to one (a `javaw` path is corrected to `java`). */
+  java          : z.string().optional(),
+  jvmArgs       : z.array(z.string()).default([]),
+  minRam        : z.string().default('2G'),
+  maxRam        : z.string().default('4G'),
+  /** Pack directories junctioned into the game dir — edits apply on next boot. */
+  link          : z.array(z.string()).default([]),
+  /** Pack directories copied once, because the server writes into them. */
+  seed          : z.array(z.string()).default([]),
+  /** Jars that must never reach the server (client-only, dev-only). */
+  exclude       : z.array(z.string()).default([]),
+  /** `server.properties` template, copied on first provision. */
+  propertiesFrom: z.string().optional(),
+  /** `server.properties` keys forced on that first write only. */
+  properties    : z.record(z.string(), z.string()).default({}),
+  /** Write `eula=true` — a local test server the user just asked to start. */
+  eula          : z.boolean().default(true),
+  /** Player to op; defaults to the one in the pack's `usernamecache.json`. */
+  op            : z.string().optional(),
+  /** Give the JVM its own console window (default: on Windows). */
+  console       : z.boolean().optional(),
+  /** Readiness signals; defaults to the universal dedicated-server ones. */
+  ready         : ReadyConfigSchema.optional(),
+  /** Capabilities lost with a disabled mod *on the server* (the pack's are client-side). */
+  capabilities  : z.array(CapabilitySchema).default([]),
+})
+
+export type ServerConfig = z.infer<typeof ServerConfigSchema>
+
 export const ReducerConfigSchema = z.object({
   dependencies: BranchSchema.default({}),
   dependents  : BranchSchema.default({}),
@@ -86,6 +147,8 @@ export const ReducerConfigSchema = z.object({
   scan        : z.array(z.string()).default(['crafttweaker.log']),
   /** Mods whose absence silently limits the harness (warning-only, CLI-only). */
   capabilities: z.array(CapabilitySchema).default([]),
+  /** Dedicated server built out of this same pack (`--server`). */
+  server      : ServerConfigSchema.default(() => ServerConfigSchema.parse({})),
 })
 
 export type ReducerConfig = z.infer<typeof ReducerConfigSchema>

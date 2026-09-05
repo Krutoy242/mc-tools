@@ -84,6 +84,12 @@ const dryArg = {
   dry: { type: 'boolean', alias: 'y', description: 'Dry run: change no files/processes; log status as "assumed"' },
 } satisfies ArgsDef
 
+// The pack describes two games; every verb can address either. The server keeps
+// its own game dir and mod set, so `--server` never disturbs a running client.
+const serverArg = {
+  server: { type: 'boolean', alias: 'S', description: 'Act on the dedicated server built from this pack' },
+} satisfies ArgsDef
+
 function mcPathOf(args: Record<string, unknown>): string {
   return assertPath(String(args.cwd ?? './'))
 }
@@ -105,15 +111,17 @@ const restartCmd = defineCommand({
   args: {
     ...cwdArg,
     ...dryArg,
-    full    : { type: 'boolean', alias: 'F', description: 'Enable ALL mods before restarting' },
-    disable : { type: 'string', alias: 'd', description: 'Disable these mods (+dependents); rest untouched' },
-    enable  : { type: 'string', alias: 'e', description: 'Enable these mods (+dependencies); rest untouched' },
-    only    : { type: 'string', alias: 'o', description: 'Enable only these (+deps); disable everything else' },
-    except  : { type: 'string', alias: 'x', description: 'Disable these (+dependents); enable everything else' },
-    continue: { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
-    new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
-    detach  : { type: 'boolean', alias: 'D', description: 'Launch and return immediately; poll with `reducer ready`' },
-    strict  : { type: 'boolean', alias: 's', description: 'Fail (exit 1) on post-load log ERROR/FATAL instead of warning' },
+    ...serverArg,
+    full     : { type: 'boolean', alias: 'F', description: 'Enable ALL mods before restarting' },
+    disable  : { type: 'string', alias: 'd', description: 'Disable these mods (+dependents); rest untouched' },
+    enable   : { type: 'string', alias: 'e', description: 'Enable these mods (+dependencies); rest untouched' },
+    only     : { type: 'string', alias: 'o', description: 'Enable only these (+deps); disable everything else' },
+    except   : { type: 'string', alias: 'x', description: 'Disable these (+dependents); enable everything else' },
+    continue : { type: 'boolean', alias: 'c', description: 'Resume a mod change left interrupted by a killed run' },
+    new      : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session record and start fresh' },
+    detach   : { type: 'boolean', alias: 'D', description: 'Launch and return immediately; poll with `reducer ready`' },
+    strict   : { type: 'boolean', alias: 's', description: 'Fail (exit 1) on post-load log ERROR/FATAL instead of warning' },
+    reinstall: { type: 'boolean', description: '--server: re-run the loader installer (after a loader bump)' },
   },
   async run({ args }) {
     const mcPath = mcPathOf(args)
@@ -143,16 +151,18 @@ const restartCmd = defineCommand({
 
     process.exitCode = await runRestart({
       mcPath,
-      dry     : Boolean(args.dry),
-      full    : Boolean(args.full),
+      dry      : Boolean(args.dry),
+      full     : Boolean(args.full),
       disable,
       enable,
       only,
       except,
-      continue: Boolean(args.continue),
-      new     : Boolean(args.new),
-      detach  : Boolean(args.detach),
-      strict  : Boolean(args.strict),
+      continue : Boolean(args.continue),
+      new      : Boolean(args.new),
+      detach   : Boolean(args.detach),
+      strict   : Boolean(args.strict),
+      server   : Boolean(args.server),
+      reinstall: Boolean(args.reinstall),
     })
   },
 })
@@ -161,6 +171,7 @@ const readyCmd = defineCommand({
   meta: { name: 'ready', description: 'Is the game loaded & ready for commands right now? (mod-agnostic)' },
   args: {
     ...cwdArg,
+    ...serverArg,
     wait   : { type: 'boolean', alias: 'w', description: 'Block until ready (or --timeout) instead of answering once' },
     timeout: { type: 'string', alias: 'T', default: '600000', description: 'Max ms to wait with --wait (default 600000)' },
   },
@@ -169,15 +180,16 @@ const readyCmd = defineCommand({
       mcPath : mcPathOf(args),
       wait   : Boolean(args.wait),
       timeout: Number(args.timeout) || 600_000,
+      server : Boolean(args.server),
     })
   },
 })
 
 const killCmd = defineCommand({
   meta: { name: 'kill', description: 'Kill the running Minecraft process for this instance' },
-  args: { ...cwdArg, ...dryArg },
+  args: { ...cwdArg, ...dryArg, ...serverArg },
   async run({ args }) {
-    process.exitCode = await runKill(mcPathOf(args), Boolean(args.dry))
+    process.exitCode = await runKill(mcPathOf(args), Boolean(args.dry), Boolean(args.server))
   },
 })
 
@@ -185,6 +197,7 @@ const findCmd = defineCommand({
   meta: { name: 'find', description: 'Resolve queries to ./mods/<jar> paths' },
   args: {
     ...cwdArg,
+    ...serverArg,
     dependencies: { type: 'boolean', alias: 'd', description: 'Also list each mod\'s dependency closure' },
     dependents  : { type: 'boolean', alias: 'u', description: 'Also list mods that depend on each match' },
   },
@@ -194,21 +207,23 @@ const findCmd = defineCommand({
       queries     : positionals(args),
       dependencies: Boolean(args.dependencies),
       dependents  : Boolean(args.dependents),
+      server      : Boolean(args.server),
     })
   },
 })
 
 const statusCmd = defineCommand({
   meta: { name: 'status', description: 'Print the non-interactive dashboard (roster, diagnostics, weight)' },
-  args: { ...cwdArg },
+  args: { ...cwdArg, ...serverArg },
   async run({ args }) {
-    process.exitCode = await runStatus(mcPathOf(args))
+    process.exitCode = await runStatus(mcPathOf(args), Boolean(args.server))
   },
 })
 
 const binaryArgs = {
   ...cwdArg,
   ...dryArg,
+  ...serverArg,
   force   : { type: 'boolean', alias: 'f', description: 'Ignore config validation problems' },
   continue: { type: 'boolean', alias: 'c', description: 'Resume a previously interrupted session' },
   new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session and start fresh' },
@@ -236,6 +251,7 @@ const binaryCmd = defineCommand({
       ignored   : listArg(args.ignored),
       continue  : Boolean(args.continue),
       new       : Boolean(args.new),
+      server    : Boolean(args.server),
     })
   },
 })
@@ -258,6 +274,15 @@ const HELP_EXAMPLES = [
   '  reducer ./conditions.ts                  automated binary search (see below)',
   '  reducer --continue / --new               resume / discard an interrupted session',
   '',
+  'DEDICATED SERVER (--server works on every verb above)',
+  '  reducer restart --server --only "ZenUtils"  boot a server with one mod, from this same pack',
+  '  reducer status --server                     build/refresh the server game dir, launch nothing',
+  '  reducer ./conditions.ts --server            bisect a server-side bug',
+  '',
+  'The server gets its own game dir (server.dir, default ~server/) with hardlinked',
+  'mods and its own session, so a reduced server runs next to a full client.',
+  'Configure it under `server:` in reducer.config.yml.',
+  '',
   'Readiness is mod-agnostic: a pack declares extra signals (ready.logPattern /',
   'ready.tcpPort) in reducer.config.yml; without them a bare Forge launch is still',
   'detected via "FML loaded + log quiet". Add --dry/-y to log changes as "assumed".',
@@ -268,6 +293,7 @@ const mainCli = defineCommand({
   args: {
     ...cwdArg,
     ...dryArg,
+    ...serverArg,
     force   : { type: 'boolean', alias: 'f', description: 'Binary search: ignore config validation problems' },
     continue: { type: 'boolean', alias: 'c', description: 'Resume a previously interrupted session' },
     new     : { type: 'boolean', alias: 'n', description: 'Discard an interrupted session and start fresh' },
@@ -306,6 +332,7 @@ const mainCli = defineCommand({
           trusted   : listArg(args.trusted),
           ignored   : listArg(args.ignored),
           continue  : true,
+          server    : Boolean(args.server),
         })
         return
       }

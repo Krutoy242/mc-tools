@@ -218,9 +218,21 @@ Bees). Every later step takes its addon from that jar, not from the ranker.
 
 Bisects a modpack: toggles mods on/off, launches and monitors the game, and
 binary-searches for the minimal mod set reproducing a bug. Key types: `Mod`,
-`ModStore`, `ReducerConfig`, `Branch`, `Launcher`, `MonitorResult`,
+`ModStore`, `ReducerConfig`, `Branch`, `Launcher`, `Target`, `MonitorResult`,
 `Conditions`/`ConditionContext`, `SessionState`. Non-interactive verbs live in
 the core command layer; the Ink/React TUI lives in a separate UI subtree.
+
+**Boundary:** `Target` is *which game* a verb acts on — the pack's client, or
+the dedicated server built out of it (`--server`, the `server/` subtree). It
+keeps the game dir (mods, logs, crash reports, session key) apart from the pack
+dir (config, instance manifest), so commands, the monitor and the bisection all
+address a game dir and no verb needs a server branch of its own.
+
+**Invariant:** the server's mod set is its own — jars are hardlinked into its
+game dir and toggled *there*, and a re-sync preserves that state, so a reduced
+server runs beside a full client out of one pack folder. Which jars a server
+must not load is never a list in this package: `server.exclude` points at files
+the pack already maintains (`path/to/file#dotted.path`).
 
 **Boundary:** `Launcher` abstracts "how do we start/stop Minecraft here".
 PrismLauncher is the bundled default; a pack overrides it via config, so the

@@ -39,6 +39,15 @@ MORE
   reducer ./conditions.ts                  automated binary search (see below)
   reducer --continue / --new               resume / discard an interrupted session
 
+DEDICATED SERVER (--server works on every verb above)
+  reducer restart --server --only "ZenUtils"  boot a server with one mod, from this same pack
+  reducer status --server                     build/refresh the server game dir, launch nothing
+  reducer ./conditions.ts --server            bisect a server-side bug
+
+The server gets its own game dir (server.dir, default ~server/) with hardlinked
+mods and its own session, so a reduced server runs next to a full client.
+Configure it under server: in reducer.config.yml.
+
 Readiness is mod-agnostic: a pack declares extra signals (ready.logPattern /
 ready.tcpPort) in reducer.config.yml; without them a bare Forge launch is still
 detected via "FML loaded + log quiet". Add --dry/-y to log changes as "assumed". (@mctools/reducer v0.1.0)
@@ -49,6 +58,7 @@ OPTIONS
 
   -m, --cwd="./"    Minecraft dir with mods/ and minecraftinstance.json        
        -y, --dry    Dry run: change no files/processes; log status as "assumed"
+    -S, --server    Act on the dedicated server built from this pack           
      -f, --force    Binary search: ignore config validation problems           
   -c, --continue    Resume a previously interrupted session                    
        -n, --new    Discard an interrupted session and start fresh             

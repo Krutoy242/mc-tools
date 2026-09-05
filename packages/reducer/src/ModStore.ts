@@ -71,22 +71,28 @@ export class ModStore {
 
   private constructor() {}
 
+  /**
+   * Build the roster. `mcPath` is the pack (instance manifest, config);
+   * `modsPath` is where the jars are — the pack's own `mods/`, unless another
+   * game dir built out of this same pack is being driven (`--server`).
+   */
   static async load(
     mcPath: string,
     config: ReducerConfig,
-    cache: WarningCache = createWarningCache()
+    cache: WarningCache = createWarningCache(),
+    modsPath: string = join(mcPath, 'mods')
   ): Promise<ModStore> {
     const store = new ModStore()
-    await store.init(mcPath, config, cache)
+    await store.init(mcPath, config, cache, modsPath)
     return store
   }
 
-  private async init(mcPath: string, config: ReducerConfig, cache: WarningCache) {
+  private async init(mcPath: string, config: ReducerConfig, cache: WarningCache, modsPath: string) {
     const mcInstance = JSON.parse(
       await readFile(join(mcPath, 'minecraftinstance.json'), 'utf8')
     ) as MCInstance
 
-    Mod.modsPath = join(mcPath, 'mods')
+    Mod.modsPath = modsPath
     const fetched = await fetchInModsDirAsync(Mod.modsPath, [
       '*.jar?(.disabled)?(.disabled)?(.disabled)?(.disabled)',
       '*.jar',
@@ -241,7 +247,7 @@ export function getFetchInModsDir(mods: string): (globPattern: string) => string
   return fetchInModsDir
 }
 
-function findAddonByFilename(addons: ModdedAddon[], fileName: string): ModdedAddon | undefined {
+export function findAddonByFilename(addons: ModdedAddon[], fileName: string): ModdedAddon | undefined {
   const pureName = purify(fileName)
 
   const exact = addons.find(a => purify(a.installedFile.fileNameOnDisk) === pureName)
