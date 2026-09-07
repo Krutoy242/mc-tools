@@ -3,8 +3,7 @@ import type { ModdedAddon } from '../Mod.js'
 import type { SyncSummary } from './mods.js'
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
 import consola from 'consola'
 import { execa } from 'execa'
@@ -35,69 +34,6 @@ export async function resolveJava(packDir: string, cfg: ServerConfig): Promise<s
   if (java && existsSync(java)) return java
   if (cfg.java) consola.warn(`server.java: "${cfg.java}" resolved to ${java ?? 'nothing'} — falling back to \`java\` from PATH.`)
   return 'java'
-}
-
-/** `jar` from the same JDK — used only when `install.selfClassPath` is on. */
-function jarBinary(java: string): string {
-  const jar = java.replace(/java(\.exe)?$/i, 'jar$1')
-  if (jar !== java && existsSync(jar)) return jar
-  throw new Error(`server.install.selfClassPath needs the JDK "jar" tool next to ${java} (looked for ${jar}).`)
-}
-
-/** No manifest line may exceed 72 bytes; the rest continues after a single space. */
-export function wrapManifest(attribute: string): string {
-  const lines = [attribute.slice(0, 72)]
-  for (let rest = attribute.slice(72); rest; rest = rest.slice(71)) lines.push(` ${rest.slice(0, 71)}`)
-  return lines.join('\r\n')
-}
-
-/** `Class-Path:` of a manifest, continuation lines folded back together. */
-export function manifestClassPath(manifest: string): string[] {
-  const lines = manifest.split(/\r?\n/)
-  const first = lines.findIndex(line => line.startsWith('Class-Path: '))
-  if (first === -1) return []
-
-  let value = lines[first].slice('Class-Path: '.length)
-  for (let i = first + 1; i < lines.length && lines[i].startsWith(' '); i++) value += lines[i].slice(1)
-  return value.split(' ').filter(Boolean)
-}
-
-/**
- * Put the launch jar into its own manifest `Class-Path`.
- *
- * A coremod that compiles scripts before the game starts (ZenUtils and its
- * mixin scripts) reads the classes those scripts may reference off the manifest
- * `Class-Path` of the jar `java.class.path` names. That list has the libraries
- * and `minecraft_server.jar` but not the launch jar itself — where every
- * `net.minecraftforge.*` class lives. Each Forge type a script touches then
- * falls through to `Class.forName`, is loaded half-transformed in the coremod
- * phase, and the server dies at vanilla bootstrap with `NoSuchMethodError:
- * IForgeRegistryEntry.getRegistryName()`.
- *
- * Naming the jar in its own `Class-Path` fixes that and changes nothing else:
- * the JVM already had it on the classpath, and `java -jar <loader>.jar` stays
- * the command — which matters, because FML reads the first entry of
- * `java.class.path` as *the* Minecraft jar and scans it for `@CapabilityInject`.
- *
- * @link https://github.com/friendlyhj/ZenUtils/issues/148
- */
-export async function patchLoaderManifest(serverJar: string, java: string): Promise<boolean> {
-  const jar = jarBinary(java)
-  const work = mkdtempSync(join(tmpdir(), 'mctools-loader-'))
-  try {
-    await execa(jar, ['xf', serverJar, 'META-INF/MANIFEST.MF'], { cwd: work })
-    const entries = manifestClassPath(readFileSync(join(work, 'META-INF', 'MANIFEST.MF'), 'utf8'))
-    const self = basename(serverJar)
-    if (entries.includes(self)) return false
-
-    const patch = join(work, 'patch.mf')
-    writeFileSync(patch, `${wrapManifest(`Class-Path: ${[self, ...entries].join(' ')}`)}\r\n\r\n`)
-    await execa(jar, ['--update', `--file=${serverJar}`, `--manifest=${patch}`], { cwd: work })
-    return true
-  }
-  finally {
-    rmSync(work, { recursive: true, force: true })
-  }
 }
 
 /** Download and run the loader installer, once. Returns the jar to boot. */
@@ -239,10 +175,6 @@ export async function provisionServer(opts: ProvisionOptions): Promise<Provision
     mkdirSync(gameDir, { recursive: true })
     if (opts.reinstall && serverJar) rmSync(serverJar, { force: true })
     serverJar = await installLoader(packDir, gameDir, cfg, version ?? '') ?? serverJar
-    if (serverJar && cfg.install?.selfClassPath && existsSync(serverJar)) {
-      const patched = await patchLoaderManifest(serverJar, await resolveJava(packDir, cfg))
-      if (patched) consola.info(`listed ${basename(serverJar)} in its own manifest Class-Path, so coremods find the Forge classes.`)
-    }
     seedGameDir(packDir, gameDir, cfg)
   }
 

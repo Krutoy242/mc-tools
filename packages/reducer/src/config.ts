@@ -87,17 +87,11 @@ export type Capability = z.infer<typeof CapabilitySchema>
  */
 export const ServerInstallSchema = z.object({
   /** Loader build the server must match, e.g. `config/relauncher.json#selectedVersion`. */
-  version      : z.string().optional(),
+  version  : z.string().optional(),
   /** Installer jar URL; `{version}` is substituted. */
-  installer    : z.string().optional(),
+  installer: z.string().optional(),
   /** Arguments passed to the installer jar (Forge/Cleanroom: `--installServer`). */
-  args         : z.array(z.string()).default([]),
-  /**
-   * List the produced jar in its own manifest `Class-Path`. Coremods that read
-   * the launch classpath (ZenUtils compiling mixin scripts) otherwise cannot
-   * see the Forge classes and take the server down at vanilla bootstrap.
-   */
-  selfClassPath: z.boolean().default(false),
+  args     : z.array(z.string()).default([]),
 })
 
 export type ServerInstallConfig = z.infer<typeof ServerInstallSchema>
