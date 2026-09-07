@@ -97,6 +97,11 @@ export class ServerLauncher implements Launcher {
    * and every other command are typed there — and the terminal that started it
    * is usually needed for something else a minute later. So the JVM gets its
    * own window and this process returns.
+   *
+   * The window lives exactly as long as the JVM: no `-NoExit`, so a `stop`
+   * typed there (or `reducer kill --server`) takes the console with it and a
+   * day of restarts leaves no dead windows behind. What the server printed is
+   * in `logs/`; {@link RUN_SCRIPT} re-runs the very same command by hand.
    */
   private openConsole(): void {
     const { gameDir, java } = this.spec
@@ -118,7 +123,6 @@ export class ServerLauncher implements Launcher {
       this.spec.title,
       powershellBinary(),
       '-NoLogo',
-      '-NoExit',
       '-ExecutionPolicy',
       'Bypass',
       '-File',
