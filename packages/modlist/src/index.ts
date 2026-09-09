@@ -36,7 +36,7 @@ export async function generateModsList(opts: ModListOpts): Promise<string> {
   log('Get Mods diffs from JSONs ... ')
   const tDiff = performance.now()
   const diff: ModsComparison = opts.old
-    ? modListDiff(opts.fresh, opts.old, opts.ignore)
+    ? modListDiff(opts.fresh, opts.old, opts.ignore, opts.oldIgnore)
     : modListUnion(opts.fresh, opts.ignore)
 
   // Auto-detect mod replacements (forks/remakes) by matching base file names.

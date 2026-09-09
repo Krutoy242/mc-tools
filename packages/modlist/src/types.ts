@@ -18,6 +18,15 @@ export interface ModListOpts {
    */
   ignore?: string
 
+  /**
+   * Same as {@link ignore}, but applied to {@link old}. Defaults to {@link ignore}.
+   *
+   * Read it from the old release itself (`git show <tag>:dev/.devonly.ignore`):
+   * a mod that was dev-only then and ships now is only an addition if the two
+   * sides are filtered by their own lists.
+   */
+  oldIgnore?: string
+
   /** CurseForge API key. Get one at https://console.curseforge.com/?#/api-keys */
   key: string
 

@@ -61,14 +61,23 @@ function keyBy<T>(arr: T[], key: keyof T): Record<number, T> {
  *
  * Use this when you have the previous version to diff against, typically for
  * generating a changelog.
+ *
+ * @param fresh Snapshot being released.
+ * @param old Snapshot it is compared against.
+ * @param ignore Filter applied to `fresh` — the dev-only list as it stands now.
+ * @param oldIgnore Filter applied to `old`; defaults to `ignore`.
+ * Pass the ignore list as it was at the old snapshot whenever that list can
+ * change between releases. With one shared filter a mod that was dev-only back
+ * then and ships now sits on both sides of the diff and never reaches `added`.
  */
 export function modListDiff(
   fresh: Minecraftinstance,
   old: Minecraftinstance,
-  ignore?: IgnoreArgument
+  ignore?: IgnoreArgument,
+  oldIgnore?: IgnoreArgument
 ): import('./types.js').ModsComparison {
   const B = loadMCInstanceFiltered(fresh, ignore).installedAddons
-  const A = loadMCInstanceFiltered(old, ignore).installedAddons
+  const A = loadMCInstanceFiltered(old, oldIgnore ?? ignore).installedAddons
 
   const map_A = keyBy(A, 'addonID')
   const map_B = keyBy(B, 'addonID')

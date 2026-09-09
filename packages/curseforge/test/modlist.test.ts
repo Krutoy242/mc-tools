@@ -74,4 +74,38 @@ describe('mod list functions', () => {
 
     expect(diff.union).toHaveLength(3) // mod1, mod2, mod4
   })
+
+  // The pack's dev-only list changes between releases: a mod kept out of the
+  // release for testing later becomes part of it, without its entry in
+  // `minecraftinstance.json` changing at all.
+  it('modListDiff should treat an un-ignored mod as added', () => {
+    const diff = modListDiff(instance1, instance1, '', 'mod2.jar')
+
+    expect(diff.added).toHaveLength(1)
+    expect(diff.added![0].addonID).toBe(asAddonID(2))
+    expect(diff.removed).toHaveLength(0)
+  })
+
+  it('modListDiff should treat a newly ignored mod as removed', () => {
+    const diff = modListDiff(instance1, instance1, 'mod2.jar', '')
+
+    expect(diff.removed).toHaveLength(1)
+    expect(diff.removed![0].addonID).toBe(asAddonID(2))
+    expect(diff.added).toHaveLength(0)
+  })
+
+  it('modListDiff should ignore a mod that is dev-only on both sides', () => {
+    const diff = modListDiff(instance1, instance1, 'mod2.jar', 'mod2.jar')
+
+    expect(diff.added).toHaveLength(0)
+    expect(diff.removed).toHaveLength(0)
+    expect(diff.union).toHaveLength(1)
+  })
+
+  it('modListDiff should fall back to the single ignore list', () => {
+    const diff = modListDiff(instance1, instance1, 'mod2.jar')
+
+    expect(diff.added).toHaveLength(0)
+    expect(diff.union).toHaveLength(1)
+  })
 })

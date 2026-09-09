@@ -25,6 +25,10 @@ const main = defineCommand({
       alias      : 'i',
       description: 'Path to .gitignore-like file to exclude dev-only mods.',
     },
+    oldIgnore: {
+      type       : 'string',
+      description: 'Path to the .gitignore-like file as it was at --old. Defaults to --ignore; pass the old release\'s own list so un-ignored mods count as added.',
+    },
     mcinstance: {
       type       : 'string',
       alias      : 'm',
@@ -79,7 +83,9 @@ const main = defineCommand({
       process.exit(1)
     }
 
-    const ignore = args.ignore ? readFileSync(assertPath(args.ignore), 'utf8') : undefined
+    const readIgnore = (path?: string) => path ? readFileSync(assertPath(path), 'utf8') : undefined
+    const ignore = readIgnore(args.ignore)
+    const oldIgnore = readIgnore(args.oldIgnore)
     const mcinstance = JSON.parse(readFileSync(assertPath(args.mcinstance), 'utf8')) as Minecraftinstance
     const old = args.old ? JSON.parse(readFileSync(assertPath(args.old), 'utf8')) as Minecraftinstance : undefined
     const template = args.template ? readFileSync(assertPath(args.template), 'utf8') : undefined
@@ -90,6 +96,7 @@ const main = defineCommand({
       old,
       key,
       ignore,
+      oldIgnore,
       sort     : args.sort,
       template,
       changelog: args.changelog,
