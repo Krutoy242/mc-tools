@@ -93,11 +93,18 @@ function buildSortedModList(files: ModpackManifestFile[]): ModpackManifestFile[]
 /**
  * Serialize manifest with beautiful file list formatting and write to disk.
  */
+/**
+ * Renders the manifest and writes it only when the bytes differ.
+ *
+ * Rewriting identical content is not free: watchers downstream (the VS Code
+ * extension) react to the write, and a manifest touched while git is mid-rebase
+ * dirties the working tree and stops the rebase. Returns whether it wrote.
+ */
 function writeManifestToDisk(
   manifestPath: string,
   manifest: ModpackManifest,
   files: ModpackManifestFile[]
-): void {
+): boolean {
   // Temporarily clear files so JSON.stringify emits the exact placeholder we replace
   const originalFiles = manifest.files
   manifest.files = []
@@ -106,7 +113,12 @@ function writeManifestToDisk(
     `  "files": ${formatModList(files)}`
   )
   manifest.files = originalFiles
+
+  const current = existsSync(manifestPath) ? readFileSync(manifestPath, 'utf-8') : null
+  if (current === resultStr) return false
+
   writeFileSync(manifestPath, resultStr)
+  return true
 }
 
 /**
@@ -167,10 +179,16 @@ function requireOrAbort<T>(value: T | undefined, flag: string, hint: string): T 
   )
 }
 
+/**
+ * Patches an existing manifest in place from a fresh instance.
+ *
+ * Returns `true` when the file was actually rewritten — an update that changes
+ * nothing leaves the file, and its mtime, untouched.
+ */
 export function incrementalUpdateManifest(
   manifestPath: string,
   fresh: Minecraftinstance
-): void {
+): boolean {
   if (!existsSync(manifestPath)) throw new Error(`Manifest not found: ${manifestPath}`)
 
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as ModpackManifest
@@ -192,7 +210,7 @@ export function incrementalUpdateManifest(
   }
 
   const modList = buildSortedModList(manifest.files)
-  writeManifestToDisk(manifestPath, manifest, modList)
+  return writeManifestToDisk(manifestPath, manifest, modList)
 }
 
 export async function generateManifest(

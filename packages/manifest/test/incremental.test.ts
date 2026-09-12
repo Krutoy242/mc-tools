@@ -1,7 +1,7 @@
 import type { Minecraftinstance } from '@mctools/curseforge/minecraftinstance'
 import type { ModpackManifest } from '../src/index.js'
 
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -48,6 +48,25 @@ describe('incrementalUpdateManifest', () => {
     const result = JSON.parse(readFileSync(manifestPath, 'utf8')) as ModpackManifest
     expect(result.files.map(f => f.projectID)).toEqual([2, 3])
     expect(result.files.find(f => f.projectID === 2)?.fileID).toBe(99)
+  })
+
+  it('leaves the file untouched when nothing changed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mctools-manifest-'))
+    const manifestPath = join(dir, 'manifest.json')
+    writeFileSync(manifestPath, JSON.stringify(baseManifest, null, 2))
+
+    const fresh = {
+      installedAddons: [addon(1, 10, 'One'), addon(2, 20, 'Two')],
+    } as unknown as Minecraftinstance
+
+    // First pass rewrites the file into the canonical layout ...
+    expect(incrementalUpdateManifest(manifestPath, fresh)).toBe(true)
+
+    // ... the second has nothing to say, so it must not touch the file: a write
+    // during a rebase dirties the tree and aborts it.
+    const before = statSync(manifestPath).mtimeMs
+    expect(incrementalUpdateManifest(manifestPath, fresh)).toBe(false)
+    expect(statSync(manifestPath).mtimeMs).toBe(before)
   })
 
   it('throws when the manifest file is missing', () => {
