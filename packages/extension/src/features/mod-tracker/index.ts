@@ -1,15 +1,15 @@
 import type { McToolsConfig } from '../../core/config.js'
 import type { Logger } from '../../core/logger.js'
 import type { ModTrackerState, TrackerConfig } from './state.js'
-import { modListDiff } from '@mctools/curseforge'
 import * as path from 'pathe'
 import { debounce } from 'perfect-debounce'
 import * as vscode from 'vscode'
 import { setContext } from '../../core/context.js'
+import { resolveGitDir } from '../../util/git-state.js'
 import { errorMessage } from '../../util/helpers.js'
 import { registerCommands } from './commands.js'
 import { GitStaging } from './git.js'
-import { updateManifest } from './manifest.js'
+import { createManifestSync } from './manifest-sync.js'
 import { buildTreeData, createState, headInstance, InstanceCache, runGitOps, syncHeadInstance } from './state.js'
 import { ModChangesProvider } from './tree.js'
 
@@ -57,9 +57,25 @@ export async function activateModTracker(
     debouncedRefresh().catch(err => logger.error(`Mod tracker refresh failed: ${errorMessage(err)}`))
   }
 
+  const gitDir = await resolveGitDir(root)
+  if (!gitDir) logger.warn('No git directory found — manifest sync cannot tell when a rebase is running')
+
+  const manifestSync = createManifestSync({
+    root,
+    mciPath,
+    gitDir,
+    state,
+    mciCache,
+    git,
+    config,
+    logger,
+    onWrite: queueRefresh,
+  })
+
   const disposables: vscode.Disposable[] = [
-    createMciWatcher(root, config, state, mciCache, git, logger, queueRefresh),
+    createMciWatcher(root, config.modTracker.inputPath, logger, manifestSync.queue, queueRefresh),
     createConfigWatcher(root, config.modTracker.configWatchPattern, queueRefresh),
+    { dispose: manifestSync.dispose },
   ]
 
   await initializeTracker(state, treeProvider, mciCache, git, mciPath, root, trackerConfig, logger)
@@ -116,35 +132,18 @@ function makeRefreshFn(
 
 function createMciWatcher(
   root: string,
-  config: McToolsConfig,
-  state: ModTrackerState,
-  mciCache: InstanceCache,
-  git: GitStaging,
+  inputPath: string,
   logger: Logger,
+  queueManifestSync: () => void,
   queueRefresh: () => void
 ): vscode.Disposable {
-  const pattern = new vscode.RelativePattern(root, config.modTracker.inputPath)
+  const pattern = new vscode.RelativePattern(root, inputPath)
   const watcher = vscode.workspace.createFileSystemWatcher(pattern)
-  const mciPath = path.join(root, config.modTracker.inputPath)
 
   watcher.onDidChange(() => {
-    void (async () => {
-      logger.info('minecraftinstance.json changed')
-      if (config.manifest.autoUpdate) {
-        try {
-          const fresh = await mciCache.read()
-          await syncHeadInstance(state, git, mciPath)
-          const old = headInstance(state, fresh)
-          const diff = modListDiff(fresh, old)
-          logger.info(`Manifest auto-update: +${diff.added?.length ?? 0} / -${diff.removed?.length ?? 0} / ~${diff.updated?.length ?? 0}`)
-          await updateManifest(root, fresh, old, config.manifest.postfix, config.manifest, logger)
-        }
-        catch (err) {
-          logger.error(`Manifest sync failed: ${errorMessage(err)}`)
-        }
-      }
-      queueRefresh()
-    })()
+    logger.info('minecraftinstance.json changed')
+    queueManifestSync()
+    queueRefresh()
   })
   return watcher
 }

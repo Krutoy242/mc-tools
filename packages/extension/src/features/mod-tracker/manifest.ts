@@ -7,6 +7,7 @@ import { generateManifest, incrementalUpdateManifest } from '@mctools/manifest'
 import * as path from 'pathe'
 import { errorMessage } from '../../util/helpers.js'
 
+/** Patches the manifest from the instance file; `true` when it wrote. */
 export async function updateManifest(
   workspaceRoot: string,
   fresh: Minecraftinstance,
@@ -14,14 +15,16 @@ export async function updateManifest(
   postfix: string,
   manifestConfig: McToolsConfig['manifest'],
   logger: Logger
-): Promise<void> {
+): Promise<boolean> {
   const manifestPath = path.join(workspaceRoot, `manifest${postfix ?? ''}.json`)
   const timer = logger.time('Manifest incremental update')
   try {
     const ignore = await readIgnoreFile(workspaceRoot, manifestConfig.ignorePath)
     const freshFiltered = loadMCInstanceFiltered(fresh, ignore)
-    incrementalUpdateManifest(manifestPath, freshFiltered)
+    const written = incrementalUpdateManifest(manifestPath, freshFiltered)
     timer()
+    if (!written) logger.info('Manifest already up to date — not rewritten')
+    return written
   }
   catch (err) {
     timer()

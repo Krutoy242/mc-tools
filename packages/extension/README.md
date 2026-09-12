@@ -40,7 +40,11 @@ VS Code extension for Minecraft 1.12.2 modpack development automation
 - Shows changes in a dedicated **Mod Changes** Explorer panel
 - Supports staging files per-mod or all at once
 - Skips paths inside git submodules, which cannot be staged from the parent repo
-- Incrementally updates `manifest.json` when `minecraftinstance.json` changes
+- Incrementally updates `manifest.json` when `minecraftinstance.json` changes,
+  writing only when the content actually differs
+- Stands down while git owns the working tree — a rebase, merge, cherry-pick,
+  revert or bisect — and syncs once the operation ends, so a regenerated
+  manifest can no longer dirty the tree mid-rebase
 - Generates `MODS.md` on demand via `@mctools/modlist`
 
 The extension stays completely idle in workspaces that are not a modpack: the
@@ -133,10 +137,12 @@ src/
 │       ├── git.ts          # Staging via the vscode.git API
 │       ├── git-api.ts      # Typings for the git extension
 │       ├── manifest.ts     # manifest.json generation/patching
+│       ├── manifest-sync.ts # Git-aware debounced manifest sync
 │       ├── modlist.ts      # MODS.md generation
 │       ├── state.ts        # Cached instances + tree assembly
 │       └── tree.ts         # TreeDataProvider
 └── util/
+    ├── git-state.ts        # In-progress rebase/merge/cherry-pick detection
     ├── gitmodules.ts       # .gitmodules parsing, submodule checks
     ├── helpers.ts          # Error text, severity, glob matching
     ├── logtail.ts          # Byte-range reads and newline counting
