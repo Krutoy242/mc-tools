@@ -2,12 +2,16 @@ import type { Capability, ReadyConfig } from '../config.js'
 import type { Mod } from '../Mod.js'
 import type { ActionKind, ActionPlan } from './modActions.js'
 import type { Target } from './target.js'
+import { openSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import process from 'node:process'
 import consola from 'consola'
 import { runAutoBinary } from '../binary/auto.js'
 import { loadConditions } from '../binary/conditions.js'
 import { validateConditions } from '../binary/validate.js'
 import { describeLauncher, probeReadyNow, restartAndMonitor, scanLogErrors, stallHint, waitUntilReady } from '../launcher/index.js'
+import { placeGameWindow } from '../launcher/place-window.js'
 import {
   clearSession,
   readSession,
@@ -16,6 +20,7 @@ import {
 } from '../session/lock.js'
 import { formatFind } from './find.js'
 import { applyPlan, computeAction, computeCombined, isConflict } from './modActions.js'
+import { ensurePatchCheckForBoot, restorePatchCheckFlag } from './patchCheck.js'
 import { resolveMod, resolveMods } from './resolve.js'
 import { loadRuntime } from './runtime.js'
 import { guardSession } from './session.js'
@@ -36,6 +41,56 @@ function fmtSec(ms: number): string {
 
 /** A boot that writes nothing for this long stops reading as progress. */
 const STALL_WARN_MS = 45_000
+
+/** How long the post-launch placer waits for the game window (test launches). */
+const PLACE_WINDOW_MS = 180_000
+
+/**
+ * Move the game window to the test corner (top-right of the tallest monitor).
+ * Client only — a dedicated server has no window. Never fails the restart:
+ * placement problems are warnings. In detached mode the placer re-invokes
+ * itself detached so the fast return stays fast.
+ */
+function kickPlaceWindow(detached: boolean): void {
+  if (process.platform !== 'win32') return
+  if (detached) {
+    import('node:child_process').then(({ spawn }) => {
+      const child = spawn(process.execPath, [process.argv[1]!, 'place-window'], {
+        detached: true, stdio: 'ignore',
+      })
+      child.unref()
+    }).catch(() => {})
+    return
+  }
+  void placeGameWindow({ waitMs: PLACE_WINDOW_MS })
+    .then((p) => consola.success(`window placed at ${p.x},${p.y} (${p.w}x${p.h})`))
+    .catch((e) => consola.warn(`window not placed: ${(e as Error).message}`))
+}
+
+/**
+ * Detached patch-check restore: a blocking caller restores the flag itself
+ * after the monitor ends, but a detached launch returns in seconds — so the
+ * wait-for-read + restore runs as a detached self re-invocation (same shape
+ * as the detached place-window kick). The flip itself was already announced
+ * by ensurePatchCheckForBoot, so a lost watcher can only delay the restore,
+ * never silence the message.
+ */
+function kickPatchCheckRestore(gameDir: string): void {
+  import('node:child_process').then(({ spawn }) => {
+    const log = openSync(join(tmpdir(), 'mctools-patch-check.log'), 'a')
+    const child = spawn(process.execPath, [
+      process.argv[1],
+      'restore-patch-check',
+      '--cwd',
+      gameDir,
+    ], {
+      detached: true,
+      stdio   : ['ignore', log, log],
+    })
+    child.unref()
+    child.on('error', () => {})
+  }).catch(() => {})
+}
 
 function trimLine(s: string, max = 100): string {
   const t = s.replace(/\s+/g, ' ').trim()
@@ -278,6 +333,12 @@ export async function runRestart(input: RestartInput): Promise<number> {
   printRoster(runtime.mods)
   warnLostCapabilities(runtime.mods, target.capabilities)
 
+  // Scalar/Fugue "press any key" block: with those mods absent the boot stalls
+  // before any mod loads, so flip the check off now (announced out loud) and
+  // restore it once the boot is past the read — or right after, in all cases.
+  // Runs before the dry early-return so dry runs still report the flip.
+  const patch = await ensurePatchCheckForBoot(target.gameDir, runtime.mods, { dry })
+
   if (dry) {
     consola.info(`dry run — ${target.isServer ? 'the server was' : 'Minecraft was'} not restarted (assumed).`)
     return 0
@@ -296,12 +357,15 @@ export async function runRestart(input: RestartInput): Promise<number> {
     }
     await sleep(3000) // let the OS release file handles before relaunch
     await launcher.launch()
+    if (!target.isServer) kickPlaceWindow(true)
+    if (patch.flipped) kickPatchCheckRestore(target.gameDir)
     consola.success(`launched via ${launcher.name}: ${await describeLauncher(launcher)}. Poll with \`reducer ready\` (or \`reducer ready --wait\`).`)
     return 0
   }
 
   // ----- blocking restart + monitor (no session lock held) -----
   consola.start(`restarting via ${launcher.name} …`)
+  if (!target.isServer) kickPlaceWindow(false) // float while booting; warns on failure
   // A wedged boot used to print the same heartbeat as a healthy one, so it read as
   // progress for as long as the operator was willing to wait. Name the stall instead.
   let hinted = false
@@ -318,6 +382,12 @@ export async function runRestart(input: RestartInput): Promise<number> {
       }
     },
   })
+  // The monitor ending (idle/crash/exit/timeout) always postdates the check
+  // read — the check runs in the FML handler constructor, before mod loading
+  // logs anything — so restore now in every outcome. A boot that never
+  // launched never read the value either, and restoring still leaves the tree
+  // exactly as found.
+  if (patch.flipped) await restorePatchCheckFlag(target.gameDir, { dry })
   /** Name the boot stage a failed launch froze on, and why it can freeze there. */
   const explainStage = () => {
     if (!result.lastLine) return

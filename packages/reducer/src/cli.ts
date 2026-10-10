@@ -6,10 +6,13 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { assertPath } from '@mctools/utils/args'
 import { defineCommand, runMain } from 'citty'
+import consola from 'consola'
 import { resolve } from 'pathe'
 
 import pkg from '../package.json' with { type: 'json' }
 import { runBinary, runFind, runKill, runReady, runRestart, runStatus } from './core/commands.js'
+import { restorePatchCheckFlag, waitUntilBootReadFlag } from './core/patchCheck.js'
+import { placeGameWindow } from './launcher/place-window.js'
 import { clearSession, readSession } from './session/lock.js'
 
 const { description, name, version } = pkg
@@ -17,7 +20,7 @@ const { description, name, version } = pkg
 // CLI is the robot surface. Humans do fine-grained toggling in the interactive
 // TUI (bare `reducer`); the standalone disable/enable/only/except verbs are
 // deliberately not exposed here — agents always want the combined `restart --…`.
-const SUBCOMMANDS = new Set(['restart', 'ready', 'kill', 'find', 'status', 'binary'])
+const SUBCOMMANDS = new Set(['restart', 'ready', 'kill', 'find', 'status', 'binary', 'place-window', 'restore-patch-check'])
 
 /** Flags that consume the following token as their value (for argv scanning). */
 const VALUE_FLAGS = new Set(['-m', '--cwd', '-t', '--trusted', '-i', '--ignored'])
@@ -193,6 +196,24 @@ const killCmd = defineCommand({
   },
 })
 
+const placeWindowCmd = defineCommand({
+  meta: { name: 'place-window', description: 'Move the game window to the top-right corner of the tallest monitor' },
+  args: {
+    timeout: { type: 'string', description: 'Max time to wait for the window, ms (default 120000)' },
+  },
+  async run({ args }) {
+    const waitMs = Number(args.timeout) > 0 ? Number(args.timeout) : 120_000
+    try {
+      const p = await placeGameWindow({ waitMs })
+      process.stdout.write(`placed ${p.x},${p.y} ${p.w}x${p.h} (screen ${p.screen.x},${p.screen.y} ${p.screen.w}x${p.screen.h})\n`)
+    }
+    catch (e) {
+      consola.error(`place-window: ${(e as Error).message}`)
+      process.exitCode = 1
+    }
+  },
+})
+
 const findCmd = defineCommand({
   meta: { name: 'find', description: 'Resolve queries to ./mods/<jar> paths' },
   args: {
@@ -217,6 +238,24 @@ const statusCmd = defineCommand({
   args: { ...cwdArg, ...serverArg },
   async run({ args }) {
     process.exitCode = await runStatus(mcPathOf(args), Boolean(args.server))
+  },
+})
+
+// Internal: the detached `restart --detach` flips B:DISABLE_PATCH_MOD_CHECK
+// and returns at once, so this watcher waits for the boot to read the value
+// and restores it. Kicked automatically — never run by hand.
+const restorePatchCheckCmd = defineCommand({
+  meta: { name: 'restore-patch-check', description: 'Wait for the boot to read the patch-mod flag, then restore it to false (internal)' },
+  args: {
+    ...cwdArg,
+    timeout: { type: 'string', description: 'Max time to wait for the boot read, ms (default 300000)' },
+  },
+  async run({ args }) {
+    const gameDir = mcPathOf(args)
+    const timeoutMs = Number(args.timeout) > 0 ? Number(args.timeout) : 300_000
+    const read = await waitUntilBootReadFlag(gameDir, { timeoutMs })
+    if (!read) consola.warn(`restore-patch-check: no boot read seen within ${timeoutMs}ms — restoring anyway.`)
+    await restorePatchCheckFlag(gameDir)
   },
 })
 
@@ -271,6 +310,7 @@ const HELP_EXAMPLES = [
   '  reducer status                           liveness + roster / diagnostics / weight',
   '  reducer find jei thaum 1234              resolve queries → ./mods/<jar> paths',
   '  reducer kill                             kill the running game',
+  '  reducer place-window                     move the game window to the test corner',
   '  reducer ./conditions.ts                  automated binary search (see below)',
   '  reducer --continue / --new               resume / discard an interrupted session',
   '',
@@ -301,12 +341,14 @@ const mainCli = defineCommand({
     ignored : { type: 'string', alias: 'i', description: 'Binary search: mods kept enabled (untouched)' },
   },
   subCommands: {
-    restart: restartCmd,
-    ready  : readyCmd,
-    kill   : killCmd,
-    find   : findCmd,
-    status : statusCmd,
-    binary : binaryCmd,
+    'restart'            : restartCmd,
+    'ready'              : readyCmd,
+    'kill'               : killCmd,
+    'find'               : findCmd,
+    'status'             : statusCmd,
+    'binary'             : binaryCmd,
+    'place-window'       : placeWindowCmd,
+    'restore-patch-check': restorePatchCheckCmd,
   },
   async run({ args }) {
     const pos = positionals(args)

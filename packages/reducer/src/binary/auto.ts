@@ -8,6 +8,7 @@ import {
   getStatus,
   nextPartition,
 } from '../binarySearch.js'
+import { ensurePatchCheckForBoot, restorePatchCheckFlag } from '../core/patchCheck.js'
 import { restartAndMonitor } from '../launcher/monitor.js'
 import { Mod as ModClass } from '../Mod.js'
 import { buildFullLogContext } from './validate.js'
@@ -135,18 +136,27 @@ export async function runAutoBinary(opts: AutoOptions): Promise<AutoResult> {
     }
     else {
       let captured: boolean | undefined
-      const res = await restartAndMonitor(mcDir, launcher, {
-        maxMs  : PER_TEST_MS,
-        quietMs: UNRESPONSIVE_MS,
-        log,
-        onTick : (tick) => {
-          const ctx = toCtx(tick)
-          if (conditions.isTestEnded(ctx)) {
-            captured = conditions.isBugFound(ctx)
-            return 'stop'
-          }
-        },
-      })
+      // A bisect iteration routinely disables half the roster — including
+      // Fugue/Scalar — so the same boot block applies to every relaunch here.
+      const patch = await ensurePatchCheckForBoot(mcDir, mods, { dry })
+      let res
+      try {
+        res = await restartAndMonitor(mcDir, launcher, {
+          maxMs  : PER_TEST_MS,
+          quietMs: UNRESPONSIVE_MS,
+          log,
+          onTick : (tick) => {
+            const ctx = toCtx(tick)
+            if (conditions.isTestEnded(ctx)) {
+              captured = conditions.isBugFound(ctx)
+              return 'stop'
+            }
+          },
+        })
+      }
+      finally {
+        if (patch.flipped) await restorePatchCheckFlag(mcDir, { dry })
+      }
       if (captured === undefined) {
         // Sanity fallback: test never self-reported an end. Read the verdict from
         // whatever the full log holds and note why we bailed.
