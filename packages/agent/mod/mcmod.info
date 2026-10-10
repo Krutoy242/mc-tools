@@ -1,0 +1,8 @@
+[{
+  "modid": "e2eeagent",
+  "name": "E2EE Client Agent",
+  "description": "Localhost socket bridge: an outside AI drives the client player.",
+  "version": "0.1",
+  "mcversion": "1.12.2",
+  "authorList": ["E2EE"]
+}]

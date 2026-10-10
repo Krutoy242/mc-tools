@@ -7,6 +7,8 @@ packages/*/coverage
 packages/*/dist
 packages/*/lib
 packages/curseforge/*-cache.json
+packages/agent/mod/out/
+packages/agent/mod/*.jar
 .cache
 
 # Per-agent entry points pointing at the canonical .agents/AGENTS.md.

@@ -1,0 +1,18 @@
+{
+  "name": "@mctools/agent",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Thin client for the e2ee-agent Minecraft companion mod (observe/act/cmd over a localhost socket)",
+  "author": "Krutoy242 <Krutoy242@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Krutoy242/mc-tools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Krutoy242/mc-tools.git",
+    "directory": "packages/agent"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run"
+  }
+}
