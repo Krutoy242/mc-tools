@@ -45,7 +45,7 @@ jobs:
       - name: Test all packages
         run: pnpm -r run test
 
-      # Publishes only non-private packages (utils + extension are filtered out
+      # Publishes only non-private packages (utils + agent + extension are filtered out
       # in the release:all script). workspace:* deps are replaced with real
       # versions by pnpm at pack time; bundled-only utils is already inlined.
       - name: Release

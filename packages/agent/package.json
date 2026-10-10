@@ -2,6 +2,7 @@
   "name": "@mctools/agent",
   "type": "module",
   "version": "0.1.0",
+  "private": true,
   "description": "Thin client for the e2ee-agent Minecraft companion mod (observe/act/cmd over a localhost socket)",
   "author": "Krutoy242 <Krutoy242@gmail.com>",
   "license": "MIT",
