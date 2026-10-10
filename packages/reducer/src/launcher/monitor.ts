@@ -34,7 +34,14 @@ const STALL_HINTS: { match: RegExp, hint: string }[] = [
     match: /CleanroomRelauncher|Preparing Cleanroom|JavaProvisioner/i,
     hint : 'the Cleanroom relauncher is fetching Cleanroom and its libraries. That is a download, not a hang — but the JVM ignores HTTP(S)_PROXY, so behind a proxy-only connection it stalls here forever. Watch ~/.cleanroom/relauncher for a growing *.tmp; if it never grows, add -Dhttps.proxyHost/-Dhttps.proxyPort to the launcher JVM args.',
   },
+  {
+    match: /saved with mod .* appears to be missing/i,
+    hint : 'the world was saved with mods absent from this set, so FML is sitting on the missing-registry-entries confirmation (blank window, dead log) awaiting a click that never comes in an unattended boot. Load a save matching this mod set instead — and only ever confirm on a throwaway copy, confirming DELETES the missing entries from that save.',
+  },
 ]
+
+/** A `debug.log` line showing the world needs mods this set lacks. */
+const MISSING_MODS_RE = /saved with mod .* appears to be missing/i
 
 /** Known cause for a boot frozen on `lastLine`, or `null` if we have no idea. */
 export function stallHint(lastLine: string): string | null {
@@ -222,13 +229,26 @@ export interface ReadyVerdict {
 export async function probeReadyNow(mcDir: string, signals: ReadySignals, launcher: Launcher): Promise<ReadyVerdict> {
   const pid = await launcher.getPid()
   if (!pid) return { ready: false, running: false, reason: 'game is not running' }
-  if (signals.port && await tcpOpen(signals.port)) return { ready: true, running: true, reason: `port ${signals.port} is accepting connections` }
   const tail = await tailText(dbgLogPath(mcDir), 256 * 1024)
+  const quiet = await quietFor(dbgLogPath(mcDir))
+  // A blank window with a dead log while the ready line never came: the boot
+  // is parked on the missing-registry-entries confirmation, not loaded. An
+  // open ready port must not overrule this — the port binds at mod init,
+  // long before the world finishes (or stalls) loading. The missing-mod lines
+  // come before the registry-dump spam, so they often sit outside the small
+  // tail above — search a wider window, but only on this already-suspicious
+  // path (stale log, ready line pending).
+  if (signals.pattern && !signals.pattern.test(tail) && quiet >= STALL_MS) {
+    const wide = await tailText(dbgLogPath(mcDir), 2 * 1024 * 1024)
+    if (MISSING_MODS_RE.test(wide)) {
+      return { ready: false, running: true, reason: `stalled at the missing-registry-entries confirmation (blank window, log silent for ${fmtDur(quiet)}) — the save needs mods this set lacks` }
+    }
+  }
+  if (signals.port && await tcpOpen(signals.port)) return { ready: true, running: true, reason: `port ${signals.port} is accepting connections` }
   if (signals.pattern && signals.pattern.test(tail)) return { ready: true, running: true, reason: 'ready line present in debug.log' }
   if (FML_LOADED.test(tail)) return { ready: true, running: true, reason: 'mods loaded (FML), at main menu' }
   // Alive but pre-FML. Say whether it is *moving*: a silent debug.log is the only
   // way to tell a wedged boot from a slow one, and both look "still loading".
-  const quiet = await quietFor(dbgLogPath(mcDir))
   if (quiet < STALL_MS) return { ready: false, running: true, reason: 'still loading (no FML-loaded line yet)' }
   const last = lastLineOf(tail)
   const hint = stallHint(last)
@@ -449,6 +469,9 @@ export async function restartAndMonitor(
   let lastProgress = launchTs
   let lastPortProbe = 0
   let fmlAt = 0 // when FML finished loading mods (0 = not yet)
+  let portAt = 0 // when the ready port first accepted connections (0 = not yet)
+  let missingModsSeen = false // this boot's world needs mods the set lacks
+  let missingLine = '' // last such line — doubles as the stall diagnosis
   let misses = 0 // consecutive health checks that found no process
   let crashed = false
   let crashSummary: string | undefined
@@ -469,6 +492,11 @@ export async function restartAndMonitor(
       const text = newDebug.join('\n')
       // Layer 1: pack-declared ready line is authoritative (e.g. a world-join),
       // and in-world log spam never goes "quiet" so the fallbacks can't fire.
+      if (MISSING_MODS_RE.test(text)) {
+        missingModsSeen = true
+        const hits = newDebug.filter(l => MISSING_MODS_RE.test(l))
+        missingLine = hits[hits.length - 1]
+      }
       if (readyPattern && readyPattern.test(text)) return { outcome: 'idle', reached: 'pattern', pid: await resolvePid() }
       if (!fmlAt && FML_LOADED.test(text)) fmlAt = now
     }
@@ -494,15 +522,34 @@ export async function restartAndMonitor(
     if (crashed) return { outcome: 'crash', pid: pid ?? undefined, crashSummary }
 
     // Layer 2: a pack-declared port started accepting connections (mods finished first).
+    // While the pack's ready line is still pending this is a waypoint, not the
+    // destination: the port binds at mod init, so ending here reports LOAD on a
+    // boot that later wedges mid world-load behind a blank window.
     if (readyPort && fmlAt && now - lastPortProbe >= PORT_PROBE_MS) {
       lastPortProbe = now
-      if (await tcpOpen(readyPort)) return { outcome: 'idle', reached: 'port', pid: await resolvePid() }
+      if (await tcpOpen(readyPort)) {
+        if (!readyPattern) return { outcome: 'idle', reached: 'port', pid: await resolvePid() }
+        if (!portAt) {
+          portAt = now
+          log(`ready port ${readyPort} open — still waiting for the ready line`)
+        }
+      }
     }
 
     // Layer 3 (universal): FML loaded and the log has been quiet since — main menu,
     // no world was auto-joined. Works for a bare Forge launch with zero mods.
-    if (fmlAt && now - lastChange >= quietMs) {
+    // Suppressed while the ready line is pending and the log already showed
+    // missing mods: that combination is the confirm screen, not a menu.
+    if (fmlAt && now - lastChange >= quietMs && !(missingModsSeen && readyPattern)) {
       return { outcome: 'idle', reached: 'menu', pid: await resolvePid() }
+    }
+
+    // Confirmed stall, fail fast: the world needs mods this set lacks, so the
+    // boot is parked on the missing-entries confirmation (blank window, dead
+    // log) that no unattended run clicks through. The missing-mod line rides
+    // along as lastLine so the stall hint names the cause and the remedies.
+    if (missingModsSeen && readyPattern && fmlAt && now - lastChange >= STALL_MS) {
+      return { outcome: 'stalled', pid: await resolvePid(), lastLine: missingLine }
     }
 
     if (now - lastHealth >= HEALTH_MS) {

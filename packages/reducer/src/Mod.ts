@@ -85,10 +85,14 @@ export class Mod {
     let ok = 0
     const failed: ModSwitchFailure[] = []
     for (const m of mods) {
-      await (toDisable ? m.disable(antiloop) : m.enable(antiloop))
+      const r = await (toDisable ? m.disable(antiloop) : m.enable(antiloop))
       const success = toDisable ? m.disabled : m.enabled
       if (success) ok++
-      else failed.push({ mod: m, error: 'dependency cycle or already processed' })
+      // A rename failure (locked jar, vanished file) carries the real reason
+      // in r.error — report it instead of the generic cycle message, or a
+      // stuck game reads as a dependency bug. The visited-but-untouched
+      // antiloop case has no error and keeps the generic one.
+      else failed.push({ mod: m, error: r.error ?? 'dependency cycle or already processed' })
     }
     return { ok, failed }
   }

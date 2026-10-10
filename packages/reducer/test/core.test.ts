@@ -1,11 +1,13 @@
 import type { Mod } from '../src/Mod.js'
-import { readdirSync } from 'node:fs'
+import { mkdtempSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'pathe'
 import { describe, expect, it } from 'vitest'
 import { dependencyClosure, dependentsClosure } from '../src/core/graph.js'
 import { applyPlan, computeAction, computeCombined, isConflict } from '../src/core/modActions.js'
 import { resolveMod, resolveMods } from '../src/core/resolve.js'
 import { loadRuntime } from '../src/core/runtime.js'
+import { Mod as ModClass } from '../src/Mod.js'
 
 const PACK = resolve(__dirname, 'fixtures/pack')
 
@@ -133,5 +135,21 @@ describe('applyPlan (dry)', () => {
   it('dependentsClosure of a leaf is just itself', async () => {
     const list = await mods()
     expect(dependentsClosure([byName(list, 'Delta')]).size).toBe(1)
+  })
+})
+
+describe('switchMany failures', () => {
+  it('reports the real rename error instead of the generic cycle message', async () => {
+    const prev = ModClass.modsPath
+    ModClass.modsPath = mkdtempSync(join(tmpdir(), 'reducer-locked-'))
+    try {
+      const ghost = new ModClass('ghost-1.0.jar', undefined)
+      const res = await ModClass.disable([ghost])
+      expect(res.failed).toHaveLength(1)
+      expect(res.failed[0].error).toMatch(/ENOENT/)
+    }
+    finally {
+      ModClass.modsPath = prev
+    }
   })
 })

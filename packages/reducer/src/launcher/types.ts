@@ -37,6 +37,7 @@ export type MonitorOutcome
     | 'crash' // a crash report appeared
     | 'exit' // game process died without a crash report
     | 'timeout' // overall ceiling reached
+    | 'stalled' // parked on the missing-entries confirm (lastLine carries the cause)
     | 'stopped' // an onTick callback asked to stop
 
 export interface MonitorResult {

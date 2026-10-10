@@ -53,6 +53,30 @@ describe('probeReadyNow readiness cascade', () => {
     const v = await probeReadyNow(dir, { pattern: /joined the game/i }, fakeLauncher(1))
     expect(v.ready).toBe(true)
   })
+  it('missing-mods + stale log + pending pattern → stalled, never ready-by-port', async () => {
+    const dir = mkMc({ 'logs/debug.log': '[Server thread/ERROR] [FML.ModTracker]: This world was saved with mod foo which appears to be missing, things may not work well\n' })
+    const old = new Date(Date.now() - 120_000)
+    utimesSync(join(dir, 'logs/debug.log'), old, old)
+    // A genuinely open port: proves the stall diagnosis overrules it.
+    const { createServer } = await import('node:net')
+    const server = createServer()
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    const port = (server.address() as { port: number }).port
+    try {
+      const v = await probeReadyNow(dir, { pattern: /joined the game/i, port }, fakeLauncher(1))
+      expect(v.ready).toBe(false)
+      expect(v.reason).toMatch(/stalled at the missing-registry-entries confirmation/)
+    }
+    finally {
+      server.close()
+    }
+  })
+})
+
+describe('stallHint', () => {
+  it('names the missing-registry confirmation stall and its remedy', () => {
+    expect(stallHint('This world was saved with mod foo which appears to be missing, things may not work well')).toMatch(/confirmation/)
+  })
 })
 
 /** Launcher whose pid follows a scripted sequence, one step per `getPid` call. */

@@ -200,11 +200,13 @@ const placeWindowCmd = defineCommand({
   meta: { name: 'place-window', description: 'Move the game window to the top-right corner of the tallest monitor' },
   args: {
     timeout: { type: 'string', description: 'Max time to wait for the window, ms (default 120000)' },
+    pid    : { type: 'string', description: 'Move the window of this PID only (default: largest javaw window)' },
   },
   async run({ args }) {
     const waitMs = Number(args.timeout) > 0 ? Number(args.timeout) : 120_000
+    const pid = Number(args.pid) > 0 ? Number(args.pid) : undefined
     try {
-      const p = await placeGameWindow({ waitMs })
+      const p = await placeGameWindow({ waitMs, pid })
       process.stdout.write(`placed ${p.x},${p.y} ${p.w}x${p.h} (screen ${p.screen.x},${p.screen.y} ${p.screen.w}x${p.screen.h})\n`)
     }
     catch (e) {

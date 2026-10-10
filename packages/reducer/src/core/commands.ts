@@ -24,6 +24,7 @@ import { ensurePatchCheckForBoot, restorePatchCheckFlag } from './patchCheck.js'
 import { resolveMod, resolveMods } from './resolve.js'
 import { loadRuntime } from './runtime.js'
 import { guardSession } from './session.js'
+import { ensureGameStopped } from './stopGame.js'
 import { summarizeDiagnostics, summarizeRoster, summarizeWeight } from './summaries.js'
 import { openTarget, summarizeProvision } from './target.js'
 
@@ -48,23 +49,33 @@ const PLACE_WINDOW_MS = 180_000
 /**
  * Move the game window to the test corner (top-right of the tallest monitor).
  * Client only — a dedicated server has no window. Never fails the restart:
- * placement problems are warnings. In detached mode the placer re-invokes
- * itself detached so the fast return stays fast.
+ * placement problems are warnings. Bound to the launched PID so a stranger
+ * javaw is never moved. In detached mode the placer re-invokes itself
+ * detached so the fast return stays fast (spawn errors go to the place log,
+ * not to a lost console).
  */
-function kickPlaceWindow(detached: boolean): void {
+function placeLogPath(): string {
+  return join(tmpdir(), 'mctools-place-window.log')
+}
+function kickPlaceWindow(detached: boolean, pid?: number): void {
   if (process.platform !== 'win32') return
   if (detached) {
     import('node:child_process').then(({ spawn }) => {
-      const child = spawn(process.execPath, [process.argv[1]!, 'place-window'], {
-        detached: true, stdio: 'ignore',
+      const argv = [process.argv[1], 'place-window']
+      if (pid) argv.push('--pid', String(pid))
+      const log = openSync(placeLogPath(), 'a')
+      const child = spawn(process.execPath, argv, {
+        detached: true,
+        stdio   : ['ignore', log, log],
       })
       child.unref()
+      child.on('error', () => {})
     }).catch(() => {})
     return
   }
-  void placeGameWindow({ waitMs: PLACE_WINDOW_MS })
-    .then((p) => consola.success(`window placed at ${p.x},${p.y} (${p.w}x${p.h})`))
-    .catch((e) => consola.warn(`window not placed: ${(e as Error).message}`))
+  void placeGameWindow({ waitMs: PLACE_WINDOW_MS, pid })
+    .then(p => consola.success(`window placed at ${p.x},${p.y} (${p.w}x${p.h})`))
+    .catch(e => consola.warn(`window not placed: ${(e as Error).message}`))
 }
 
 /**
@@ -211,6 +222,8 @@ export async function runAction(input: ActionInput): Promise<number> {
   }
 
   const plan = computeAction(runtime.mods, kind, targets)
+  // Renaming while the game holds its jars fails on Windows — stop it first.
+  await ensureGameStopped(target.launcher, m => consola.log(m), { dry })
   writeSession(target.gameDir, {
     phase   : 'applying',
     snapshot: snapshotMods(runtime.mods),
@@ -303,6 +316,10 @@ export async function runRestart(input: RestartInput): Promise<number> {
   // long boot so a killed monitor can never poison the session.
   const mutates = plan.toEnable.length > 0 || plan.toDisable.length > 0
 
+  // Renaming while the game holds its jars fails on Windows (file locks) and
+  // aborts the restart mid-plan — stop it before touching a single jar.
+  if (mutates) await ensureGameStopped(target.launcher, m => consola.log(m), { dry })
+
   if (mutates) {
     const guard = guardSession(target.gameDir, runtime.mods, { continue: input.continue, new: input.new })
     if (reportGuardBlock(guard)) return 1
@@ -357,7 +374,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
     }
     await sleep(3000) // let the OS release file handles before relaunch
     await launcher.launch()
-    if (!target.isServer) kickPlaceWindow(true)
+    if (!target.isServer) kickPlaceWindow(true, await launcher.getPid() ?? undefined)
     if (patch.flipped) kickPatchCheckRestore(target.gameDir)
     consola.success(`launched via ${launcher.name}: ${await describeLauncher(launcher)}. Poll with \`reducer ready\` (or \`reducer ready --wait\`).`)
     return 0
@@ -365,7 +382,16 @@ export async function runRestart(input: RestartInput): Promise<number> {
 
   // ----- blocking restart + monitor (no session lock held) -----
   consola.start(`restarting via ${launcher.name} …`)
-  if (!target.isServer) kickPlaceWindow(false) // float while booting; warns on failure
+  // The placer starts on the first monitor tick (post-launch evidence), bound
+  // to the launched PID — never before launch, never a stranger window.
+  let placerKicked = false
+  const kickPlacerOnce = () => {
+    if (placerKicked || target.isServer) return
+    placerKicked = true
+    launcher.getPid()
+      .then(pid => kickPlaceWindow(false, pid ?? undefined))
+      .catch(() => kickPlaceWindow(false))
+  }
   // A wedged boot used to print the same heartbeat as a healthy one, so it read as
   // progress for as long as the operator was willing to wait. Name the stall instead.
   let hinted = false
@@ -373,6 +399,7 @@ export async function runRestart(input: RestartInput): Promise<number> {
     ...signals,
     log       : m => consola.log(m),
     onProgress: ({ elapsed, lastLine, stalledMs }) => {
+      kickPlacerOnce()
       const stall = stalledMs >= STALL_WARN_MS ? ` · no log output for ${fmtSec(stalledMs)}` : ''
       consola.log(`  booting ${fmtSec(elapsed)}${stall} · ${trimLine(lastLine)}`)
       const hint = !hinted && stalledMs >= STALL_WARN_MS ? stallHint(lastLine) : null
@@ -406,6 +433,11 @@ export async function runRestart(input: RestartInput): Promise<number> {
   if (result.outcome === 'exit') {
     consola.error(`LOAD ✗ ${game} process exited unexpectedly (no crash report).`)
     if (result.crashSummary) process.stderr.write(`${result.crashSummary}\n`)
+    explainStage()
+    return 1
+  }
+  if (result.outcome === 'stalled') {
+    consola.error(`LOAD ✗ ${game} stalled on a confirmation screen (blank window, dead log) — no unattended run clicks it through.`)
     explainStage()
     return 1
   }

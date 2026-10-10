@@ -9,6 +9,7 @@ import {
   nextPartition,
 } from '../binarySearch.js'
 import { ensurePatchCheckForBoot, restorePatchCheckFlag } from '../core/patchCheck.js'
+import { ensureGameStopped } from '../core/stopGame.js'
 import { restartAndMonitor } from '../launcher/monitor.js'
 import { Mod as ModClass } from '../Mod.js'
 import { buildFullLogContext } from './validate.js'
@@ -78,6 +79,8 @@ export async function runAutoBinary(opts: AutoOptions): Promise<AutoResult> {
 
   // Apply the seed classification once (real mode only).
   if (!dry) {
+    // Toggling while the game holds its jars fails on Windows — stop it first.
+    await ensureGameStopped(launcher, log, { dry })
     const f1 = await ModClass.disable(opts.trusted ?? [])
     const f2 = await ModClass.enable(opts.ignored ?? [])
     const failed = [...f1.failed, ...f2.failed]
@@ -120,6 +123,9 @@ export async function runAutoBinary(opts: AutoOptions): Promise<AutoResult> {
       log(`iter #${iterations.length + 1}: assumed enable ${plan.enabledSuspects.size} / assumed disable ${plan.disabledSuspects.size}`)
     }
     else {
+      // Each iteration relaunches: the previous iteration's game is still
+      // running here, so stop it before renaming or the toggles fail locked.
+      await ensureGameStopped(launcher, log, { dry })
       const dis = await ModClass.disable([...plan.disable])
       const en = await ModClass.enable([...plan.enable])
       const failed = [...dis.failed, ...en.failed]
