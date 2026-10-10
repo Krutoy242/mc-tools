@@ -39,6 +39,7 @@ export class LogWatcher {
   private lastSize = 0
   private lastLine = 0
   private lastIno = 0
+  private lastBirth = 0
   private scanning = false
   private rescanQueued = false
   /** A delete event arrived; whatever shows up under the path next is a new run. */
@@ -106,6 +107,7 @@ export class LogWatcher {
     this.lastSize = end
     this.lastLine = countBufferNewlines(buf)
     this.lastIno = stat.ino
+    this.lastBirth = stat.birthtimeMs
 
     await this.handler({ text: buf.toString('utf-8'), startLine: 0, isTruncated: false })
 
@@ -147,13 +149,20 @@ export class LogWatcher {
       // Minecraft rotates debug.log on every restart: log4j rolls the old file
       // away and opens a fresh one. A shrunk file catches a truncate-in-place,
       // but a roll-and-recreate can already be past the old size by the time the
-      // first scan lands — and NTFS hands a file recreated under the same name
-      // its predecessor's creation time — so the inode is what actually tells
-      // the two runs apart.
-      const isNewFile = this.resetPending
-        || (this.lastIno !== 0 && stat.ino !== 0 && stat.ino !== this.lastIno)
+      // first scan lands, so size alone cannot tell an append from a new run.
+      // Neither metadata signal works everywhere on its own: NTFS tunnels a
+      // recreated file's creation time from its predecessor, while ext4 happily
+      // hands the same inode back to a file recreated in the same directory —
+      // so the inode tells runs apart where birthtime lies, and birthtime tells
+      // them apart where the inode is reused. Either changing means a new file
+      // (both are zero-guarded for filesystems that report neither).
+      const inoChanged = this.lastIno !== 0 && stat.ino !== 0 && stat.ino !== this.lastIno
+      const birthChanged = this.lastBirth !== 0 && stat.birthtimeMs !== 0
+        && stat.birthtimeMs !== this.lastBirth
+      const isNewFile = this.resetPending || inoChanged || birthChanged
       this.resetPending = false
       this.lastIno = stat.ino
+      this.lastBirth = stat.birthtimeMs
 
       if (isNewFile || stat.size < this.lastSize) {
         this.logger.warn('File rotated or truncated, resetting state')
