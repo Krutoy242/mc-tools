@@ -23,4 +23,5 @@ packages/agent/mod/*.jar
 /CLAUDE.md
 /.claude/
 /.opencode/
+/.hermes/
 # <<< agent-rules
